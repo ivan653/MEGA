@@ -1,0 +1,5 @@
+/home/ivan/ImportantFiles/My Games/MEGA/build/CMakeFiles/mega.dir
+/home/ivan/ImportantFiles/My Games/MEGA/build/CMakeFiles/mega_tests.dir
+/home/ivan/ImportantFiles/My Games/MEGA/build/CMakeFiles/test.dir
+/home/ivan/ImportantFiles/My Games/MEGA/build/CMakeFiles/edit_cache.dir
+/home/ivan/ImportantFiles/My Games/MEGA/build/CMakeFiles/rebuild_cache.dir

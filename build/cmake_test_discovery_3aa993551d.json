@@ -1,0 +1,50 @@
+{
+  "tests": 4,
+  "name": "AllTests",
+  "testsuites": [
+    {
+      "name": "WorldGridTest",
+      "tests": 1,
+      "testsuite": [
+        {
+          "name": "BoundsAndBlockPlacement",
+          "file": "\/home\/ivan\/ImportantFiles\/My Games\/MEGA\/tests\/CoreTests.cpp",
+          "line": 11
+        }
+      ]
+    },
+    {
+      "name": "PlayerPhysicsTest",
+      "tests": 1,
+      "testsuite": [
+        {
+          "name": "GravityLandsOnFloorAndStepUpWorks",
+          "file": "\/home\/ivan\/ImportantFiles\/My Games\/MEGA\/tests\/CoreTests.cpp",
+          "line": 27
+        }
+      ]
+    },
+    {
+      "name": "MegaGeneratorTest",
+      "tests": 1,
+      "testsuite": [
+        {
+          "name": "GeneratesConnectedMultiBiomeMegastructureQuickly",
+          "file": "\/home\/ivan\/ImportantFiles\/My Games\/MEGA\/tests\/CoreTests.cpp",
+          "line": 49
+        }
+      ]
+    },
+    {
+      "name": "GameWorldTest",
+      "tests": 1,
+      "testsuite": [
+        {
+          "name": "RaycastAndEnemySpawningWork",
+          "file": "\/home\/ivan\/ImportantFiles\/My Games\/MEGA\/tests\/CoreTests.cpp",
+          "line": 75
+        }
+      ]
+    }
+  ]
+}

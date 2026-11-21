@@ -1,0 +1,5 @@
+if(EXISTS "/home/ivan/ImportantFiles/My Games/MEGA/build/mega_tests_e3b0c442_tests.cmake")
+  include("/home/ivan/ImportantFiles/My Games/MEGA/build/mega_tests_e3b0c442_tests.cmake")
+else()
+  add_test(mega_tests_NOT_BUILT mega_tests_NOT_BUILT)
+endif()
