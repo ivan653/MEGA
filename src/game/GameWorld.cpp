@@ -2,6 +2,8 @@
 #include "core/Rng.hpp"
 #include <algorithm>
 #include <cmath>
+#include <queue>
+#include <unordered_map>
 
 namespace mega {
 
@@ -31,6 +33,85 @@ void GameWorld::generateLevel(uint64_t seed) {
     pickups.clear();
     projectiles.clear();
     particles.clear();
+
+    spawnRobotsInLoadedRegions();
+}
+
+void GameWorld::spawnRobotsInLoadedRegions() {
+    // Remove robots from unloaded regions
+    int keepRadius = settings.streamRadius + 1;
+    enemies.erase(
+        std::remove_if(enemies.begin(), enemies.end(),
+                       [&](const Enemy& e) {
+                           return std::abs(e.regX - map.currentRegX) > keepRadius ||
+                                  std::abs(e.regZ - map.currentRegZ) > keepRadius;
+                       }),
+        enemies.end());
+
+    // Spawn 2-3 robots in each newly loaded region
+    for (const auto& reg : map.loadedRegions) {
+        int rx = reg.first, rz = reg.second;
+        int existing = 0;
+        for (const auto& e : enemies) {
+            if (e.regX == rx && e.regZ == rz) existing++;
+        }
+        if (existing > 0) continue;
+
+        std::vector<const CorridorSegment*> regSegs;
+        for (const auto& seg : map.corridors) {
+            if (seg.regX == rx && seg.regZ == rz) regSegs.push_back(&seg);
+        }
+        if (regSegs.empty()) continue;
+
+        uint64_t rSeed = map.seed ^ (static_cast<uint64_t>(static_cast<uint32_t>(rx)) * 0x9E3779B9ULL) ^
+                         (static_cast<uint64_t>(static_cast<uint32_t>(rz)) * 0xBF58476DULL);
+        Rng rng(rSeed);
+        int want = rng.rangeInt(2, 3);
+
+        for (int i = 0; i < want * 4 && existing < want; ++i) {
+            const auto* seg = regSegs[rng.rangeInt(0, static_cast<int>(regSegs.size()) - 1)];
+            float px, pz;
+            int dx = 0, dz = 0;
+            if (seg->alongX) {
+                int minX = std::min(seg->x0, seg->x1) + 4;
+                int maxX = std::max(seg->x0, seg->x1) - 4;
+                if (maxX <= minX) continue;
+                px = static_cast<float>(rng.rangeInt(minX, maxX)) + 0.5f;
+                pz = static_cast<float>(seg->z0) + seg->width * 0.5f;
+                dx = rng.chance(0.5f) ? 1 : -1;
+            } else {
+                int minZ = std::min(seg->z0, seg->z1) + 4;
+                int maxZ = std::max(seg->z0, seg->z1) - 4;
+                if (maxZ <= minZ) continue;
+                px = static_cast<float>(seg->x0) + seg->width * 0.5f;
+                pz = static_cast<float>(rng.rangeInt(minZ, maxZ)) + 0.5f;
+                dz = rng.chance(0.5f) ? 1 : -1;
+            }
+
+            Vec3 cand{px, 1.0f, pz};
+            if (lengthSq(cand - map.spawnPos) < 14.0f * 14.0f) continue;
+
+            int ix = static_cast<int>(std::floor(px));
+            int iz = static_cast<int>(std::floor(pz));
+            if (map.world.getBlock(ix, 1, iz) != BlockType::Air ||
+                map.world.getBlock(ix, 2, iz) != BlockType::Air) {
+                continue;
+            }
+
+            Enemy e;
+            e.pos = cand;
+            e.dirX = dx;
+            e.dirZ = dz;
+            e.pendingDirX = dx;
+            e.pendingDirZ = dz;
+            e.yaw = std::atan2(static_cast<float>(dx), static_cast<float>(dz));
+            e.movePulseTimer = rng.nextFloat() * 1.5f;
+            e.regX = rx;
+            e.regZ = rz;
+            enemies.push_back(e);
+            existing++;
+        }
+    }
 }
 
 float GameWorld::raycastWorld(const Vec3& origin, const Vec3& dir, float maxDist) const {
@@ -171,6 +252,7 @@ void GameWorld::update(const PlayerInput& input, bool firePressed, float dt, Aud
     if (rx != map.currentRegX || rz != map.currentRegZ) {
         if (MegaGenerator::updateInfiniteStream(map, player.position, settings)) {
             worldStreamChanged = true;
+            spawnRobotsInLoadedRegions();
         }
     }
 
@@ -220,55 +302,389 @@ void GameWorld::update(const PlayerInput& input, bool firePressed, float dt, Aud
         return;
     }
 
-    // Enemies AI
+    // Robot Enemies AI
     Vec3 target = player.eyePosition();
+    auto isWalkable = [&](float x, float z) -> bool {
+        int ix = static_cast<int>(std::floor(x));
+        int iz = static_cast<int>(std::floor(z));
+        return map.world.getBlock(ix, 1, iz) == BlockType::Air &&
+               map.world.getBlock(ix, 2, iz) == BlockType::Air;
+    };
+
+    auto isCellClear = [&](int ix, int iz) -> bool {
+        if (map.world.getBlock(ix, 1, iz) != BlockType::Air ||
+            map.world.getBlock(ix, 2, iz) != BlockType::Air) {
+            return false;
+        }
+        AABB cellBox{{ix + 0.25f, 1.0f, iz + 0.25f}, {ix + 0.75f, 2.5f, iz + 0.75f}};
+        for (const auto& pc : map.world.propColliders()) {
+            if (cellBox.intersects(pc)) return false;
+        }
+        return true;
+    };
+
+    // 2D Grid BFS pathfinder for Chase mode (avoids getting stuck on corridor walls & props)
+    auto findNextStepBFS = [&](const Vec3& fromPos, const Vec3& toPos) -> Vec3 {
+        int sx = static_cast<int>(std::floor(fromPos.x));
+        int sz = static_cast<int>(std::floor(fromPos.z));
+        int gx = static_cast<int>(std::floor(toPos.x));
+        int gz = static_cast<int>(std::floor(toPos.z));
+        if (sx == gx && sz == gz) return toPos;
+
+        auto pack = [](int x, int z) -> int64_t {
+            return (static_cast<int64_t>(x) << 32) | static_cast<uint32_t>(z);
+        };
+
+        std::queue<std::pair<int, int>> q;
+        std::unordered_map<int64_t, int64_t> parent;
+        int64_t startKey = pack(sx, sz);
+        parent[startKey] = startKey;
+        q.push({sx, sz});
+
+        static constexpr int DX[4] = {1, -1, 0, 0};
+        static constexpr int DZ[4] = {0, 0, 1, -1};
+
+        bool found = false;
+        int explored = 0;
+        while (!q.empty() && explored < 1800) {
+            auto [cx, cz] = q.front();
+            q.pop();
+            explored++;
+
+            if (cx == gx && cz == gz) {
+                found = true;
+                break;
+            }
+
+            for (int d = 0; d < 4; ++d) {
+                int nx = cx + DX[d];
+                int nz = cz + DZ[d];
+                if (std::abs(nx - sx) > 40 || std::abs(nz - sz) > 40) continue;
+                int64_t nk = pack(nx, nz);
+                if (parent.count(nk)) continue;
+                if (!isCellClear(nx, nz) && !(nx == gx && nz == gz)) continue;
+                parent[nk] = pack(cx, cz);
+                q.push({nx, nz});
+            }
+        }
+
+        if (!found) return toPos;
+
+        // Backtrack from goal to find the immediate next cell after (sx, sz)
+        int64_t cur = pack(gx, gz);
+        while (parent.count(cur) && parent[cur] != startKey) {
+            cur = parent[cur];
+        }
+        int nextX = static_cast<int>(cur >> 32);
+        int nextZ = static_cast<int>(static_cast<int32_t>(cur & 0xFFFFFFFF));
+        return {nextX + 0.5f, 1.0f, nextZ + 0.5f};
+    };
+
+    Rng aiRng(static_cast<uint64_t>(player.position.x * 100.0f + player.position.z * 37.0f + enemies.size()));
+
     for (auto& e : enemies) {
         if (!e.alive) continue;
         if (e.attackCooldown > 0.0f) e.attackCooldown -= dt;
         if (e.hurtFlash > 0.0f) e.hurtFlash -= dt;
+        if (e.decisionCooldown > 0.0f) e.decisionCooldown -= dt;
 
-        Vec3 eEye = {e.pos.x, e.pos.y + e.height * 0.7f, e.pos.z};
+        Vec3 eEye = {e.pos.x, e.pos.y + 2.12f, e.pos.z};
         Vec3 toPlayer = target - eEye;
         float dist = length(toPlayer);
 
-        if (dist < 22.0f) {
-            Vec3 dir = toPlayer / std::max(dist, 1e-4f);
-            float wall = raycastWorld(eEye, dir, dist);
-            if (wall >= dist - 0.5f) {
-                e.alerted = true;
+        // Check line-of-sight to player
+        bool canSeePlayer = false;
+        if (dist <= 30.0f && dist > 0.1f) {
+            Vec3 forward{std::sin(e.yaw), 0.0f, std::cos(e.yaw)};
+            Vec3 toPlayerHoriz = normalize({toPlayer.x, 0.0f, toPlayer.z});
+            bool inCone = (e.aiState == EnemyAIState::Chase || e.aiState == EnemyAIState::InvestigateLastSeen)
+                              ? (dot(forward, toPlayerHoriz) > -0.2f)
+                              : (dot(forward, toPlayerHoriz) > 0.35f); // Patrol: front only
+            if (inCone) {
+                Vec3 dir = toPlayer / dist;
+                float wall = raycastWorld(eEye, dir, dist);
+                if (wall >= dist - 0.6f) {
+                    canSeePlayer = true;
+                }
             }
         }
 
-        if (e.alerted && dist > 0.1f) {
-            Vec3 horiz = {target.x - e.pos.x, 0.0f, target.z - e.pos.z};
-            float hDist = length(horiz);
-            if (hDist > 1.2f) {
-                Vec3 moveDir = horiz / hDist;
-                float spd = (e.kind == SpriteType::EnemyStalker) ? 4.2f :
-                            (e.kind == SpriteType::EnemyDrone ? 3.1f : 2.3f);
-                Vec3 nextPos = e.pos + moveDir * (spd * dt);
-                int nx = static_cast<int>(std::floor(nextPos.x));
-                int ny = static_cast<int>(std::floor(nextPos.y + 0.3f));
-                int nz = static_cast<int>(std::floor(nextPos.z));
-                if (map.world.getBlock(nx, ny, nz) == BlockType::Air) {
-                    e.pos.x = nextPos.x;
-                    e.pos.z = nextPos.z;
+        if (canSeePlayer) {
+            if (e.aiState == EnemyAIState::Patrol || e.aiState == EnemyAIState::ReturnToAggro) {
+                e.aggroOrigin = e.pos;
+                e.alertPulseTimer = 0.0f;
+            }
+            e.aiState = EnemyAIState::Chase;
+            e.alerted = true;
+            e.lastSeenPos = player.position;
+        } else if (e.aiState == EnemyAIState::Chase) {
+            e.aiState = EnemyAIState::InvestigateLastSeen;
+            e.pathTimer = 0.0f;
+        }
+
+        float soundVol = std::clamp(1.0f - (dist / 28.0f), 0.0f, 1.0f);
+        soundVol *= soundVol;
+        Vec3 prevPos = e.pos;
+
+        if (e.aiState == EnemyAIState::Patrol) {
+            e.alerted = false;
+            if (e.turnPauseTimer > 0.0f) {
+                e.turnPauseTimer -= dt;
+                e.movePulseTimer = 0.0f;
+                float targetYaw = std::atan2(static_cast<float>(e.pendingDirX),
+                                             static_cast<float>(e.pendingDirZ));
+                float diff = targetYaw - e.yaw;
+                while (diff > PI) diff -= 2.0f * PI;
+                while (diff < -PI) diff += 2.0f * PI;
+                e.yaw += diff * std::min(1.0f, dt * 6.0f);
+                if (e.turnPauseTimer <= 0.0f) {
+                    e.dirX = e.pendingDirX;
+                    e.dirZ = e.pendingDirZ;
+                    e.yaw = targetYaw;
+                }
+            } else {
+                // Constant steady patrol velocity calibrated so a 1.12m wide stride = 1 step per 1.50 seconds!
+                // Full 2-step cycle = 3.0s, stance duration = 2.55s -> v = 1.12m / 2.55s = 0.44 m/s
+                constexpr float PATROL_SPEED = 0.44f;
+                float nx = e.pos.x + e.dirX * PATROL_SPEED * dt;
+                float nz = e.pos.z + e.dirZ * PATROL_SPEED * dt;
+
+                int perpX = -e.dirZ, perpZ = e.dirX;
+                int ix = static_cast<int>(std::floor(e.pos.x));
+                int iz = static_cast<int>(std::floor(e.pos.z));
+                int negSpan = 0, posSpan = 0;
+                while (negSpan < 3 && isWalkable(ix + 0.5f - perpX * (negSpan + 1), iz + 0.5f - perpZ * (negSpan + 1))) negSpan++;
+                while (posSpan < 3 && isWalkable(ix + 0.5f + perpX * (posSpan + 1), iz + 0.5f + perpZ * (posSpan + 1))) posSpan++;
+                if (negSpan + posSpan <= 4) {
+                    float centerOffset = (posSpan - negSpan) * 0.5f;
+                    if (perpX != 0) nx += (ix + 0.5f + centerOffset * perpX - nx) * std::min(1.0f, dt * 4.0f);
+                    else            nz += (iz + 0.5f + centerOffset * perpZ - nz) * std::min(1.0f, dt * 4.0f);
+                }
+
+                if (isWalkable(nx, nz)) {
+                    e.pos.x = nx;
+                    e.pos.z = nz;
+                }
+
+                int cx = static_cast<int>(std::floor(e.pos.x));
+                int cz = static_cast<int>(std::floor(e.pos.z));
+                bool blockedAhead = !isWalkable(e.pos.x + e.dirX * 1.1f, e.pos.z + e.dirZ * 1.1f);
+
+                if (e.decisionCooldown <= 0.0f || blockedAhead) {
+                    int leftX = -e.dirZ, leftZ = e.dirX;
+                    int rightX = e.dirZ, rightZ = -e.dirX;
+                    bool openFwd = isWalkable(cx + 0.5f + e.dirX * 1.8f, cz + 0.5f + e.dirZ * 1.8f);
+                    bool openLeft = isWalkable(cx + 0.5f + leftX * 2.2f, cz + 0.5f + leftZ * 2.2f);
+                    bool openRight = isWalkable(cx + 0.5f + rightX * 2.2f, cz + 0.5f + rightZ * 2.2f);
+
+                    if (openLeft || openRight || blockedAhead) {
+                        struct DirOpt { int dx, dz; };
+                        std::vector<DirOpt> opts;
+                        if (openFwd && !blockedAhead) opts.push_back({e.dirX, e.dirZ});
+                        if (openLeft) opts.push_back({leftX, leftZ});
+                        if (openRight) opts.push_back({rightX, rightZ});
+
+                        DirOpt chosen{e.dirX, e.dirZ};
+                        if (!opts.empty()) chosen = opts[aiRng.rangeInt(0, static_cast<int>(opts.size()) - 1)];
+                        else if (blockedAhead) chosen = {-e.dirX, -e.dirZ};
+
+                        if (chosen.dx != e.dirX || chosen.dz != e.dirZ) {
+                            e.pendingDirX = chosen.dx;
+                            e.pendingDirZ = chosen.dz;
+                            e.turnPauseTimer = 1.0f;
+                        }
+                        e.decisionCooldown = 4.5f;
+                    }
+                }
+            }
+        } else if (e.aiState == EnemyAIState::Chase || e.aiState == EnemyAIState::InvestigateLastSeen) {
+            float chaseSpeed = 4.4f;
+            e.alerted = true;
+            e.alertPulseTimer -= dt;
+            if (e.alertPulseTimer <= 0.0f) {
+                e.alertPulseTimer = 0.62f;
+                if (soundVol > 0.02f) audio.play(SoundId::RobotAlertPulse, soundVol * 0.85f);
+            }
+
+            Vec3 goalPos = (e.aiState == EnemyAIState::Chase) ? player.position : e.lastSeenPos;
+
+            if (e.aiState == EnemyAIState::InvestigateLastSeen &&
+                lengthSq({goalPos.x - e.pos.x, 0.0f, goalPos.z - e.pos.z}) < 1.25f * 1.25f) {
+                e.aiState = EnemyAIState::ReturnToAggro;
+                e.alerted = false;
+                e.pathTimer = 0.0f;
+                e.movePulseTimer = 0.0f;
+            } else {
+                e.pathTimer -= dt;
+                if (e.pathTimer <= 0.0f || !e.hasWaypoint) {
+                    e.pathTimer = 0.25f;
+                    e.nextWaypoint = findNextStepBFS(e.pos, goalPos);
+                    e.hasWaypoint = true;
+                }
+
+                Vec3 moveTarget = (e.aiState == EnemyAIState::Chase && canSeePlayer && dist < 3.5f)
+                                      ? player.position
+                                      : e.nextWaypoint;
+                Vec3 horiz = {moveTarget.x - e.pos.x, 0.0f, moveTarget.z - e.pos.z};
+                float hDist = length(horiz);
+                if (hDist > 0.05f) {
+                    Vec3 moveDir = horiz / hDist;
+                    e.yaw = std::atan2(moveDir.x, moveDir.z);
+
+                    if (e.aiState != EnemyAIState::Chase || dist > 1.15f) {
+                        float nx = e.pos.x + moveDir.x * chaseSpeed * dt;
+                        float nz = e.pos.z + moveDir.z * chaseSpeed * dt;
+                        if (isWalkable(nx, e.pos.z)) e.pos.x = nx;
+                        if (isWalkable(e.pos.x, nz)) e.pos.z = nz;
+                    }
+                }
+
+                if (e.aiState == EnemyAIState::Chase && dist < 1.45f && e.attackCooldown <= 0.0f) {
+                    health -= 15.0f;
+                    damageFlash = 0.6f;
+                    e.attackCooldown = 1.0f;
+                    audio.play(SoundId::PlayerHurt);
+                }
+            }
+        } else {
+            // RETURN TO AGGRO POINT
+            e.alerted = false;
+            float distAggroSq = lengthSq({e.aggroOrigin.x - e.pos.x, 0.0f, e.aggroOrigin.z - e.pos.z});
+            if (distAggroSq < 1.3f * 1.3f) {
+                e.aiState = EnemyAIState::Patrol;
+                e.decisionCooldown = 0.5f;
+            } else {
+                e.pathTimer -= dt;
+                if (e.pathTimer <= 0.0f || !e.hasWaypoint) {
+                    e.pathTimer = 0.35f;
+                    e.nextWaypoint = findNextStepBFS(e.pos, e.aggroOrigin);
+                    e.hasWaypoint = true;
+                }
+                constexpr float RETURN_SPEED = 0.44f;
+                Vec3 horiz = {e.nextWaypoint.x - e.pos.x, 0.0f, e.nextWaypoint.z - e.pos.z};
+                float hDist = length(horiz);
+                if (hDist > 0.05f) {
+                    Vec3 moveDir = horiz / hDist;
+                    e.yaw = std::atan2(moveDir.x, moveDir.z);
+                    float nx = e.pos.x + moveDir.x * RETURN_SPEED * dt;
+                    float nz = e.pos.z + moveDir.z * RETURN_SPEED * dt;
+                    if (isWalkable(nx, e.pos.z)) e.pos.x = nx;
+                    if (isWalkable(e.pos.x, nz)) e.pos.z = nz;
+                }
+            }
+        }
+
+        // =========================================================================
+        // RAIN WORLD-STYLE PROCEDURAL FOOT STEPPING & SPRING-DAMPER BODY DYNAMICS
+        // idx 0 = Left (+X local), idx 1 = Right (-X local)
+        // =========================================================================
+        e.vel = (e.pos - prevPos) / std::max(dt, 1e-4f);
+        float speedXZ = std::hypot(e.vel.x, e.vel.z);
+        Vec3 fwdVec{std::sin(e.yaw), 0.0f, std::cos(e.yaw)};
+        Vec3 leftVec{std::cos(e.yaw), 0.0f, -std::sin(e.yaw)}; // +X in robot local space
+
+        // Initialize feet in an exact half-cycle staggered stance so Right foot (idx 1) steps forward first
+        // and Left/Right alternate with symmetric ~1.50s intervals!
+        if (!e.feet[0].initialized || !e.feet[1].initialized) {
+            e.feet[0].worldPos = e.pos + leftVec * (0.182f) + fwdVec * (0.11f);
+            e.feet[0].worldPos.y = 1.0f;
+            e.feet[0].targetPos = e.feet[0].worldPos;
+            e.feet[0].initialized = true;
+
+            e.feet[1].worldPos = e.pos + leftVec * (-0.182f) - fwdVec * (0.52f); // Right trailing -> steps FIRST!
+            e.feet[1].worldPos.y = 1.0f;
+            e.feet[1].targetPos = e.feet[1].worldPos;
+            e.feet[1].initialized = true;
+        }
+
+        for (int pass = 0; pass < 2; ++pass) {
+            int i = (pass == 0) ? 1 : 0; // Right foot (1) checked first
+            int localSide = (i == 0) ? 1 : -1;
+            Vec3 ideal = e.pos + leftVec * (localSide * 0.182f);
+            ideal.y = 1.0f;
+
+            if (e.feet[i].stepping) {
+                e.feet[i].stepT += dt / e.feet[i].stepDuration;
+                if (e.feet[i].stepT >= 1.0f) {
+                    e.feet[i].worldPos = e.feet[i].targetPos;
+                    e.feet[i].worldPos.y = 1.0f;
+                    e.feet[i].stepping = false;
+                    e.feet[i].stepT = 0.0f;
+
+                    e.pelvisVelY -= e.alerted ? 1.85f : 1.15f;
+                    if (soundVol > 0.02f) {
+                        audio.play(SoundId::RobotStep, soundVol * (e.alerted ? 0.55f : 0.95f));
+                    }
+                } else {
+                    float t = e.feet[i].stepT;
+                    float horizT = std::pow(t, 0.65f);
+                    float liftH = e.alerted ? 0.40f : 0.34f;
+                    e.feet[i].worldPos.x = e.feet[i].startPos.x + (e.feet[i].targetPos.x - e.feet[i].startPos.x) * horizT;
+                    e.feet[i].worldPos.z = e.feet[i].startPos.z + (e.feet[i].targetPos.z - e.feet[i].startPos.z) * horizT;
+                    e.feet[i].worldPos.y = 1.0f + std::sin(t * PI) * liftH;
+                }
+            } else {
+                bool otherBusy = e.alerted
+                                     ? (e.feet[1 - i].stepping && e.feet[1 - i].stepT < 0.65f)
+                                     : e.feet[1 - i].stepping;
+                if (!otherBusy) {
+                    Vec3 offset = e.feet[i].worldPos - ideal;
+                    Vec3 moveDir = (speedXZ > 0.15f)
+                                       ? Vec3{e.vel.x / speedXZ, 0.0f, e.vel.z / speedXZ}
+                                       : fwdVec;
+                    // Signed distance BEHIND the hip along travel direction (+ = trailing behind, - = ahead!)
+                    float behindDist = -dot(offset, moveDir);
+                    float lateralDist = std::abs(dot(offset, Vec3{-moveDir.z, 0.0f, moveDir.x}));
+
+                    // Patrol: foot triggers ONLY when trailing >= 0.54m behind hip (or >0.35m sideways on turn)
+                    // At v=0.44 m/s and landing at +0.56m ahead, full 1.10m stance = ~2.50s + 0.44s swing = 2.94s cycle -> 1 step / 1.47s!
+                    float triggerBehind = e.alerted ? 0.34f : 0.54f;
+                    bool shouldStep = (behindDist > triggerBehind) || (lateralDist > 0.35f);
+                    if (shouldStep) {
+                        e.feet[i].stepping = true;
+                        e.feet[i].stepT = 0.0f;
+                        e.feet[i].stepDuration = e.alerted ? 0.14f : 0.44f;
+                        e.feet[i].startPos = e.feet[i].worldPos;
+
+                        if (speedXZ > 0.15f) {
+                            float leadAmt = e.alerted
+                                                ? clampf(speedXZ * e.feet[i].stepDuration * 1.05f, 0.40f, 0.64f)
+                                                : (0.56f + speedXZ * e.feet[i].stepDuration);
+                            e.feet[i].targetPos = ideal + moveDir * leadAmt;
+                        } else {
+                            e.feet[i].targetPos = ideal;
+                        }
+                        e.feet[i].targetPos.y = 1.0f;
+                    }
                 }
             }
 
-            // Attack
-            if (e.kind == SpriteType::EnemyStalker && dist < 1.6f && e.attackCooldown <= 0.0f) {
-                health -= 12.0f;
-                damageFlash = 0.6f;
-                e.attackCooldown = 1.0f;
-                audio.play(SoundId::PlayerHurt);
-            } else if ((e.kind == SpriteType::EnemyDrone || e.kind == SpriteType::EnemyHeavy) &&
-                       dist < 20.0f && e.attackCooldown <= 0.0f) {
-                Vec3 dir = normalize(target - eEye);
-                projectiles.push_back({eEye, dir * 13.0f, 3.0f,
-                                       (e.kind == SpriteType::EnemyHeavy) ? 16.0f : 9.0f, false});
-                e.attackCooldown = (e.kind == SpriteType::EnemyHeavy) ? 1.5f : 1.9f;
+            // Reachability clamp (max horizontal reach = 0.68m for 1.288m leg at 1.092m hip height)
+            float hdx = e.feet[i].worldPos.x - ideal.x;
+            float hdz = e.feet[i].worldPos.z - ideal.z;
+            float hDist = std::hypot(hdx, hdz);
+            constexpr float MAX_HORIZ_REACH = 0.68f;
+            if (hDist > MAX_HORIZ_REACH) {
+                float scale = MAX_HORIZ_REACH / hDist;
+                e.feet[i].worldPos.x = ideal.x + hdx * scale;
+                e.feet[i].worldPos.z = ideal.z + hdz * scale;
             }
+        }
+
+        // Spring-damper pelvis bounce & torso lean from real velocity
+        e.pelvisVelY += (-150.0f * e.pelvisOffsetY - 14.0f * e.pelvisVelY) * dt;
+        e.pelvisOffsetY = clampf(e.pelvisOffsetY + e.pelvisVelY * dt, -0.14f, 0.10f);
+        float targetLean = clampf(dot(e.vel, fwdVec) * 0.055f, -0.08f, 0.28f);
+        e.torsoLeanX += (targetLean - e.torsoLeanX) * std::min(1.0f, dt * 10.0f);
+
+        // Spring-damper arms counter-balancing actual foot positions
+        for (int i = 0; i < 2; ++i) {
+            int otherSide = ((1 - i) == 0) ? 1 : -1;
+            Vec3 otherIdeal = e.pos + leftVec * (otherSide * 0.182f);
+            float legFwd = dot(e.feet[1 - i].worldPos - otherIdeal, fwdVec);
+            float targetArm = clampf(-legFwd * 1.35f, -0.85f, 0.85f);
+            e.armVel[i] += (110.0f * (targetArm - e.armAngle[i]) - 11.0f * e.armVel[i]) * dt;
+            e.armAngle[i] += e.armVel[i] * dt;
         }
     }
 
@@ -318,6 +734,41 @@ void GameWorld::gatherBillboards(std::vector<BillboardInstance>& out, float time
         out.push_back({pt.pos, 0.12f, 0.12f, SpriteType::Spark, pt.color});
     }
     (void)timeSec;
+}
+
+void GameWorld::gatherRobots(std::vector<RobotRenderState>& out) const {
+    out.clear();
+    for (const auto& e : enemies) {
+        if (!e.alive) continue;
+        RobotRenderState rs;
+        rs.pos = e.pos;
+        rs.yaw = e.yaw;
+        rs.footWorldPos[0] = e.feet[0].initialized ? e.feet[0].worldPos : e.pos;
+        rs.footWorldPos[1] = e.feet[1].initialized ? e.feet[1].worldPos : e.pos;
+        rs.pelvisOffsetY = e.pelvisOffsetY;
+        rs.armAngle[0] = e.armAngle[0];
+        rs.armAngle[1] = e.armAngle[1];
+        rs.torsoLeanX = e.torsoLeanX;
+        rs.alerted = e.alerted;
+        rs.hurt = e.hurtFlash > 0.0f;
+        out.push_back(rs);
+    }
+}
+
+void GameWorld::gatherRobotLights(std::vector<PointLight3D>& out) const {
+    for (const auto& e : enemies) {
+        if (!e.alive) continue;
+        PointLight3D pl;
+        pl.pos = {
+            e.pos.x + std::sin(e.yaw) * 0.30f,
+            e.pos.y + 2.28f,
+            e.pos.z + std::cos(e.yaw) * 0.30f
+        };
+        pl.color = e.alerted ? Vec3{1.0f, 0.12f, 0.10f} : Vec3{0.25f, 0.80f, 1.0f};
+        pl.radius = e.alerted ? 9.5f : 7.0f;
+        pl.intensity = e.alerted ? 1.35f : 0.90f;
+        out.push_back(pl);
+    }
 }
 
 } // namespace mega

@@ -1,5 +1,5 @@
 {
-  "tests": 4,
+  "tests": 6,
   "name": "AllTests",
   "testsuites": [
     {
@@ -43,6 +43,22 @@
           "name": "RaycastAndEnemySpawningWork",
           "file": "\/home\/ivan\/ImportantFiles\/My Games\/MEGA\/tests\/CoreTests.cpp",
           "line": 75
+        }
+      ]
+    },
+    {
+      "name": "RobotSimTest",
+      "tests": 2,
+      "testsuite": [
+        {
+          "name": "ObservePatrolAndChaseFootKinematics",
+          "file": "\/home\/ivan\/ImportantFiles\/My Games\/MEGA\/tests\/CoreTests.cpp",
+          "line": 86
+        },
+        {
+          "name": "ObserveMapNavigationPatrolAndChase",
+          "file": "\/home\/ivan\/ImportantFiles\/My Games\/MEGA\/tests\/CoreTests.cpp",
+          "line": 160
         }
       ]
     }

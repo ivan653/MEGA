@@ -14,6 +14,8 @@ file(REMOVE_RECURSE
   "CMakeFiles/mega.dir/src/render/Framebuffer.cpp.o.d"
   "CMakeFiles/mega.dir/src/render/HudRenderer.cpp.o"
   "CMakeFiles/mega.dir/src/render/HudRenderer.cpp.o.d"
+  "CMakeFiles/mega.dir/src/render/RobotRenderer.cpp.o"
+  "CMakeFiles/mega.dir/src/render/RobotRenderer.cpp.o.d"
   "CMakeFiles/mega.dir/src/render/Shader.cpp.o"
   "CMakeFiles/mega.dir/src/render/Shader.cpp.o.d"
   "CMakeFiles/mega.dir/src/render/TextureAtlas.cpp.o"

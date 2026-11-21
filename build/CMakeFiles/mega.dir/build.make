@@ -159,10 +159,24 @@ CMakeFiles/mega.dir/src/render/BillboardRenderer.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/mega.dir/src/render/BillboardRenderer.cpp.s"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S "/home/ivan/ImportantFiles/My Games/MEGA/src/render/BillboardRenderer.cpp" -o CMakeFiles/mega.dir/src/render/BillboardRenderer.cpp.s
 
+CMakeFiles/mega.dir/src/render/RobotRenderer.cpp.o: CMakeFiles/mega.dir/flags.make
+CMakeFiles/mega.dir/src/render/RobotRenderer.cpp.o: /home/ivan/ImportantFiles/My\ Games/MEGA/src/render/RobotRenderer.cpp
+CMakeFiles/mega.dir/src/render/RobotRenderer.cpp.o: CMakeFiles/mega.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir="/home/ivan/ImportantFiles/My Games/MEGA/build/CMakeFiles" --progress-num=$(CMAKE_PROGRESS_7) "Building CXX object CMakeFiles/mega.dir/src/render/RobotRenderer.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/mega.dir/src/render/RobotRenderer.cpp.o -MF CMakeFiles/mega.dir/src/render/RobotRenderer.cpp.o.d -o CMakeFiles/mega.dir/src/render/RobotRenderer.cpp.o -c "/home/ivan/ImportantFiles/My Games/MEGA/src/render/RobotRenderer.cpp"
+
+CMakeFiles/mega.dir/src/render/RobotRenderer.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/mega.dir/src/render/RobotRenderer.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E "/home/ivan/ImportantFiles/My Games/MEGA/src/render/RobotRenderer.cpp" > CMakeFiles/mega.dir/src/render/RobotRenderer.cpp.i
+
+CMakeFiles/mega.dir/src/render/RobotRenderer.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/mega.dir/src/render/RobotRenderer.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S "/home/ivan/ImportantFiles/My Games/MEGA/src/render/RobotRenderer.cpp" -o CMakeFiles/mega.dir/src/render/RobotRenderer.cpp.s
+
 CMakeFiles/mega.dir/src/render/HudRenderer.cpp.o: CMakeFiles/mega.dir/flags.make
 CMakeFiles/mega.dir/src/render/HudRenderer.cpp.o: /home/ivan/ImportantFiles/My\ Games/MEGA/src/render/HudRenderer.cpp
 CMakeFiles/mega.dir/src/render/HudRenderer.cpp.o: CMakeFiles/mega.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir="/home/ivan/ImportantFiles/My Games/MEGA/build/CMakeFiles" --progress-num=$(CMAKE_PROGRESS_7) "Building CXX object CMakeFiles/mega.dir/src/render/HudRenderer.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir="/home/ivan/ImportantFiles/My Games/MEGA/build/CMakeFiles" --progress-num=$(CMAKE_PROGRESS_8) "Building CXX object CMakeFiles/mega.dir/src/render/HudRenderer.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/mega.dir/src/render/HudRenderer.cpp.o -MF CMakeFiles/mega.dir/src/render/HudRenderer.cpp.o.d -o CMakeFiles/mega.dir/src/render/HudRenderer.cpp.o -c "/home/ivan/ImportantFiles/My Games/MEGA/src/render/HudRenderer.cpp"
 
 CMakeFiles/mega.dir/src/render/HudRenderer.cpp.i: cmake_force
@@ -176,7 +190,7 @@ CMakeFiles/mega.dir/src/render/HudRenderer.cpp.s: cmake_force
 CMakeFiles/mega.dir/src/world/WorldGrid.cpp.o: CMakeFiles/mega.dir/flags.make
 CMakeFiles/mega.dir/src/world/WorldGrid.cpp.o: /home/ivan/ImportantFiles/My\ Games/MEGA/src/world/WorldGrid.cpp
 CMakeFiles/mega.dir/src/world/WorldGrid.cpp.o: CMakeFiles/mega.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir="/home/ivan/ImportantFiles/My Games/MEGA/build/CMakeFiles" --progress-num=$(CMAKE_PROGRESS_8) "Building CXX object CMakeFiles/mega.dir/src/world/WorldGrid.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir="/home/ivan/ImportantFiles/My Games/MEGA/build/CMakeFiles" --progress-num=$(CMAKE_PROGRESS_9) "Building CXX object CMakeFiles/mega.dir/src/world/WorldGrid.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/mega.dir/src/world/WorldGrid.cpp.o -MF CMakeFiles/mega.dir/src/world/WorldGrid.cpp.o.d -o CMakeFiles/mega.dir/src/world/WorldGrid.cpp.o -c "/home/ivan/ImportantFiles/My Games/MEGA/src/world/WorldGrid.cpp"
 
 CMakeFiles/mega.dir/src/world/WorldGrid.cpp.i: cmake_force
@@ -190,7 +204,7 @@ CMakeFiles/mega.dir/src/world/WorldGrid.cpp.s: cmake_force
 CMakeFiles/mega.dir/src/world/LightBaker.cpp.o: CMakeFiles/mega.dir/flags.make
 CMakeFiles/mega.dir/src/world/LightBaker.cpp.o: /home/ivan/ImportantFiles/My\ Games/MEGA/src/world/LightBaker.cpp
 CMakeFiles/mega.dir/src/world/LightBaker.cpp.o: CMakeFiles/mega.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir="/home/ivan/ImportantFiles/My Games/MEGA/build/CMakeFiles" --progress-num=$(CMAKE_PROGRESS_9) "Building CXX object CMakeFiles/mega.dir/src/world/LightBaker.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir="/home/ivan/ImportantFiles/My Games/MEGA/build/CMakeFiles" --progress-num=$(CMAKE_PROGRESS_10) "Building CXX object CMakeFiles/mega.dir/src/world/LightBaker.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/mega.dir/src/world/LightBaker.cpp.o -MF CMakeFiles/mega.dir/src/world/LightBaker.cpp.o.d -o CMakeFiles/mega.dir/src/world/LightBaker.cpp.o -c "/home/ivan/ImportantFiles/My Games/MEGA/src/world/LightBaker.cpp"
 
 CMakeFiles/mega.dir/src/world/LightBaker.cpp.i: cmake_force
@@ -204,7 +218,7 @@ CMakeFiles/mega.dir/src/world/LightBaker.cpp.s: cmake_force
 CMakeFiles/mega.dir/src/world/gen/MegaGenerator.cpp.o: CMakeFiles/mega.dir/flags.make
 CMakeFiles/mega.dir/src/world/gen/MegaGenerator.cpp.o: /home/ivan/ImportantFiles/My\ Games/MEGA/src/world/gen/MegaGenerator.cpp
 CMakeFiles/mega.dir/src/world/gen/MegaGenerator.cpp.o: CMakeFiles/mega.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir="/home/ivan/ImportantFiles/My Games/MEGA/build/CMakeFiles" --progress-num=$(CMAKE_PROGRESS_10) "Building CXX object CMakeFiles/mega.dir/src/world/gen/MegaGenerator.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir="/home/ivan/ImportantFiles/My Games/MEGA/build/CMakeFiles" --progress-num=$(CMAKE_PROGRESS_11) "Building CXX object CMakeFiles/mega.dir/src/world/gen/MegaGenerator.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/mega.dir/src/world/gen/MegaGenerator.cpp.o -MF CMakeFiles/mega.dir/src/world/gen/MegaGenerator.cpp.o.d -o CMakeFiles/mega.dir/src/world/gen/MegaGenerator.cpp.o -c "/home/ivan/ImportantFiles/My Games/MEGA/src/world/gen/MegaGenerator.cpp"
 
 CMakeFiles/mega.dir/src/world/gen/MegaGenerator.cpp.i: cmake_force
@@ -218,7 +232,7 @@ CMakeFiles/mega.dir/src/world/gen/MegaGenerator.cpp.s: cmake_force
 CMakeFiles/mega.dir/src/game/Player.cpp.o: CMakeFiles/mega.dir/flags.make
 CMakeFiles/mega.dir/src/game/Player.cpp.o: /home/ivan/ImportantFiles/My\ Games/MEGA/src/game/Player.cpp
 CMakeFiles/mega.dir/src/game/Player.cpp.o: CMakeFiles/mega.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir="/home/ivan/ImportantFiles/My Games/MEGA/build/CMakeFiles" --progress-num=$(CMAKE_PROGRESS_11) "Building CXX object CMakeFiles/mega.dir/src/game/Player.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir="/home/ivan/ImportantFiles/My Games/MEGA/build/CMakeFiles" --progress-num=$(CMAKE_PROGRESS_12) "Building CXX object CMakeFiles/mega.dir/src/game/Player.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/mega.dir/src/game/Player.cpp.o -MF CMakeFiles/mega.dir/src/game/Player.cpp.o.d -o CMakeFiles/mega.dir/src/game/Player.cpp.o -c "/home/ivan/ImportantFiles/My Games/MEGA/src/game/Player.cpp"
 
 CMakeFiles/mega.dir/src/game/Player.cpp.i: cmake_force
@@ -232,7 +246,7 @@ CMakeFiles/mega.dir/src/game/Player.cpp.s: cmake_force
 CMakeFiles/mega.dir/src/game/GameWorld.cpp.o: CMakeFiles/mega.dir/flags.make
 CMakeFiles/mega.dir/src/game/GameWorld.cpp.o: /home/ivan/ImportantFiles/My\ Games/MEGA/src/game/GameWorld.cpp
 CMakeFiles/mega.dir/src/game/GameWorld.cpp.o: CMakeFiles/mega.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir="/home/ivan/ImportantFiles/My Games/MEGA/build/CMakeFiles" --progress-num=$(CMAKE_PROGRESS_12) "Building CXX object CMakeFiles/mega.dir/src/game/GameWorld.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir="/home/ivan/ImportantFiles/My Games/MEGA/build/CMakeFiles" --progress-num=$(CMAKE_PROGRESS_13) "Building CXX object CMakeFiles/mega.dir/src/game/GameWorld.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/mega.dir/src/game/GameWorld.cpp.o -MF CMakeFiles/mega.dir/src/game/GameWorld.cpp.o.d -o CMakeFiles/mega.dir/src/game/GameWorld.cpp.o -c "/home/ivan/ImportantFiles/My Games/MEGA/src/game/GameWorld.cpp"
 
 CMakeFiles/mega.dir/src/game/GameWorld.cpp.i: cmake_force
@@ -246,7 +260,7 @@ CMakeFiles/mega.dir/src/game/GameWorld.cpp.s: cmake_force
 CMakeFiles/mega.dir/src/audio/AudioEngine.cpp.o: CMakeFiles/mega.dir/flags.make
 CMakeFiles/mega.dir/src/audio/AudioEngine.cpp.o: /home/ivan/ImportantFiles/My\ Games/MEGA/src/audio/AudioEngine.cpp
 CMakeFiles/mega.dir/src/audio/AudioEngine.cpp.o: CMakeFiles/mega.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir="/home/ivan/ImportantFiles/My Games/MEGA/build/CMakeFiles" --progress-num=$(CMAKE_PROGRESS_13) "Building CXX object CMakeFiles/mega.dir/src/audio/AudioEngine.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir="/home/ivan/ImportantFiles/My Games/MEGA/build/CMakeFiles" --progress-num=$(CMAKE_PROGRESS_14) "Building CXX object CMakeFiles/mega.dir/src/audio/AudioEngine.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/mega.dir/src/audio/AudioEngine.cpp.o -MF CMakeFiles/mega.dir/src/audio/AudioEngine.cpp.o.d -o CMakeFiles/mega.dir/src/audio/AudioEngine.cpp.o -c "/home/ivan/ImportantFiles/My Games/MEGA/src/audio/AudioEngine.cpp"
 
 CMakeFiles/mega.dir/src/audio/AudioEngine.cpp.i: cmake_force
@@ -265,6 +279,7 @@ mega_OBJECTS = \
 "CMakeFiles/mega.dir/src/render/TextureAtlas.cpp.o" \
 "CMakeFiles/mega.dir/src/render/WorldMesher.cpp.o" \
 "CMakeFiles/mega.dir/src/render/BillboardRenderer.cpp.o" \
+"CMakeFiles/mega.dir/src/render/RobotRenderer.cpp.o" \
 "CMakeFiles/mega.dir/src/render/HudRenderer.cpp.o" \
 "CMakeFiles/mega.dir/src/world/WorldGrid.cpp.o" \
 "CMakeFiles/mega.dir/src/world/LightBaker.cpp.o" \
@@ -282,6 +297,7 @@ mega: CMakeFiles/mega.dir/src/render/Framebuffer.cpp.o
 mega: CMakeFiles/mega.dir/src/render/TextureAtlas.cpp.o
 mega: CMakeFiles/mega.dir/src/render/WorldMesher.cpp.o
 mega: CMakeFiles/mega.dir/src/render/BillboardRenderer.cpp.o
+mega: CMakeFiles/mega.dir/src/render/RobotRenderer.cpp.o
 mega: CMakeFiles/mega.dir/src/render/HudRenderer.cpp.o
 mega: CMakeFiles/mega.dir/src/world/WorldGrid.cpp.o
 mega: CMakeFiles/mega.dir/src/world/LightBaker.cpp.o
@@ -296,7 +312,7 @@ mega: /usr/lib/libGLX.so
 mega: /usr/lib/libOpenGL.so
 mega: /usr/lib/libepoxy.so
 mega: CMakeFiles/mega.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir="/home/ivan/ImportantFiles/My Games/MEGA/build/CMakeFiles" --progress-num=$(CMAKE_PROGRESS_14) "Linking CXX executable mega"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir="/home/ivan/ImportantFiles/My Games/MEGA/build/CMakeFiles" --progress-num=$(CMAKE_PROGRESS_15) "Linking CXX executable mega"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/mega.dir/link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.

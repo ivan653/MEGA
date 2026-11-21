@@ -1,10 +1,10 @@
-Start testing: Nov 21 22:04 EET
+Start testing: Nov 21 23:45 EET
 ----------------------------------------------------------
-1/4 Testing: WorldGridTest.BoundsAndBlockPlacement
-1/4 Test: WorldGridTest.BoundsAndBlockPlacement
+1/5 Testing: WorldGridTest.BoundsAndBlockPlacement
+1/5 Test: WorldGridTest.BoundsAndBlockPlacement
 Command: "/home/ivan/ImportantFiles/My Games/MEGA/build/mega_tests" "--gtest_filter=WorldGridTest.BoundsAndBlockPlacement" "--gtest_also_run_disabled_tests"
 Directory: /home/ivan/ImportantFiles/My Games/MEGA/build
-"WorldGridTest.BoundsAndBlockPlacement" start time: Nov 21 22:04 EET
+"WorldGridTest.BoundsAndBlockPlacement" start time: Nov 21 23:45 EET
 Output:
 ----------------------------------------------------------
 Running main() from /usr/src/debug/gtest/googletest-1.18.0/googletest/src/gtest_main.cc
@@ -23,15 +23,15 @@ Note: Google Test filter = WorldGridTest.BoundsAndBlockPlacement
 Test time =   0.00 sec
 ----------------------------------------------------------
 Test Passed.
-"WorldGridTest.BoundsAndBlockPlacement" end time: Nov 21 22:04 EET
+"WorldGridTest.BoundsAndBlockPlacement" end time: Nov 21 23:45 EET
 "WorldGridTest.BoundsAndBlockPlacement" time elapsed: 00:00:00
 ----------------------------------------------------------
 
-2/4 Testing: PlayerPhysicsTest.GravityLandsOnFloorAndStepUpWorks
-2/4 Test: PlayerPhysicsTest.GravityLandsOnFloorAndStepUpWorks
+2/5 Testing: PlayerPhysicsTest.GravityLandsOnFloorAndStepUpWorks
+2/5 Test: PlayerPhysicsTest.GravityLandsOnFloorAndStepUpWorks
 Command: "/home/ivan/ImportantFiles/My Games/MEGA/build/mega_tests" "--gtest_filter=PlayerPhysicsTest.GravityLandsOnFloorAndStepUpWorks" "--gtest_also_run_disabled_tests"
 Directory: /home/ivan/ImportantFiles/My Games/MEGA/build
-"PlayerPhysicsTest.GravityLandsOnFloorAndStepUpWorks" start time: Nov 21 22:04 EET
+"PlayerPhysicsTest.GravityLandsOnFloorAndStepUpWorks" start time: Nov 21 23:45 EET
 Output:
 ----------------------------------------------------------
 Running main() from /usr/src/debug/gtest/googletest-1.18.0/googletest/src/gtest_main.cc
@@ -50,15 +50,15 @@ Note: Google Test filter = PlayerPhysicsTest.GravityLandsOnFloorAndStepUpWorks
 Test time =   0.00 sec
 ----------------------------------------------------------
 Test Passed.
-"PlayerPhysicsTest.GravityLandsOnFloorAndStepUpWorks" end time: Nov 21 22:04 EET
+"PlayerPhysicsTest.GravityLandsOnFloorAndStepUpWorks" end time: Nov 21 23:45 EET
 "PlayerPhysicsTest.GravityLandsOnFloorAndStepUpWorks" time elapsed: 00:00:00
 ----------------------------------------------------------
 
-3/4 Testing: MegaGeneratorTest.GeneratesConnectedMultiBiomeMegastructureQuickly
-3/4 Test: MegaGeneratorTest.GeneratesConnectedMultiBiomeMegastructureQuickly
+3/5 Testing: MegaGeneratorTest.GeneratesConnectedMultiBiomeMegastructureQuickly
+3/5 Test: MegaGeneratorTest.GeneratesConnectedMultiBiomeMegastructureQuickly
 Command: "/home/ivan/ImportantFiles/My Games/MEGA/build/mega_tests" "--gtest_filter=MegaGeneratorTest.GeneratesConnectedMultiBiomeMegastructureQuickly" "--gtest_also_run_disabled_tests"
 Directory: /home/ivan/ImportantFiles/My Games/MEGA/build
-"MegaGeneratorTest.GeneratesConnectedMultiBiomeMegastructureQuickly" start time: Nov 21 22:04 EET
+"MegaGeneratorTest.GeneratesConnectedMultiBiomeMegastructureQuickly" start time: Nov 21 23:45 EET
 Output:
 ----------------------------------------------------------
 Running main() from /usr/src/debug/gtest/googletest-1.18.0/googletest/src/gtest_main.cc
@@ -67,25 +67,25 @@ Note: Google Test filter = MegaGeneratorTest.GeneratesConnectedMultiBiomeMegastr
 [----------] Global test environment set-up.
 [----------] 1 test from MegaGeneratorTest
 [ RUN      ] MegaGeneratorTest.GeneratesConnectedMultiBiomeMegastructureQuickly
-[       OK ] MegaGeneratorTest.GeneratesConnectedMultiBiomeMegastructureQuickly (107 ms)
-[----------] 1 test from MegaGeneratorTest (107 ms total)
+[       OK ] MegaGeneratorTest.GeneratesConnectedMultiBiomeMegastructureQuickly (74 ms)
+[----------] 1 test from MegaGeneratorTest (74 ms total)
 
 [----------] Global test environment tear-down
-[==========] 1 test from 1 test suite ran. (107 ms total)
+[==========] 1 test from 1 test suite ran. (74 ms total)
 [  PASSED  ] 1 test.
 <end of output>
-Test time =   0.11 sec
+Test time =   0.08 sec
 ----------------------------------------------------------
 Test Passed.
-"MegaGeneratorTest.GeneratesConnectedMultiBiomeMegastructureQuickly" end time: Nov 21 22:04 EET
+"MegaGeneratorTest.GeneratesConnectedMultiBiomeMegastructureQuickly" end time: Nov 21 23:45 EET
 "MegaGeneratorTest.GeneratesConnectedMultiBiomeMegastructureQuickly" time elapsed: 00:00:00
 ----------------------------------------------------------
 
-4/4 Testing: GameWorldTest.RaycastAndEnemySpawningWork
-4/4 Test: GameWorldTest.RaycastAndEnemySpawningWork
+4/5 Testing: GameWorldTest.RaycastAndEnemySpawningWork
+4/5 Test: GameWorldTest.RaycastAndEnemySpawningWork
 Command: "/home/ivan/ImportantFiles/My Games/MEGA/build/mega_tests" "--gtest_filter=GameWorldTest.RaycastAndEnemySpawningWork" "--gtest_also_run_disabled_tests"
 Directory: /home/ivan/ImportantFiles/My Games/MEGA/build
-"GameWorldTest.RaycastAndEnemySpawningWork" start time: Nov 21 22:04 EET
+"GameWorldTest.RaycastAndEnemySpawningWork" start time: Nov 21 23:45 EET
 Output:
 ----------------------------------------------------------
 Running main() from /usr/src/debug/gtest/googletest-1.18.0/googletest/src/gtest_main.cc
@@ -94,8 +94,73 @@ Note: Google Test filter = GameWorldTest.RaycastAndEnemySpawningWork
 [----------] Global test environment set-up.
 [----------] 1 test from GameWorldTest
 [ RUN      ] GameWorldTest.RaycastAndEnemySpawningWork
-[       OK ] GameWorldTest.RaycastAndEnemySpawningWork (17 ms)
-[----------] 1 test from GameWorldTest (17 ms total)
+[       OK ] GameWorldTest.RaycastAndEnemySpawningWork (13 ms)
+[----------] 1 test from GameWorldTest (13 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test suite ran. (13 ms total)
+[  PASSED  ] 1 test.
+<end of output>
+Test time =   0.02 sec
+----------------------------------------------------------
+Test Passed.
+"GameWorldTest.RaycastAndEnemySpawningWork" end time: Nov 21 23:45 EET
+"GameWorldTest.RaycastAndEnemySpawningWork" time elapsed: 00:00:00
+----------------------------------------------------------
+
+5/5 Testing: RobotSimTest.ObservePatrolAndChaseFootKinematics
+5/5 Test: RobotSimTest.ObservePatrolAndChaseFootKinematics
+Command: "/home/ivan/ImportantFiles/My Games/MEGA/build/mega_tests" "--gtest_filter=RobotSimTest.ObservePatrolAndChaseFootKinematics" "--gtest_also_run_disabled_tests"
+Directory: /home/ivan/ImportantFiles/My Games/MEGA/build
+"RobotSimTest.ObservePatrolAndChaseFootKinematics" start time: Nov 21 23:45 EET
+Output:
+----------------------------------------------------------
+Running main() from /usr/src/debug/gtest/googletest-1.18.0/googletest/src/gtest_main.cc
+Note: Google Test filter = RobotSimTest.ObservePatrolAndChaseFootKinematics
+[==========] Running 1 test from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 1 test from RobotSimTest
+[ RUN      ] RobotSimTest.ObservePatrolAndChaseFootKinematics
+=== PATROL OBSERVATION (0.0s .. 6.0s, constant speed, 1 step / 1.5s) ===
+[t=0.05s] RIGHT FOOT LIFTED  (bodyZ=70.03, v=0.44)
+[t=0.50s] RIGHT FOOT PLANTED (bodyZ=70.23, footZ=70.78, strideFromBody=0.56m)
+[t=1.48s] LEFT FOOT LIFTED  (bodyZ=70.66, v=0.44)
+[t=1.93s] LEFT FOOT PLANTED (bodyZ=70.86, footZ=71.41, strideFromBody=0.56m)
+[t=3.00s] RIGHT FOOT LIFTED  (bodyZ=71.33, v=0.44)
+[t=3.45s] RIGHT FOOT PLANTED (bodyZ=71.53, footZ=72.08, strideFromBody=0.56m)
+[t=4.43s] LEFT FOOT LIFTED  (bodyZ=71.96, v=0.44)
+[t=4.88s] LEFT FOOT PLANTED (bodyZ=72.16, footZ=72.71, strideFromBody=0.56m)
+[t=5.95s] RIGHT FOOT LIFTED  (bodyZ=72.62, v=0.44)
+Step interval #1: 1.43s
+Step interval #2: 1.52s
+Step interval #3: 1.43s
+
+=== CHASE OBSERVATION (0.0s .. 1.5s) ===
+t=0.00s | alert=1 | bodyZ=72.71 | v=4.40 | L_step=0 y=1.00 d=0.18 | R_step=1 y=1.14 d=0.37
+t=0.07s | alert=1 | bodyZ=73.01 | v=4.40 | L_step=0 y=1.00 d=0.35 | R_step=1 y=1.30 d=0.42
+t=0.13s | alert=1 | bodyZ=73.30 | v=4.40 | L_step=0 y=1.00 d=0.62 | R_step=1 y=1.39 d=0.52
+t=0.20s | alert=1 | bodyZ=73.52 | v=0.00 | L_step=0 y=1.00 d=0.70 | R_step=1 y=1.39 d=0.57
+t=0.27s | alert=1 | bodyZ=73.59 | v=4.40 | L_step=1 y=1.15 d=0.61 | R_step=1 y=1.31 d=0.50
+t=0.33s | alert=1 | bodyZ=73.89 | v=4.40 | L_step=1 y=1.38 d=0.59 | R_step=1 y=1.16 d=0.65
+t=0.40s | alert=1 | bodyZ=74.18 | v=4.40 | L_step=0 y=1.00 d=0.68 | R_step=0 y=1.00 d=0.70
+t=0.47s | alert=1 | bodyZ=74.47 | v=4.40 | L_step=0 y=1.00 d=0.70 | R_step=1 y=1.36 d=0.32
+t=0.53s | alert=1 | bodyZ=74.55 | v=4.40 | L_step=1 y=1.15 d=0.61 | R_step=1 y=1.20 d=0.26
+t=0.60s | alert=1 | bodyZ=74.84 | v=4.40 | L_step=1 y=1.38 d=0.59 | R_step=0 y=1.00 d=0.19
+t=0.67s | alert=1 | bodyZ=75.13 | v=4.40 | L_step=0 y=1.00 d=0.68 | R_step=0 y=1.00 d=0.30
+t=0.73s | alert=1 | bodyZ=75.43 | v=4.40 | L_step=1 y=1.36 d=0.31 | R_step=0 y=1.00 d=0.56
+t=0.80s | alert=1 | bodyZ=75.57 | v=4.40 | L_step=1 y=1.20 d=0.22 | R_step=1 y=1.00 d=0.70
+t=0.87s | alert=1 | bodyZ=75.87 | v=4.40 | L_step=0 y=1.00 d=0.18 | R_step=1 y=1.40 d=0.24
+t=0.93s | alert=1 | bodyZ=76.16 | v=4.40 | L_step=0 y=1.00 d=0.36 | R_step=1 y=1.06 d=0.18
+t=1.00s | alert=1 | bodyZ=76.45 | v=4.40 | L_step=1 y=1.36 d=0.20 | R_step=0 y=1.00 d=0.30
+t=1.07s | alert=1 | bodyZ=76.53 | v=4.40 | L_step=1 y=1.20 d=0.29 | R_step=0 y=1.00 d=0.36
+t=1.13s | alert=1 | bodyZ=76.82 | v=4.40 | L_step=0 y=1.00 d=0.19 | R_step=1 y=1.36 d=0.20
+t=1.20s | alert=1 | bodyZ=77.11 | v=4.40 | L_step=0 y=1.00 d=0.30 | R_step=1 y=1.20 d=0.18
+t=1.27s | alert=1 | bodyZ=77.41 | v=4.40 | L_step=1 y=1.27 d=0.22 | R_step=0 y=1.00 d=0.25
+t=1.33s | alert=1 | bodyZ=77.55 | v=4.40 | L_step=1 y=1.31 d=0.23 | R_step=0 y=1.00 d=0.36
+t=1.40s | alert=1 | bodyZ=77.85 | v=4.40 | L_step=0 y=1.00 d=0.19 | R_step=1 y=1.36 d=0.20
+t=1.47s | alert=1 | bodyZ=78.14 | v=4.40 | L_step=0 y=1.00 d=0.30 | R_step=1 y=1.20 d=0.18
+[       OK ] RobotSimTest.ObservePatrolAndChaseFootKinematics (17 ms)
+[----------] 1 test from RobotSimTest (17 ms total)
 
 [----------] Global test environment tear-down
 [==========] 1 test from 1 test suite ran. (17 ms total)
@@ -104,8 +169,8 @@ Note: Google Test filter = GameWorldTest.RaycastAndEnemySpawningWork
 Test time =   0.02 sec
 ----------------------------------------------------------
 Test Passed.
-"GameWorldTest.RaycastAndEnemySpawningWork" end time: Nov 21 22:04 EET
-"GameWorldTest.RaycastAndEnemySpawningWork" time elapsed: 00:00:00
+"RobotSimTest.ObservePatrolAndChaseFootKinematics" end time: Nov 21 23:45 EET
+"RobotSimTest.ObservePatrolAndChaseFootKinematics" time elapsed: 00:00:00
 ----------------------------------------------------------
 
-End testing: Nov 21 22:04 EET
+End testing: Nov 21 23:45 EET

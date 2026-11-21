@@ -11,7 +11,7 @@ AudioEngine::~AudioEngine() {
 
 bool AudioEngine::init() {
     if (!SDL_InitSubSystem(SDL_INIT_AUDIO)) {
-        return false; // Non-fatal if no audio device in headless env
+        return false;
     }
 
     SDL_AudioSpec spec{};
@@ -26,17 +26,20 @@ bool AudioEngine::init() {
     return true;
 }
 
-void AudioEngine::play(SoundId id) {
-    if (!initialized_) return;
+void AudioEngine::play(SoundId id, float volume) {
+    if (!initialized_ || volume <= 0.01f) return;
     Voice v;
     v.id = id;
+    v.volume = std::clamp(volume, 0.0f, 1.5f);
     switch (id) {
-        case SoundId::ShootBolter:  v.duration = 0.14f; break;
-        case SoundId::ShootShotgun: v.duration = 0.28f; break;
-        case SoundId::HitEnemy:     v.duration = 0.10f; break;
-        case SoundId::PlayerHurt:   v.duration = 0.22f; break;
-        case SoundId::Pickup:       v.duration = 0.18f; break;
-        case SoundId::LevelDescend: v.duration = 0.55f; break;
+        case SoundId::ShootBolter:     v.duration = 0.14f; break;
+        case SoundId::ShootShotgun:    v.duration = 0.28f; break;
+        case SoundId::HitEnemy:        v.duration = 0.10f; break;
+        case SoundId::PlayerHurt:      v.duration = 0.22f; break;
+        case SoundId::Pickup:          v.duration = 0.18f; break;
+        case SoundId::LevelDescend:    v.duration = 0.55f; break;
+        case SoundId::RobotStep:       v.duration = 0.26f; break;
+        case SoundId::RobotAlertPulse: v.duration = 0.34f; break;
     }
     voices_.push_back(v);
 }
@@ -45,10 +48,10 @@ void AudioEngine::update() {
     if (!initialized_ || !stream_) return;
 
     const int queued = SDL_GetAudioStreamQueued(stream_);
-    const int targetBytes = 2048 * static_cast<int>(sizeof(float));
+    const int targetBytes = 512 * static_cast<int>(sizeof(float));
     if (queued >= targetBytes) return;
 
-    const int samples = 1024;
+    const int samples = 512;
     std::vector<float> buf(samples, 0.0f);
     const float dt = 1.0f / 22050.0f;
 
@@ -61,10 +64,9 @@ void AudioEngine::update() {
     };
 
     for (int i = 0; i < samples; ++i) {
-        // Subtle low industrial megastructure hum
         ambientPhase_ += dt * 55.0f * 6.283185f;
         if (ambientPhase_ > 6.283185f) ambientPhase_ -= 6.283185f;
-        float out = std::sin(ambientPhase_) * 0.025f;
+        float out = std::sin(ambientPhase_) * 0.022f;
 
         for (auto& v : voices_) {
             float env = std::max(0.0f, 1.0f - (v.time / v.duration));
@@ -104,11 +106,29 @@ void AudioEngine::update() {
                     s = std::sin(v.phase) * env * 0.3f;
                     break;
                 }
+                case SoundId::RobotStep: {
+                    // Resonant metallic clank + high-pitched ring
+                    v.phase += dt * 880.0f * 6.283185f;
+                    v.phase2 += dt * 1410.0f * 6.283185f;
+                    float ring = (std::sin(v.phase) * 0.55f + std::sin(v.phase2) * 0.45f) * std::pow(env, 1.8f);
+                    float thud = (v.time < 0.045f) ? nextNoise() * 0.45f : 0.0f;
+                    s = (ring * 0.32f + thud) * 0.9f;
+                    break;
+                }
+                case SoundId::RobotAlertPulse: {
+                    // Monotonous repeating mechanical alarm tone
+                    v.phase += dt * 520.0f * 6.283185f;
+                    v.phase2 += dt * 260.0f * 6.283185f;
+                    float sq = (std::sin(v.phase) > 0.0f ? 0.6f : -0.6f) + std::sin(v.phase2) * 0.4f;
+                    float gate = (v.time < 0.18f) ? 1.0f : std::max(0.0f, 1.0f - (v.time - 0.18f) / 0.16f);
+                    s = sq * gate * 0.22f;
+                    break;
+                }
             }
-            out += s;
+            out += s * v.volume;
             v.time += dt;
         }
-        buf[i] = std::clamp(out, -0.8f, 0.8f);
+        buf[i] = std::clamp(out, -0.85f, 0.85f);
     }
 
     voices_.erase(

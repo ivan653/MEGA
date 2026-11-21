@@ -323,6 +323,8 @@ CMakeFiles/mega_tests.dir/tests/CoreTests.cpp.o: \
  /usr/include/epoxy/gl.h /usr/include/epoxy/common.h \
  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdbool.h \
  /usr/include/epoxy/gl_generated.h /usr/include/inttypes.h \
+ /home/ivan/ImportantFiles/My\ Games/MEGA/src/render/RobotRenderer.hpp \
+ /home/ivan/ImportantFiles/My\ Games/MEGA/src/render/Shader.hpp \
  /usr/include/c++/16/queue /usr/include/c++/16/deque \
  /usr/include/c++/16/bits/stl_deque.h /usr/include/c++/16/bits/deque.tcc \
  /usr/include/c++/16/bits/stl_queue.h

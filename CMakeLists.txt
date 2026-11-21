@@ -21,6 +21,7 @@ add_executable(mega
     src/render/TextureAtlas.cpp
     src/render/WorldMesher.cpp
     src/render/BillboardRenderer.cpp
+    src/render/RobotRenderer.cpp
     src/render/HudRenderer.cpp
     src/world/WorldGrid.cpp
     src/world/LightBaker.cpp

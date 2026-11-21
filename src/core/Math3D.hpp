@@ -100,6 +100,38 @@ struct Mat4 {
         return r;
     }
 
+    static Mat4 scale(const Vec3& s) {
+        Mat4 r = identity();
+        r.m[0] = s.x;
+        r.m[5] = s.y;
+        r.m[10] = s.z;
+        return r;
+    }
+
+    static Mat4 rotateX(float rad) {
+        Mat4 r = identity();
+        float c = std::cos(rad), s = std::sin(rad);
+        r.m[5] = c;  r.m[9]  = -s;
+        r.m[6] = s;  r.m[10] = c;
+        return r;
+    }
+
+    static Mat4 rotateY(float rad) {
+        Mat4 r = identity();
+        float c = std::cos(rad), s = std::sin(rad);
+        r.m[0] = c;  r.m[8]  = s;
+        r.m[2] = -s; r.m[10] = c;
+        return r;
+    }
+
+    static Mat4 rotateZ(float rad) {
+        Mat4 r = identity();
+        float c = std::cos(rad), s = std::sin(rad);
+        r.m[0] = c;  r.m[4] = -s;
+        r.m[1] = s;  r.m[5] = c;
+        return r;
+    }
+
     Mat4 operator*(const Mat4& o) const {
         Mat4 r;
         for (int col = 0; col < 4; ++col) {

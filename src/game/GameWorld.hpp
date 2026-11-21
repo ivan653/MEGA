@@ -5,6 +5,7 @@
 #include "core/Math3D.hpp"
 #include "game/Player.hpp"
 #include "render/BillboardRenderer.hpp"
+#include "render/RobotRenderer.hpp"
 #include "world/gen/MegaGenerator.hpp"
 #include <cstdint>
 #include <vector>
@@ -16,16 +17,56 @@ enum class WeaponType : int {
     Scattergun = 1
 };
 
+enum class EnemyAIState : uint8_t {
+    Patrol = 0,
+    Chase,
+    InvestigateLastSeen,
+    ReturnToAggro
+};
+
+struct FootState {
+    Vec3 worldPos{};
+    Vec3 startPos{};
+    Vec3 targetPos{};
+    bool stepping = false;
+    float stepT = 0.0f;
+    float stepDuration = 0.35f;
+    bool initialized = false;
+};
+
 struct Enemy {
     Vec3 pos;
     Vec3 vel;
     SpriteType kind = SpriteType::EnemyStalker;
-    float hp = 40.0f;
-    float maxHp = 40.0f;
-    float radius = 0.35f;
-    float height = 1.6f;
+    EnemyAIState aiState = EnemyAIState::Patrol;
+    Vec3 aggroOrigin{};
+    Vec3 lastSeenPos{};
+    FootState feet[2];
+    float pelvisOffsetY = 0.0f;
+    float pelvisVelY = 0.0f;
+    float armAngle[2] = {0.0f, 0.0f};
+    float armVel[2] = {0.0f, 0.0f};
+    float torsoLeanX = 0.0f;
+    float hp = 60.0f;
+    float maxHp = 60.0f;
+    float radius = 0.38f;
+    float height = 2.5f;
+    float yaw = 0.0f;
+    int dirX = 0;
+    int dirZ = 1;
+    int pendingDirX = 0;
+    int pendingDirZ = 1;
+    float turnPauseTimer = 0.0f;
+    float movePulseTimer = 0.0f;
+    float alertPulseTimer = 0.0f;
+    float decisionCooldown = 0.0f;
+    float pathTimer = 0.0f;
+    Vec3 nextWaypoint{};
+    bool hasWaypoint = false;
     float attackCooldown = 0.0f;
     float hurtFlash = 0.0f;
+    int regX = 0;
+    int regZ = 0;
     bool alerted = false;
     bool alive = true;
 };
@@ -81,6 +122,9 @@ public:
     void update(const PlayerInput& input, bool firePressed, float dt, AudioEngine& audio);
     void fireWeapon(AudioEngine& audio);
     void gatherBillboards(std::vector<BillboardInstance>& out, float timeSec) const;
+    void gatherRobots(std::vector<RobotRenderState>& out) const;
+    void gatherRobotLights(std::vector<PointLight3D>& out) const;
+    void spawnRobotsInLoadedRegions();
 
     const char* currentBiomeName() const;
     BiomeType currentBiome() const;

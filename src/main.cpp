@@ -5,6 +5,7 @@
 #include "render/BillboardRenderer.hpp"
 #include "render/Framebuffer.hpp"
 #include "render/HudRenderer.hpp"
+#include "render/RobotRenderer.hpp"
 #include "render/Shader.hpp"
 #include "render/TextureAtlas.hpp"
 #include "render/WorldMesher.hpp"
@@ -260,6 +261,9 @@ int main(int, char**) {
     BillboardRenderer billboards;
     if (!billboards.init()) return 1;
 
+    RobotRenderer robotRenderer;
+    if (!robotRenderer.init()) return 1;
+
     HudRenderer hud;
     if (!hud.init(cfg::RETRO_WIDTH, cfg::RETRO_HEIGHT)) return 1;
 
@@ -291,6 +295,7 @@ int main(int, char**) {
     int winW = cfg::WINDOW_WIDTH;
     int winH = cfg::WINDOW_HEIGHT;
     std::vector<BillboardInstance> spriteQueue;
+    std::vector<RobotRenderState> robotQueue;
 
     auto reloadConfig = [&]() {
         gw.settings = GameSettings::loadOrCreate("mega.cfg");
@@ -429,6 +434,7 @@ int main(int, char**) {
         worldShader.setFloat("uLightDitherStrength", gw.settings.lightDitherStrength);
 
         auto sortedLights = gw.map.pointLights;
+        gw.gatherRobotLights(sortedLights);
         std::sort(sortedLights.begin(), sortedLights.end(),
                   [&](const PointLight3D& a, const PointLight3D& b) {
                       return lengthSq(a.pos - camPos) < lengthSq(b.pos - camPos);
@@ -456,6 +462,9 @@ int main(int, char**) {
 
         atlas.bind(0);
         mesher.render();
+
+        gw.gatherRobots(robotQueue);
+        robotRenderer.render(view, proj, camPos, robotQueue);
 
         gw.gatherBillboards(spriteQueue, totalTime);
         billboards.render(view, proj, camPos, spriteQueue);

@@ -15,6 +15,7 @@ set(CMAKE_DEPENDS_DEPENDENCY_FILES
   "/home/ivan/ImportantFiles/My Games/MEGA/src/render/BillboardRenderer.cpp" "CMakeFiles/mega.dir/src/render/BillboardRenderer.cpp.o" "gcc" "CMakeFiles/mega.dir/src/render/BillboardRenderer.cpp.o.d"
   "/home/ivan/ImportantFiles/My Games/MEGA/src/render/Framebuffer.cpp" "CMakeFiles/mega.dir/src/render/Framebuffer.cpp.o" "gcc" "CMakeFiles/mega.dir/src/render/Framebuffer.cpp.o.d"
   "/home/ivan/ImportantFiles/My Games/MEGA/src/render/HudRenderer.cpp" "CMakeFiles/mega.dir/src/render/HudRenderer.cpp.o" "gcc" "CMakeFiles/mega.dir/src/render/HudRenderer.cpp.o.d"
+  "/home/ivan/ImportantFiles/My Games/MEGA/src/render/RobotRenderer.cpp" "CMakeFiles/mega.dir/src/render/RobotRenderer.cpp.o" "gcc" "CMakeFiles/mega.dir/src/render/RobotRenderer.cpp.o.d"
   "/home/ivan/ImportantFiles/My Games/MEGA/src/render/Shader.cpp" "CMakeFiles/mega.dir/src/render/Shader.cpp.o" "gcc" "CMakeFiles/mega.dir/src/render/Shader.cpp.o.d"
   "/home/ivan/ImportantFiles/My Games/MEGA/src/render/TextureAtlas.cpp" "CMakeFiles/mega.dir/src/render/TextureAtlas.cpp.o" "gcc" "CMakeFiles/mega.dir/src/render/TextureAtlas.cpp.o.d"
   "/home/ivan/ImportantFiles/My Games/MEGA/src/render/WorldMesher.cpp" "CMakeFiles/mega.dir/src/render/WorldMesher.cpp.o" "gcc" "CMakeFiles/mega.dir/src/render/WorldMesher.cpp.o.d"

@@ -345,6 +345,30 @@ src/render/HudRenderer.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/mega.dir/build.make CMakeFiles/mega.dir/src/render/HudRenderer.cpp.s
 .PHONY : src/render/HudRenderer.cpp.s
 
+src/render/RobotRenderer.o: src/render/RobotRenderer.cpp.o
+.PHONY : src/render/RobotRenderer.o
+
+# target to build an object file
+src/render/RobotRenderer.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/mega.dir/build.make CMakeFiles/mega.dir/src/render/RobotRenderer.cpp.o
+.PHONY : src/render/RobotRenderer.cpp.o
+
+src/render/RobotRenderer.i: src/render/RobotRenderer.cpp.i
+.PHONY : src/render/RobotRenderer.i
+
+# target to preprocess a source file
+src/render/RobotRenderer.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/mega.dir/build.make CMakeFiles/mega.dir/src/render/RobotRenderer.cpp.i
+.PHONY : src/render/RobotRenderer.cpp.i
+
+src/render/RobotRenderer.s: src/render/RobotRenderer.cpp.s
+.PHONY : src/render/RobotRenderer.s
+
+# target to generate assembly for a file
+src/render/RobotRenderer.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/mega.dir/build.make CMakeFiles/mega.dir/src/render/RobotRenderer.cpp.s
+.PHONY : src/render/RobotRenderer.cpp.s
+
 src/render/Shader.o: src/render/Shader.cpp.o
 .PHONY : src/render/Shader.o
 
@@ -554,6 +578,9 @@ help:
 	@echo "... src/render/HudRenderer.o"
 	@echo "... src/render/HudRenderer.i"
 	@echo "... src/render/HudRenderer.s"
+	@echo "... src/render/RobotRenderer.o"
+	@echo "... src/render/RobotRenderer.i"
+	@echo "... src/render/RobotRenderer.s"
 	@echo "... src/render/Shader.o"
 	@echo "... src/render/Shader.i"
 	@echo "... src/render/Shader.s"

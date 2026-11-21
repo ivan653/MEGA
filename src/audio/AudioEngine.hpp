@@ -1,8 +1,6 @@
 #pragma once
 
 #include <SDL3/SDL.h>
-#include <atomic>
-#include <mutex>
 #include <vector>
 
 namespace mega {
@@ -13,7 +11,9 @@ enum class SoundId {
     HitEnemy,
     PlayerHurt,
     Pickup,
-    LevelDescend
+    LevelDescend,
+    RobotStep,
+    RobotAlertPulse
 };
 
 class AudioEngine {
@@ -22,15 +22,17 @@ public:
     ~AudioEngine();
 
     bool init();
-    void play(SoundId id);
-    void update(); // Feeds procedural audio stream
+    void play(SoundId id, float volume = 1.0f);
+    void update();
 
 private:
     struct Voice {
         SoundId id;
         float phase = 0.0f;
+        float phase2 = 0.0f;
         float time = 0.0f;
         float duration = 0.2f;
+        float volume = 1.0f;
     };
 
     SDL_AudioStream* stream_ = nullptr;

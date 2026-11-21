@@ -1,5 +1,6 @@
-WorldGridTest.BoundsAndBlockPlacement 7 0.000479015
-PlayerPhysicsTest.GravityLandsOnFloorAndStepUpWorks 7 0.000473743
-MegaGeneratorTest.GeneratesConnectedMultiBiomeMegastructureQuickly 6 0.0185228
-GameWorldTest.RaycastAndEnemySpawningWork 5 0.00465793
+WorldGridTest.BoundsAndBlockPlacement 15 0.000169909
+PlayerPhysicsTest.GravityLandsOnFloorAndStepUpWorks 15 0.000176463
+MegaGeneratorTest.GeneratesConnectedMultiBiomeMegastructureQuickly 14 0.00548676
+GameWorldTest.RaycastAndEnemySpawningWork 13 0.00120272
+RobotSimTest.ObservePatrolAndChaseFootKinematics 1 0.0202391
 ---

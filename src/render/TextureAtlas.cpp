@@ -167,6 +167,39 @@ bool TextureAtlas::init() {
     }
     uploadLayer(8);
 
+    // Layer 9: ChippedBlueArmor (peeling/chipped light-blue paint over dark steel)
+    for (int y = 0; y < TEX_SIZE; ++y) {
+        for (int x = 0; x < TEX_SIZE; ++x) {
+            int n = rng.rangeInt(-8, 8);
+            bool borderWear = (x <= 1 || x >= 30 || y <= 1 || y >= 30) && rng.chance(0.7f);
+            float patch = std::sin(x * 0.45f) * std::cos(y * 0.4f) + rng.nextFloat() * 0.8f;
+            if (borderWear || patch > 0.95f) {
+                // Exposed dark metal underneath
+                uint8_t v = static_cast<uint8_t>(std::clamp(44 + n, 20, 75));
+                setPx(pixels, x, y, v, v + 2, v + 5);
+            } else {
+                // Chipped pale-cyan/blue paint
+                setPx(pixels, x, y,
+                      static_cast<uint8_t>(std::clamp(74 + n, 40, 115)),
+                      static_cast<uint8_t>(std::clamp(146 + n, 105, 185)),
+                      static_cast<uint8_t>(std::clamp(192 + n, 145, 230)));
+            }
+        }
+    }
+    uploadLayer(9);
+
+    // Layer 10: DarkSkeleton (dark gunmetal frame)
+    for (int y = 0; y < TEX_SIZE; ++y) {
+        for (int x = 0; x < TEX_SIZE; ++x) {
+            int n = rng.rangeInt(-5, 5);
+            int base = 36 + n;
+            if (x == 0 || y == 0) base -= 10;
+            uint8_t v = static_cast<uint8_t>(std::clamp(base, 14, 65));
+            setPx(pixels, x, y, v, v + 1, v + 3);
+        }
+    }
+    uploadLayer(10);
+
     // Crisp pixel-art filtering (no blur!)
     glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_NEAREST);

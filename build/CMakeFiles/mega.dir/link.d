@@ -8,6 +8,7 @@ mega: \
   CMakeFiles/mega.dir/src/render/TextureAtlas.cpp.o \
   CMakeFiles/mega.dir/src/render/WorldMesher.cpp.o \
   CMakeFiles/mega.dir/src/render/BillboardRenderer.cpp.o \
+  CMakeFiles/mega.dir/src/render/RobotRenderer.cpp.o \
   CMakeFiles/mega.dir/src/render/HudRenderer.cpp.o \
   CMakeFiles/mega.dir/src/world/WorldGrid.cpp.o \
   CMakeFiles/mega.dir/src/world/LightBaker.cpp.o \
@@ -78,6 +79,8 @@ CMakeFiles/mega.dir/src/render/TextureAtlas.cpp.o:
 CMakeFiles/mega.dir/src/render/WorldMesher.cpp.o:
 
 CMakeFiles/mega.dir/src/render/BillboardRenderer.cpp.o:
+
+CMakeFiles/mega.dir/src/render/RobotRenderer.cpp.o:
 
 CMakeFiles/mega.dir/src/render/HudRenderer.cpp.o:
 
