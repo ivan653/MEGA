@@ -55,23 +55,19 @@ bool TextureAtlas::init() {
     }
     uploadLayer(1);
 
-    // Layer 2: MetalCabinet (32x32 painted steel locker with louvers & seam)
+    // Layer 2: MetalCabinet / Locker Body (seamless brushed dark blue-grey steel, no repeating door pattern)
     for (int y = 0; y < TEX_SIZE; ++y) {
         for (int x = 0; x < TEX_SIZE; ++x) {
-            int n = rng.rangeInt(-5, 5);
-            int r = 96 + n, g = 106 + n, b = 116 + n;
-            bool outerFrame = (x == 0 || x == 31 || y == 0 || y == 31);
-            bool centerDoorSeam = (x == 15 || x == 16);
-            if (outerFrame) { r -= 24; g -= 24; b -= 24; }
-            if (centerDoorSeam) { r -= 38; g -= 38; b -= 38; }
-            bool ventX = (x >= 4 && x <= 12) || (x >= 19 && x <= 27);
-            bool ventY = (y >= 5 && y <= 11) && (y % 2 == 1);
-            if (ventX && ventY) { r -= 36; g -= 36; b -= 36; }
-            if ((x == 13 || x == 18) && (y >= 15 && y <= 18)) { r += 48; g += 48; b += 48; }
+            int n = rng.rangeInt(-4, 4);
+            int streak = static_cast<int>(std::sin(y * 0.45f) * 2.0f);
+            int r = 74 + n + streak;
+            int g = 84 + n + streak;
+            int b = 94 + n + streak;
+            if (x == 0 || x == 31) { r -= 14; g -= 14; b -= 14; }
             setPx(pixels, x, y,
-                  static_cast<uint8_t>(std::clamp(r, 20, 220)),
-                  static_cast<uint8_t>(std::clamp(g, 20, 225)),
-                  static_cast<uint8_t>(std::clamp(b, 20, 230)));
+                  static_cast<uint8_t>(std::clamp(r, 20, 160)),
+                  static_cast<uint8_t>(std::clamp(g, 20, 165)),
+                  static_cast<uint8_t>(std::clamp(b, 20, 175)));
         }
     }
     uploadLayer(2);
@@ -199,6 +195,44 @@ bool TextureAtlas::init() {
         }
     }
     uploadLayer(10);
+
+    // Layer 11: CabinetDoor (matches Layer 2 exact blue-grey palette, single non-repeating panel)
+    for (int y = 0; y < TEX_SIZE; ++y) {
+        for (int x = 0; x < TEX_SIZE; ++x) {
+            int n = rng.rangeInt(-4, 4);
+            int r = 74 + n, g = 84 + n, b = 94 + n;
+            bool rim = (x <= 1 || x >= 30 || y <= 1 || y >= 30);
+            bool inset = (x == 3 || x == 28 || y == 3 || y == 28);
+            if (rim) { r -= 16; g -= 16; b -= 16; }
+            else if (inset) { r -= 10; g -= 10; b -= 10; }
+            if (x >= 8 && x <= 23 && (y == 6 || y == 8 || y == 10)) {
+                r -= 24; g -= 24; b -= 24; // Top louver vents only (once per door)
+            }
+            setPx(pixels, x, y,
+                  static_cast<uint8_t>(std::clamp(r, 20, 160)),
+                  static_cast<uint8_t>(std::clamp(g, 20, 165)),
+                  static_cast<uint8_t>(std::clamp(b, 20, 175)));
+        }
+    }
+    uploadLayer(11);
+
+    // Layer 12: HeavyMetalDoor (2m reinforced industrial steel exit door)
+    for (int y = 0; y < TEX_SIZE; ++y) {
+        for (int x = 0; x < TEX_SIZE; ++x) {
+            int n = rng.rangeInt(-5, 5);
+            int r = 68 + n, g = 74 + n, b = 82 + n;
+            bool frame = (x < 3 || x > 28 || y < 3 || y > 28);
+            bool midBrace = (y >= 15 && y <= 17);
+            if (frame || midBrace) { r -= 16; g -= 16; b -= 16; }
+            bool rivet = ((x == 4 || x == 27) && (y == 4 || y == 14 || y == 18 || y == 27));
+            if (rivet) { r += 34; g += 34; b += 34; }
+            setPx(pixels, x, y,
+                  static_cast<uint8_t>(std::clamp(r, 18, 175)),
+                  static_cast<uint8_t>(std::clamp(g, 18, 180)),
+                  static_cast<uint8_t>(std::clamp(b, 18, 190)));
+        }
+    }
+    uploadLayer(12);
 
     // Crisp pixel-art filtering (no blur!)
     glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_NEAREST);

@@ -27,8 +27,9 @@ private:
     void clear();
     void putPixel(int x, int y, uint32_t rgba);
     void fillRect(int x, int y, int w, int h, uint32_t rgba);
-    void drawChar(int x, int y, char c, uint32_t rgba);
-    void drawText(int x, int y, const char* text, uint32_t rgba);
+    void drawChar(int x, int y, char c, uint32_t rgba, int scale = 1);
+    void drawText(int x, int y, const char* text, uint32_t rgba, int scale = 1);
+    void drawBar(int x, int y, int w, int h, float pct, uint32_t fillCol);
     void drawMinimap(const GameWorld& gw);
 };
 

@@ -33,7 +33,8 @@ AABB Player::boxAt(const Vec3& pos) {
     };
 }
 
-bool Player::collides(const WorldGrid& world, const AABB& box) const {
+bool Player::collides(const WorldGrid& world, const AABB& box,
+                      const std::vector<AABB>& dynamicColliders) const {
     int minX = static_cast<int>(std::floor(box.min.x));
     int maxX = static_cast<int>(std::floor(box.max.x - 1e-4f));
     int minY = static_cast<int>(std::floor(box.min.y));
@@ -59,14 +60,19 @@ bool Player::collides(const WorldGrid& world, const AABB& box) const {
             return true;
         }
     }
+    for (const auto& dc : dynamicColliders) {
+        if (box.intersects(dc)) {
+            return true;
+        }
+    }
     return false;
 }
 
-void Player::update(const PlayerInput& input, const WorldGrid& world, float dt) {
+void Player::update(const PlayerInput& input, const WorldGrid& world, float dt,
+                    const std::vector<AABB>& dynamicColliders) {
     yaw += input.yawDelta;
     pitch = clampf(pitch + input.pitchDelta, -radians(89.0f), radians(89.0f));
 
-    // Horizontal wish direction on XZ plane
     Vec3 fwdXZ{std::sin(yaw), 0.0f, -std::cos(yaw)};
     Vec3 rightXZ{std::cos(yaw), 0.0f, std::sin(yaw)};
     Vec3 wish = fwdXZ * input.moveForward + rightXZ * input.moveRight;
@@ -76,7 +82,6 @@ void Player::update(const PlayerInput& input, const WorldGrid& world, float dt) 
 
     float maxSpeed = cfg::MOVE_SPEED * (input.sprint ? cfg::SPRINT_MULT : 1.0f);
 
-    // Ground friction
     if (grounded) {
         Vec3 horiz{velocity.x, 0.0f, velocity.z};
         float speed = length(horiz);
@@ -88,69 +93,63 @@ void Player::update(const PlayerInput& input, const WorldGrid& world, float dt) 
         }
     }
 
-    // Acceleration
     float accel = grounded ? cfg::GROUND_ACCEL : cfg::AIR_ACCEL;
     Vec3 targetVel = wish * maxSpeed;
     velocity.x += (targetVel.x - velocity.x) * std::min(1.0f, accel * dt);
     velocity.z += (targetVel.z - velocity.z) * std::min(1.0f, accel * dt);
 
-    // Jump & Gravity
     if (grounded && input.jump) {
         velocity.y = cfg::JUMP_SPEED;
         grounded = false;
     }
     velocity.y -= cfg::GRAVITY * dt;
 
-    moveAndSlide(world, velocity * dt);
+    moveAndSlide(world, velocity * dt, dynamicColliders);
 }
 
-void Player::moveAndSlide(const WorldGrid& world, const Vec3& delta) {
-    // 1. Horizontal X & Z with step-up support
+void Player::moveAndSlide(const WorldGrid& world, const Vec3& delta,
+                          const std::vector<AABB>& dynamicColliders) {
     Vec3 horizPos = position;
     bool hitX = false, hitZ = false;
 
     horizPos.x += delta.x;
-    if (collides(world, boxAt(horizPos))) {
+    if (collides(world, boxAt(horizPos), dynamicColliders)) {
         horizPos.x = position.x;
         hitX = true;
     }
 
     horizPos.z += delta.z;
-    if (collides(world, boxAt(horizPos))) {
+    if (collides(world, boxAt(horizPos), dynamicColliders)) {
         horizPos.z = position.z;
         hitZ = true;
     }
 
-    // Try stepping up if blocked horizontally while grounded
     if ((hitX || hitZ) && grounded) {
         Vec3 stepped = position;
         stepped.y += cfg::STEP_HEIGHT;
-        if (!collides(world, boxAt(stepped))) {
+        if (!collides(world, boxAt(stepped), dynamicColliders)) {
             Vec3 tryStep = stepped;
             tryStep.x += delta.x;
-            if (collides(world, boxAt(tryStep))) tryStep.x = stepped.x;
+            if (collides(world, boxAt(tryStep), dynamicColliders)) tryStep.x = stepped.x;
             tryStep.z += delta.z;
-            if (collides(world, boxAt(tryStep))) tryStep.z = stepped.z;
+            if (collides(world, boxAt(tryStep), dynamicColliders)) tryStep.z = stepped.z;
 
-            // Only accept step-up if it actually moved further horizontally
             float oldDistSq = (horizPos.x - position.x) * (horizPos.x - position.x) +
                               (horizPos.z - position.z) * (horizPos.z - position.z);
             float newDistSq = (tryStep.x - position.x) * (tryStep.x - position.x) +
                               (tryStep.z - position.z) * (tryStep.z - position.z);
             if (newDistSq > oldDistSq + 1e-6f) {
                 horizPos = tryStep;
-                // Snap down onto the step surface
                 float stepDown = cfg::STEP_HEIGHT;
                 Vec3 probe = horizPos;
                 probe.y -= stepDown;
-                if (collides(world, boxAt(probe))) {
-                    // Binary search exact landing height
+                if (collides(world, boxAt(probe), dynamicColliders)) {
                     float lo = 0.0f, hi = stepDown;
                     for (int i = 0; i < 6; ++i) {
                         float mid = 0.5f * (lo + hi);
                         Vec3 p = horizPos;
                         p.y -= mid;
-                        if (collides(world, boxAt(p))) hi = mid;
+                        if (collides(world, boxAt(p), dynamicColliders)) hi = mid;
                         else lo = mid;
                     }
                     horizPos.y -= lo;
@@ -164,10 +163,9 @@ void Player::moveAndSlide(const WorldGrid& world, const Vec3& delta) {
     if (hitZ) velocity.z = 0.0f;
     position = horizPos;
 
-    // 2. Vertical Y
     Vec3 vertPos = position;
     vertPos.y += delta.y;
-    if (collides(world, boxAt(vertPos))) {
+    if (collides(world, boxAt(vertPos), dynamicColliders)) {
         if (delta.y < 0.0f) {
             grounded = true;
         }

@@ -157,22 +157,30 @@ void HudRenderer::fillRect(int x, int y, int w, int h, uint32_t col) {
             putPixel(px, py, col);
 }
 
-void HudRenderer::drawChar(int x, int y, char c, uint32_t col) {
+void HudRenderer::drawChar(int x, int y, char c, uint32_t col, int scale) {
     const Glyph3x5* g = findGlyph(c);
     for (int r = 0; r < 5; ++r) {
         for (int colBit = 0; colBit < 3; ++colBit) {
             if (g->rows[r] & (1 << (2 - colBit))) {
-                putPixel(x + colBit, y + r, col);
+                fillRect(x + colBit * scale, y + r * scale, scale, scale, col);
             }
         }
     }
 }
 
-void HudRenderer::drawText(int x, int y, const char* text, uint32_t col) {
+void HudRenderer::drawText(int x, int y, const char* text, uint32_t col, int scale) {
     int cx = x;
     for (const char* p = text; *p; ++p) {
-        drawChar(cx, y, *p, col);
-        cx += 4;
+        drawChar(cx, y, *p, col, scale);
+        cx += 4 * scale;
+    }
+}
+
+void HudRenderer::drawBar(int x, int y, int w, int h, float pct, uint32_t fillCol) {
+    fillRect(x, y, w, h, rgba(16, 20, 26, 210));
+    int fw = static_cast<int>(std::clamp(pct, 0.0f, 1.0f) * (w - 2));
+    if (fw > 0) {
+        fillRect(x + 1, y + 1, fw, h - 2, fillCol);
     }
 }
 
@@ -227,11 +235,105 @@ void HudRenderer::drawMinimap(const GameWorld& gw) {
 void HudRenderer::render(const GameWorld& gw) {
     clear();
 
-    // Subtle center dot crosshair
-    fillRect(width_ / 2 - 1, height_ / 2 - 1, 2, 2, rgba(200, 220, 240, 140));
+    // Damage vignette border
+    if (gw.damageFlash > 0.01f) {
+        uint8_t a = static_cast<uint8_t>(std::min(180.0f, gw.damageFlash * 220.0f));
+        uint32_t red = rgba(210, 25, 25, a);
+        fillRect(0, 0, width_, 8, red);
+        fillRect(0, height_ - 8, width_, 8, red);
+        fillRect(0, 0, 8, height_, red);
+        fillRect(width_ - 8, 0, 8, height_, red);
+    }
+
+    // Center crosshair / Amnesia-style interaction reticle & prompt
+    int cx = width_ / 2;
+    int cy = height_ / 2;
+    if (gw.grabbedDoorIdx >= 0) {
+        fillRect(cx - 5, cy - 5, 10, 10, rgba(130, 215, 255, 190));
+        drawText(cx - 56, cy + 16, "DRAG MOUSE", rgba(160, 225, 255, 230), 2);
+    } else if (gw.hoveredDoorIdx >= 0) {
+        fillRect(cx - 4, cy - 4, 8, 8, rgba(160, 225, 255, 170));
+        const char* label = gw.doors[gw.hoveredDoorIdx].isCabinet ? "[LMB DRAG] CABINET" : "[LMB DRAG] DOOR";
+        drawText(cx - 72, cy + 16, label, rgba(210, 230, 245, 230), 2);
+    } else if (gw.hoveredItemIdx >= 0) {
+        fillRect(cx - 4, cy - 4, 8, 8, rgba(255, 230, 120, 190));
+        const char* names[] = {"[LMB] FLASHLIGHT", "[LMB] BATTERY", "[LMB] FOOD", "[LMB] WATER"};
+        int k = static_cast<int>(gw.worldItems[gw.hoveredItemIdx].type);
+        drawText(cx - 64, cy + 16, names[k], rgba(255, 235, 150, 235), 2);
+    } else if (!gw.inventoryOpen) {
+        fillRect(cx - 1, cy - 1, 3, 3, rgba(200, 220, 240, 140));
+    }
+
+    // Bottom-left survival bars (HP, Hunger, Thirst, Energy, Battery)
+    int bx = 18;
+    int by = height_ - 116;
+    fillRect(bx - 8, by - 8, 218, 108, rgba(10, 14, 18, 175));
+
+    drawText(bx, by + 2,  "HP",  rgba(220, 225, 235, 230), 2);
+    drawBar(bx + 68, by, 130, 12, gw.health / 100.0f, rgba(205, 55, 55, 230));
+
+    drawText(bx, by + 20, "FOOD", rgba(220, 190, 130, 230), 2);
+    drawBar(bx + 68, by + 18, 130, 12, gw.hunger / 100.0f, rgba(210, 145, 55, 230));
+
+    drawText(bx, by + 38, "H2O",  rgba(120, 200, 245, 230), 2);
+    drawBar(bx + 68, by + 36, 130, 12, gw.thirst / 100.0f, rgba(65, 165, 230, 230));
+
+    drawText(bx, by + 56, "NRG",  rgba(165, 230, 145, 230), 2);
+    drawBar(bx + 68, by + 54, 130, 12, gw.energy / 100.0f, rgba(110, 205, 95, 230));
+
+    if (gw.inventory.hasFlashlight) {
+        drawText(bx, by + 76, "LAMP", rgba(240, 235, 145, 230), 2);
+        drawBar(bx + 68, by + 74, 130, 12, gw.inventory.flashlightBattery / 100.0f,
+                gw.flashlightOn ? rgba(180, 235, 255, 240) : rgba(110, 135, 155, 210));
+    } else {
+        drawText(bx, by + 76, "NO FLASHLIGHT", rgba(140, 150, 165, 200), 2);
+    }
+
+    // Real-Time Inventory Overlay (Tab / I — game continues running!)
+    if (gw.inventoryOpen) {
+        int iw = 360, ih = 250;
+        int ix = cx - iw / 2;
+        int iy = cy - ih / 2;
+        fillRect(ix, iy, iw, ih, rgba(12, 16, 22, 228));
+        fillRect(ix, iy, iw, 2, rgba(95, 130, 160, 240));
+        fillRect(ix, iy + ih - 2, iw, 2, rgba(95, 130, 160, 240));
+
+        drawText(ix + 18, iy + 16, "INVENTORY  [TAB CLOSE]", rgba(170, 215, 245, 240), 2);
+
+        char line[64];
+        if (gw.inventory.hasFlashlight) {
+            std::snprintf(line, sizeof(line), "FLASHLIGHT  %d PCT",
+                          static_cast<int>(gw.inventory.flashlightBattery));
+            drawText(ix + 20, iy + 52, line, rgba(200, 235, 255, 240), 2);
+        } else {
+            drawText(ix + 20, iy + 52, "FLASHLIGHT  NONE", rgba(130, 140, 150, 210), 2);
+        }
+
+        // Clickable / hotkeyed slots: [1] Battery, [2] Food, [3] Water
+        fillRect(ix + 18, iy + 86, iw - 36, 36, rgba(24, 32, 42, 220));
+        std::snprintf(line, sizeof(line), "[1] BATTERY   X%d  [USE]", gw.inventory.batteries);
+        drawText(ix + 28, iy + 98, line,
+                 gw.inventory.batteries > 0 ? rgba(255, 225, 100, 245) : rgba(110, 115, 125, 200), 2);
+
+        fillRect(ix + 18, iy + 132, iw - 36, 36, rgba(24, 32, 42, 220));
+        std::snprintf(line, sizeof(line), "[2] FOOD      X%d  [EAT]", gw.inventory.food);
+        drawText(ix + 28, iy + 144, line,
+                 gw.inventory.food > 0 ? rgba(235, 175, 95, 245) : rgba(110, 115, 125, 200), 2);
+
+        fillRect(ix + 18, iy + 178, iw - 36, 36, rgba(24, 32, 42, 220));
+        std::snprintf(line, sizeof(line), "[3] WATER     X%d  [DRINK]", gw.inventory.water);
+        drawText(ix + 28, iy + 190, line,
+                 gw.inventory.water > 0 ? rgba(110, 205, 255, 245) : rgba(110, 115, 125, 200), 2);
+    }
 
     if (gw.showMinimap) {
         drawMinimap(gw);
+    }
+
+    if (gw.gameOver) {
+        fillRect(cx - 150, cy - 42, 300, 84, rgba(20, 8, 8, 235));
+        drawText(cx - 88, cy - 22, "SIGNAL LOST", rgba(255, 70, 70), 2);
+        drawText(cx - 128, cy + 8, "PRESS R TO RESTART", rgba(230, 230, 230), 2);
     }
 
     glDisable(GL_DEPTH_TEST);

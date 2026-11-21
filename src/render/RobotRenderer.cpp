@@ -298,4 +298,75 @@ void RobotRenderer::render(const Mat4& view, const Mat4& proj, const Vec3& camPo
     glBindVertexArray(0);
 }
 
+void RobotRenderer::renderInteractables(const Shader& worldShader, const Mat4& view, const Mat4& proj,
+                                        const Vec3& camPos,
+                                        const std::vector<DoorRenderState>& doors,
+                                        const std::vector<ItemRenderState>& items) {
+    if (doors.empty() && items.empty()) return;
+    (void)view; (void)proj; (void)camPos;
+
+    // Render doors & items using the exact same real-time 3D world lighting shader!
+    worldShader.use();
+    glBindVertexArray(vao_);
+
+    auto drawLitPart = [&](const Mat4& model, const Vec3& partScale, float texLayer,
+                           float emissive, const Vec3& tint) {
+        worldShader.setMat4("uModel", model);
+        worldShader.setVec3("uPartScale", partScale);
+        worldShader.setFloat("uTexLayerOverride", texLayer);
+        worldShader.setFloat("uEmissiveOverride", emissive);
+        worldShader.setVec3("uTint", tint);
+        glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, nullptr);
+    };
+
+    // Render hinged doors (2m metal exit door + cabinet/locker doors)
+    for (const auto& d : doors) {
+        Vec3 tint = d.highlighted ? Vec3{1.25f, 1.35f, 1.50f} : Vec3{1.0f, 1.0f, 1.0f};
+        float layer = d.isCabinet ? 11.0f : 12.0f;
+        Mat4 pivot = Mat4::translate(d.hingePos) * Mat4::rotateY(d.yaw);
+
+        Vec3 leafSize{d.width, d.height, d.thickness};
+        Mat4 leafM = pivot * Mat4::translate({d.width * 0.5f, d.height * 0.5f, 0.0f}) * Mat4::scale(leafSize);
+        // Use 1:1 non-repeating door panel UVs (partScale = 1,1,1) so door pattern never duplicates!
+        drawLitPart(leafM, {1.0f, 1.0f, 1.0f}, layer, 0.0f, tint);
+
+        Vec3 handleSize{0.05f, 0.14f, d.thickness + 0.08f};
+        Mat4 handleM = pivot * Mat4::translate({d.width - 0.12f, d.height * 0.48f, 0.0f}) * Mat4::scale(handleSize);
+        drawLitPart(handleM, handleSize, 4.0f, 0.0f, tint);
+    }
+
+    // Render 3D world pickup items (Flashlight, Battery, Food, Water)
+    for (const auto& it : items) {
+        Vec3 tint = it.highlighted ? Vec3{1.35f, 1.45f, 1.55f} : Vec3{1.0f, 1.0f, 1.0f};
+        Mat4 base = Mat4::translate(it.pos);
+        if (it.itemKind == 0) {
+            drawLitPart(base * Mat4::translate({0.0f, 0.04f, 0.0f}) * Mat4::scale({0.26f, 0.07f, 0.07f}),
+                        {0.26f, 0.07f, 0.07f}, 10.0f, 0.0f, tint);
+            drawLitPart(base * Mat4::translate({0.14f, 0.04f, 0.0f}) * Mat4::scale({0.06f, 0.09f, 0.09f}),
+                        {0.06f, 0.09f, 0.09f}, 6.0f, 1.0f, {0.8f, 0.95f, 1.15f});
+        } else if (it.itemKind == 1) {
+            drawLitPart(base * Mat4::translate({0.0f, 0.06f, 0.0f}) * Mat4::scale({0.07f, 0.12f, 0.07f}),
+                        {0.07f, 0.12f, 0.07f}, 3.0f, 0.0f, Vec3{1.2f, 1.0f, 0.35f} * tint.x);
+            drawLitPart(base * Mat4::translate({0.0f, 0.125f, 0.0f}) * Mat4::scale({0.04f, 0.02f, 0.04f}),
+                        {0.04f, 0.02f, 0.04f}, 4.0f, 0.0f, tint);
+        } else if (it.itemKind == 2) {
+            drawLitPart(base * Mat4::translate({0.0f, 0.07f, 0.0f}) * Mat4::scale({0.18f, 0.14f, 0.14f}),
+                        {0.18f, 0.14f, 0.14f}, 3.0f, 0.0f, Vec3{0.95f, 0.65f, 0.45f} * tint.x);
+        } else {
+            drawLitPart(base * Mat4::translate({0.0f, 0.12f, 0.0f}) * Mat4::scale({0.09f, 0.24f, 0.09f}),
+                        {0.09f, 0.24f, 0.09f}, 9.0f, 0.0f, Vec3{0.55f, 0.95f, 1.35f} * tint.x);
+            drawLitPart(base * Mat4::translate({0.0f, 0.25f, 0.0f}) * Mat4::scale({0.05f, 0.04f, 0.05f}),
+                        {0.05f, 0.04f, 0.05f}, 1.0f, 0.0f, tint);
+        }
+    }
+
+    // Reset worldShader overrides for next frame's chunks
+    worldShader.setMat4("uModel", Mat4::identity());
+    worldShader.setVec3("uPartScale", {0.0f, 0.0f, 0.0f});
+    worldShader.setFloat("uTexLayerOverride", -1.0f);
+    worldShader.setFloat("uEmissiveOverride", -1.0f);
+    worldShader.setVec3("uTint", {1.0f, 1.0f, 1.0f});
+    glBindVertexArray(0);
+}
+
 } // namespace mega

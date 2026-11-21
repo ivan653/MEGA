@@ -21,6 +21,8 @@ bool canPlaceProp(const WorldGrid& w, const AABB& box, const Vec3& spawnPos, flo
     float cx = 0.5f * (box.min.x + box.max.x);
     float cz = 0.5f * (box.min.z + box.max.z);
     if (std::abs(cx - spawnPos.x) < 2.6f && std::abs(cz - spawnPos.z) < 2.6f) return false;
+    // Keep starter room (x=54..61, z=54..62) and its doorway into spineNS1 (x=62..64, z=57..60) clear
+    if (cx >= 53.5f && cx <= 64.5f && cz >= 53.5f && cz <= 62.5f) return false;
 
     AABB expanded{
         {box.min.x - clearanceMargin, box.min.y, box.min.z - clearanceMargin},
@@ -266,9 +268,80 @@ void carveCorridor(WorldGrid& w, const CorridorSegment& seg) {
     }
 }
 
+// Hideable Hollow Locker (player can walk inside & close door!)
+void placeHideableLocker(WorldGrid& w, std::vector<LockerPlacement>& lockers,
+                         float wallX, float wallZ, int normalX, int normalZ,
+                         int regX, int regZ, const Vec3& spawnPos) {
+    float depth = 0.88f;
+    float width = 1.02f;
+    float height = 2.12f;
+    float y0 = static_cast<float>(FLOOR_Y);
+    float t = 0.06f;
+
+    AABB outer;
+    if (normalX != 0) {
+        float xA = wallX + normalX * 0.01f;
+        float xB = wallX + normalX * (0.01f + depth);
+        outer = {{std::min(xA, xB), y0, wallZ - width * 0.5f},
+                 {std::max(xA, xB), y0 + height, wallZ + width * 0.5f}};
+    } else {
+        float zA = wallZ + normalZ * 0.01f;
+        float zB = wallZ + normalZ * (0.01f + depth);
+        outer = {{wallX - width * 0.5f, y0, std::min(zA, zB)},
+                 {wallX + width * 0.5f, y0 + height, std::max(zA, zB)}};
+    }
+
+    if (!canPlaceProp(w, outer, spawnPos, 0.25f)) return;
+
+    // Top & floor plates
+    w.addProp({{outer.min.x, outer.max.y - t, outer.min.z}, {outer.max.x, outer.max.y, outer.max.z}},
+              BlockType::RustPlate, false, false, true, regX, regZ);
+    w.addProp({{outer.min.x, outer.min.y, outer.min.z}, {outer.max.x, outer.min.y + 0.03f, outer.max.z}},
+              BlockType::RustPlate, false, false, true, regX, regZ);
+
+    LockerPlacement lp;
+    lp.width = width - t * 2.0f;
+    lp.height = height - t * 1.5f;
+    lp.regX = regX;
+    lp.regZ = regZ;
+    lp.interiorBox = {{outer.min.x + t, y0, outer.min.z + t},
+                      {outer.max.x - t, y0 + lp.height, outer.max.z - t}};
+
+    if (normalX > 0) { // Back at min.x, open at max.x
+        w.addProp({{outer.min.x, y0, outer.min.z}, {outer.min.x + t, outer.max.y, outer.max.z}}, BlockType::RustPlate, true, false, true, regX, regZ);
+        w.addProp({{outer.min.x, y0, outer.min.z}, {outer.max.x, outer.max.y, outer.min.z + t}}, BlockType::RustPlate, true, false, true, regX, regZ);
+        w.addProp({{outer.min.x, y0, outer.max.z - t}, {outer.max.x, outer.max.y, outer.max.z}}, BlockType::RustPlate, true, false, true, regX, regZ);
+        lp.hingePos = {outer.max.x, y0 + 0.03f, outer.min.z + t};
+        lp.closedYaw = -PI * 0.5f; // +X rotated by -PI/2 points along +Z
+        lp.openSign = 1.0f;
+    } else if (normalX < 0) { // Back at max.x, open at min.x
+        w.addProp({{outer.max.x - t, y0, outer.min.z}, {outer.max.x, outer.max.y, outer.max.z}}, BlockType::RustPlate, true, false, true, regX, regZ);
+        w.addProp({{outer.min.x, y0, outer.min.z}, {outer.max.x, outer.max.y, outer.min.z + t}}, BlockType::RustPlate, true, false, true, regX, regZ);
+        w.addProp({{outer.min.x, y0, outer.max.z - t}, {outer.max.x, outer.max.y, outer.max.z}}, BlockType::RustPlate, true, false, true, regX, regZ);
+        lp.hingePos = {outer.min.x, y0 + 0.03f, outer.max.z - t};
+        lp.closedYaw = PI * 0.5f;
+        lp.openSign = 1.0f;
+    } else if (normalZ > 0) { // Back at min.z, open at max.z
+        w.addProp({{outer.min.x, y0, outer.min.z}, {outer.max.x, outer.max.y, outer.min.z + t}}, BlockType::RustPlate, true, false, true, regX, regZ);
+        w.addProp({{outer.min.x, y0, outer.min.z}, {outer.min.x + t, outer.max.y, outer.max.z}}, BlockType::RustPlate, true, false, true, regX, regZ);
+        w.addProp({{outer.max.x - t, y0, outer.min.z}, {outer.max.x, outer.max.y, outer.max.z}}, BlockType::RustPlate, true, false, true, regX, regZ);
+        lp.hingePos = {outer.min.x + t, y0 + 0.03f, outer.max.z};
+        lp.closedYaw = 0.0f;
+        lp.openSign = -1.0f;
+    } else { // Back at max.z, open at min.z
+        w.addProp({{outer.min.x, y0, outer.max.z - t}, {outer.max.x, outer.max.y, outer.max.z}}, BlockType::RustPlate, true, false, true, regX, regZ);
+        w.addProp({{outer.min.x, y0, outer.min.z}, {outer.min.x + t, outer.max.y, outer.max.z}}, BlockType::RustPlate, true, false, true, regX, regZ);
+        w.addProp({{outer.max.x - t, y0, outer.min.z}, {outer.max.x, outer.max.y, outer.max.z}}, BlockType::RustPlate, true, false, true, regX, regZ);
+        lp.hingePos = {outer.max.x - t, y0 + 0.03f, outer.min.z};
+        lp.closedYaw = PI;
+        lp.openSign = -1.0f;
+    }
+    lockers.push_back(lp);
+}
+
 void populateCorridor(WorldGrid& w, const CorridorSegment& seg,
-                      std::vector<PointLight3D>& lights, const Vec3& spawnPos,
-                      const GameSettings& settings, Rng& rng) {
+                      std::vector<PointLight3D>& lights, std::vector<LockerPlacement>& lockers,
+                      const Vec3& spawnPos, const GameSettings& settings, Rng& rng) {
     int minX = std::min(seg.x0, seg.x1);
     int maxX = std::max(seg.x0, seg.x1);
     int minZ = std::min(seg.z0, seg.z1);
@@ -304,8 +377,10 @@ void populateCorridor(WorldGrid& w, const CorridorSegment& seg,
                 else placeShelvingRack(w, x + 0.5f, wz, 0, nz, seg.regX, seg.regZ, spawnPos, rng);
             } else {
                 if (roll < 4) placeWoodenCrates(w, x + 0.5f, wz, 0, nz, seg.regX, seg.regZ, spawnPos, rng);
-                else if (roll < 7) placeMetalCabinet(w, x + 0.5f, wz, 0, nz, seg.regX, seg.regZ, spawnPos, rng);
-                else placeShelvingRack(w, x + 0.5f, wz, 0, nz, seg.regX, seg.regZ, spawnPos, rng);
+                else if (roll < 7) {
+                    if (rng.chance(0.25f)) placeHideableLocker(w, lockers, x + 0.5f, wz, 0, nz, seg.regX, seg.regZ, spawnPos);
+                    else placeMetalCabinet(w, x + 0.5f, wz, 0, nz, seg.regX, seg.regZ, spawnPos, rng);
+                } else placeShelvingRack(w, x + 0.5f, wz, 0, nz, seg.regX, seg.regZ, spawnPos, rng);
             }
         }
     } else {
@@ -338,8 +413,10 @@ void populateCorridor(WorldGrid& w, const CorridorSegment& seg,
                 else placeShelvingRack(w, wx, z + 0.5f, nx, 0, seg.regX, seg.regZ, spawnPos, rng);
             } else {
                 if (roll < 4) placeWoodenCrates(w, wx, z + 0.5f, nx, 0, seg.regX, seg.regZ, spawnPos, rng);
-                else if (roll < 7) placeMetalCabinet(w, wx, z + 0.5f, nx, 0, seg.regX, seg.regZ, spawnPos, rng);
-                else placeShelvingRack(w, wx, z + 0.5f, nx, 0, seg.regX, seg.regZ, spawnPos, rng);
+                else if (roll < 7) {
+                    if (rng.chance(0.25f)) placeHideableLocker(w, lockers, wx, z + 0.5f, nx, 0, seg.regX, seg.regZ, spawnPos);
+                    else placeMetalCabinet(w, wx, z + 0.5f, nx, 0, seg.regX, seg.regZ, spawnPos, rng);
+                } else placeShelvingRack(w, wx, z + 0.5f, nx, 0, seg.regX, seg.regZ, spawnPos, rng);
             }
         }
     }
@@ -355,6 +432,7 @@ bool intervalsOverlap(int a0, int a1, int b0, int b1, int margin = 0) {
 
 void MegaGenerator::generateRegion(MegaResult& state, int regX, int regZ,
                                    const GameSettings& settings) {
+    if (!isInsideUtilityBiome(regX, regZ)) return;
     if (state.loadedRegions.count({regX, regZ}) > 0) return;
     state.loadedRegions.insert({regX, regZ});
 
@@ -462,7 +540,12 @@ void MegaGenerator::generateRegion(MegaResult& state, int regX, int regZ,
             cand.z1 = std::max(startZ, endZ);
         }
 
-        // Validate against all existing corridors in this region:
+        // Validate against all existing corridors AND starter room in region (0, 0):
+        if (regX == 0 && regZ == 0 &&
+            intervalsOverlap(cand.x0, cand.x1, 53, 62, 2) &&
+            intervalsOverlap(cand.z0, cand.z1, 53, 62, 2)) {
+            continue;
+        }
         // - Must maintain minParallelSpacing from parallel corridors
         // - Must NOT cross any perpendicular corridor other than pIdx
         bool valid = true;
@@ -518,10 +601,44 @@ void MegaGenerator::generateRegion(MegaResult& state, int regX, int regZ,
         }
     }
 
-    // Populate lamps and 3D furniture
+    // Populate lamps, lockers and 3D furniture
     for (const auto& seg : regCorridors) {
-        populateCorridor(state.world, seg, state.pointLights, state.spawnPos, settings, rng);
+        populateCorridor(state.world, seg, state.pointLights, state.lockers, state.spawnPos, settings, rng);
         state.corridors.push_back(seg);
+    }
+
+    // Build the Central Starter Room in region (0, 0) at x=[55..60], z=[55..60]
+    // Completely off the main corridors (spineNS at x=63..65, spineWE at z=63..65) so nothing overlaps!
+    if (regX == 0 && regZ == 0) {
+        auto& w = state.world;
+        w.fillBox(54, FLOOR_Y - 1, 54, 62, FLOOR_Y + CEIL_H, 61, BlockType::Concrete);
+        // Hollow 6x4x6 interior at x=[55..60], z=[55..60]
+        w.fillBox(55, FLOOR_Y, 55, 60, FLOOR_Y + CEIL_H - 1, 60, BlockType::Air);
+        w.fillBox(55, FLOOR_Y - 1, 55, 60, FLOOR_Y - 1, 60, BlockType::TechPanel);
+        w.fillBox(55, FLOOR_Y + CEIL_H, 55, 60, FLOOR_Y + CEIL_H, 60, BlockType::DarkSteel);
+
+        // 1m x 2m Doorway on East wall (x=61..62, z=58, y=1..2) opening directly into spineNS1 (x=63)
+        w.fillBox(61, FLOOR_Y, 58, 62, FLOOR_Y + 1, 58, BlockType::Air);
+        w.fillBox(61, FLOOR_Y - 1, 58, 62, FLOOR_Y - 1, 58, BlockType::TechPanel);
+
+        // 1) Table against West wall (x=55.15..56.15, z=57.0..58.8)
+        w.addProp({{55.15f, 1.76f, 57.00f}, {56.15f, 1.84f, 58.80f}}, BlockType::HazardStripe, true, false, true, 0, 0);
+        w.addProp({{55.20f, 1.00f, 57.05f}, {55.30f, 1.76f, 57.15f}}, BlockType::Grate, true, false, true, 0, 0);
+        w.addProp({{56.00f, 1.00f, 57.05f}, {56.10f, 1.76f, 57.15f}}, BlockType::Grate, true, false, true, 0, 0);
+        w.addProp({{55.20f, 1.00f, 58.65f}, {55.30f, 1.76f, 58.75f}}, BlockType::Grate, true, false, true, 0, 0);
+        w.addProp({{56.00f, 1.00f, 58.65f}, {56.10f, 1.76f, 58.75f}}, BlockType::Grate, true, false, true, 0, 0);
+
+        // 2) Hollow Openable Food/Water Cabinet against North wall (x=57.3..58.7, z=55.05..56.05)
+        w.addProp({{57.30f, 1.00f, 55.05f}, {58.70f, 2.85f, 55.13f}}, BlockType::RustPlate, true, false, true, 0, 0);
+        w.addProp({{57.30f, 1.00f, 55.05f}, {57.38f, 2.85f, 56.05f}}, BlockType::RustPlate, true, false, true, 0, 0);
+        w.addProp({{58.62f, 1.00f, 55.05f}, {58.70f, 2.85f, 56.05f}}, BlockType::RustPlate, true, false, true, 0, 0);
+        w.addProp({{57.30f, 2.77f, 55.05f}, {58.70f, 2.85f, 56.05f}}, BlockType::RustPlate, false, false, true, 0, 0);
+        w.addProp({{57.30f, 1.00f, 55.05f}, {58.70f, 1.08f, 56.05f}}, BlockType::RustPlate, false, false, true, 0, 0);
+        w.addProp({{57.38f, 1.58f, 55.13f}, {58.62f, 1.64f, 56.00f}}, BlockType::Grate, false, false, true, 0, 0);
+        w.addProp({{57.38f, 2.10f, 55.13f}, {58.62f, 2.16f, 56.00f}}, BlockType::Grate, false, false, true, 0, 0);
+
+        // 3) Wall lamp inside starter room
+        placeWallLamp(w, state.pointLights, 58.0f, 61.0f, 0, -1, 0, 0, settings);
     }
 }
 
@@ -583,13 +700,11 @@ MegaResult MegaGenerator::generate(uint64_t seed, const GameSettings& settings) 
     auto t0 = std::chrono::steady_clock::now();
     MegaResult res;
     res.seed = seed;
-    res.spawnPos = {64.5f, static_cast<float>(FLOOR_Y), 64.5f};
+    // Spawn player inside the central starter room (x=[55..60], z=[55..60])
+    res.spawnPos = {58.0f, static_cast<float>(FLOOR_Y), 58.2f};
 
     // Generate initial active region window around spawn
     updateInfiniteStream(res, res.spawnPos, settings);
-
-    // Guarantee a wall lamp right near spawn
-    placeWallLamp(res.world, res.pointLights, 63.0f, 67.5f, 1, 0, 0, 0, settings);
 
     auto t1 = std::chrono::steady_clock::now();
     res.generationMs = std::chrono::duration<double, std::milli>(t1 - t0).count();

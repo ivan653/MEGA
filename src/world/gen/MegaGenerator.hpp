@@ -30,13 +30,25 @@ struct CorridorSegment {
     int regZ = 0;
 };
 
+struct LockerPlacement {
+    Vec3 hingePos;
+    float closedYaw = 0.0f;
+    float openSign = 1.0f;
+    float width = 0.95f;
+    float height = 2.05f;
+    AABB interiorBox;
+    int regX = 0;
+    int regZ = 0;
+};
+
 struct MegaResult {
     WorldGrid world;
     uint64_t seed = 0x4D4547410001ULL;
-    Vec3 spawnPos{64.5f, 1.0f, 64.5f};
+    Vec3 spawnPos{58.0f, 1.0f, 58.5f};
     Vec3 exitPos{120.0f, 1.0f, 120.0f};
     std::vector<CorridorSegment> corridors;
     std::vector<PointLight3D> pointLights;
+    std::vector<LockerPlacement> lockers;
     std::set<std::pair<int, int>> loadedRegions;
     int currentRegX = 0;
     int currentRegZ = 0;
@@ -47,10 +59,31 @@ struct MegaResult {
 
 class MegaGenerator {
 public:
+    // 11x11 regions of 128m = 1408x1408m (~1.98 km^2), centered at (64, 64)
+    static constexpr int BIOME_MIN_REG = -5;
+    static constexpr int BIOME_MAX_REG =  5;
+    static constexpr float BIOME_CENTER_X = 64.0f;
+    static constexpr float BIOME_CENTER_Z = 64.0f;
+    static constexpr float BIOME_HALF_EXTENT = 704.0f; // 1408 / 2
+    // Robots spawn ONLY within 500m of the biome edge (max(|x-64|, |z-64|) >= 204m)
+    static constexpr float ROBOT_EDGE_BAND = 500.0f;
+    static constexpr float ROBOT_MIN_DIST_FROM_CENTER = BIOME_HALF_EXTENT - ROBOT_EDGE_BAND;
+
+    static bool isInsideUtilityBiome(int regX, int regZ) {
+        return regX >= BIOME_MIN_REG && regX <= BIOME_MAX_REG &&
+               regZ >= BIOME_MIN_REG && regZ <= BIOME_MAX_REG;
+    }
+
+    static bool isRobotSpawnAllowed(float x, float z) {
+        float dx = std::abs(x - BIOME_CENTER_X);
+        float dz = std::abs(z - BIOME_CENTER_Z);
+        float chebyshev = std::max(dx, dz);
+        return chebyshev >= ROBOT_MIN_DIST_FROM_CENTER && chebyshev <= BIOME_HALF_EXTENT;
+    }
+
     static MegaResult generate(uint64_t seed, const GameSettings& settings = GameSettings{});
 
-    // Streams new regions into the infinite world as the player moves, and unloads far regions.
-    // Returns true if any region was generated or unloaded.
+    // Streams new regions into the world as the player moves, and unloads far regions.
     static bool updateInfiniteStream(MegaResult& state, const Vec3& playerPos,
                                      const GameSettings& settings);
 

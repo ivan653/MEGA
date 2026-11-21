@@ -3,6 +3,7 @@
 #include "core/Config.hpp"
 #include "core/Math3D.hpp"
 #include "world/WorldGrid.hpp"
+#include <vector>
 
 namespace mega {
 
@@ -23,7 +24,8 @@ public:
     float pitch = 0.0f; // Radians
     bool grounded = false;
 
-    void update(const PlayerInput& input, const WorldGrid& world, float dt);
+    void update(const PlayerInput& input, const WorldGrid& world, float dt,
+                const std::vector<AABB>& dynamicColliders = {});
 
     Vec3 eyePosition() const {
         return {position.x, position.y + cfg::PLAYER_EYE_Y, position.z};
@@ -36,8 +38,10 @@ public:
 
 private:
     static AABB boxAt(const Vec3& pos);
-    bool collides(const WorldGrid& world, const AABB& box) const;
-    void moveAndSlide(const WorldGrid& world, const Vec3& delta);
+    bool collides(const WorldGrid& world, const AABB& box,
+                  const std::vector<AABB>& dynamicColliders) const;
+    void moveAndSlide(const WorldGrid& world, const Vec3& delta,
+                      const std::vector<AABB>& dynamicColliders);
 };
 
 } // namespace mega

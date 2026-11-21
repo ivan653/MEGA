@@ -72,32 +72,103 @@ TEST(MegaGeneratorTest, GeneratesConnectedMultiBiomeMegastructureQuickly) {
     }
 }
 
-TEST(GameWorldTest, RaycastAndEnemySpawningWork) {
+TEST(GameWorldTest, RaycastAndStarterRoomSurvivalWork) {
     GameWorld gw;
     gw.startNewRun(12345ULL);
-    EXPECT_GE(gw.enemies.size(), 10u); // 2-3 per region across 9 loaded regions
+    AudioEngine audio;
+    PlayerInput idle;
 
-    // Raycast straight down from player eye should hit the floor within ~2m
+    // 1. Starter room & raycast check (while in region 0,0)
     float hitDist = gw.raycastWorld(gw.player.eyePosition(), {0.0f, -1.0f, 0.0f}, 10.0f);
     EXPECT_GT(hitDist, 0.5f);
     EXPECT_LT(hitDist, 2.5f);
+
+    EXPECT_GE(gw.doors.size(), 2u);
+    EXPECT_NEAR(gw.doors[0].height, 2.0f, 0.01f);
+    EXPECT_FALSE(gw.doors[0].isCabinet);
+    EXPECT_EQ(gw.worldItems.size(), 7u);  // Flashlight + 2 Batteries + 2 Food + 2 Water
+    EXPECT_GT(gw.map.lockers.size(), 0u); // 25% corridor hideable lockers generated
+
+    // Verify starter room interior has NO corridor carved through it
+    EXPECT_EQ(gw.map.world.getBlock(58, 1, 58), BlockType::Air);
+    EXPECT_EQ(gw.map.world.getBlock(58, 1, 54), BlockType::Concrete);
+    EXPECT_EQ(gw.map.world.getBlock(58, 1, 61), BlockType::Concrete);
+
+    // 2. Test camera-relative Amnesia-style door drag opens the exit door (yaw = -PI/2 -> looking East along +X)
+    gw.player.yaw = PI * 0.5f; // +X
+    gw.grabbedDoorIdx = 0;
+    gw.dragGrabbedDoor(0.0f, -45.0f); // Push mouse forward/up to push door open into corridor
+    for (int i = 0; i < 30; ++i) gw.update(idle, false, cfg::FIXED_DT, audio);
+    EXPECT_GT(gw.doors[0].angle, 0.2f);
+    gw.endInteract();
+
+    // 3. Test Inventory usage (Food, Water, Battery)
+    gw.inventory.hasFlashlight = true;
+    gw.inventory.flashlightBattery = 40.0f;
+    gw.inventory.batteries = 2;
+    gw.inventory.food = 1;
+    gw.inventory.water = 1;
+    gw.hunger = 50.0f;
+    gw.thirst = 50.0f;
+
+    EXPECT_TRUE(gw.useInventoryItem(ItemType::Battery, audio));
+    EXPECT_GT(gw.inventory.flashlightBattery, 80.0f);
+    EXPECT_TRUE(gw.useInventoryItem(ItemType::Food, audio));
+    EXPECT_GT(gw.hunger, 80.0f);
+    EXPECT_TRUE(gw.useInventoryItem(ItemType::Water, audio));
+    EXPECT_GT(gw.thirst, 85.0f);
+
+    // 4. Test Smart Locker AI: if robot saw player enter a locker, robot opens it!
+    int testLockerIdx = -1;
+    for (size_t i = 0; i < gw.doors.size(); ++i) {
+        if (gw.doors[i].isLocker) { testLockerIdx = static_cast<int>(i); break; }
+    }
+    ASSERT_GE(testLockerIdx, 0);
+    gw.doors[testLockerIdx].angle = 0.05f;
+    gw.player.position = {
+        0.5f * (gw.doors[testLockerIdx].lockerInterior.min.x + gw.doors[testLockerIdx].lockerInterior.max.x),
+        1.0f,
+        0.5f * (gw.doors[testLockerIdx].lockerInterior.min.z + gw.doors[testLockerIdx].lockerInterior.max.z)
+    };
+    Enemy seeker;
+    seeker.pos = {gw.doors[testLockerIdx].hingePos.x, 1.0f, gw.doors[testLockerIdx].hingePos.z};
+    seeker.aiState = EnemyAIState::InvestigateLastSeen;
+    seeker.alerted = true;
+    seeker.sawPlayerEnterLockerIdx = testLockerIdx;
+    seeker.lastSeenPos = gw.player.position;
+    gw.enemies.clear();
+    gw.enemies.push_back(seeker);
+    gw.update(idle, false, cfg::FIXED_DT, audio);
+    EXPECT_GE(gw.doors[testLockerIdx].angle, 0.70f);
+
+    // 5. Safe center vs outer 500m edge robot spawn rule
+    for (const auto& e : gw.enemies) {
+        EXPECT_TRUE(MegaGenerator::isRobotSpawnAllowed(e.pos.x, e.pos.z) || e.sawPlayerEnterLockerIdx == -1);
+    }
+    gw.enemies.clear();
+    gw.player.position = {448.0f, 1.0f, 64.5f};
+    gw.update(idle, false, cfg::FIXED_DT, audio);
+    EXPECT_GT(gw.enemies.size(), 0u);
+    for (const auto& e : gw.enemies) {
+        EXPECT_TRUE(MegaGenerator::isRobotSpawnAllowed(e.pos.x, e.pos.z));
+    }
 }
 
 TEST(RobotSimTest, ObservePatrolAndChaseFootKinematics) {
     GameWorld gw;
     gw.startNewRun(12345ULL);
-    ASSERT_FALSE(gw.enemies.empty());
 
-    // Place first robot right in front of player in a clear corridor to observe Patrol & Chase
-    Enemy& e = gw.enemies[0];
-    e.pos = {64.5f, 1.0f, 70.0f};
-    e.dirX = 0; e.dirZ = 1;
-    e.yaw = 0.0f;
-    e.aiState = EnemyAIState::Patrol;
-    e.alerted = false;
-    e.movePulseTimer = 0.85f; // Just before 0.90s surge!
-    e.feet[0].initialized = false;
-    e.feet[1].initialized = false;
+    // Manually spawn a robot in the central corridor to observe its Patrol & Chase kinematics
+    Enemy testBot;
+    testBot.pos = {64.5f, 1.0f, 70.0f};
+    testBot.dirX = 0; testBot.dirZ = 1;
+    testBot.pendingDirX = 0; testBot.pendingDirZ = 1;
+    testBot.yaw = 0.0f;
+    testBot.aiState = EnemyAIState::Patrol;
+    testBot.alerted = false;
+    testBot.regX = 0; testBot.regZ = 0;
+    gw.enemies.clear();
+    gw.enemies.push_back(testBot);
 
     // Move player around a corner behind a wall (same region so it isn't unloaded)
     gw.player.position = {40.0f, 1.0f, 64.5f};
@@ -160,21 +231,25 @@ TEST(RobotSimTest, ObservePatrolAndChaseFootKinematics) {
 TEST(RobotSimTest, ObserveMapNavigationPatrolAndChase) {
     GameWorld gw;
     gw.startNewRun(12345ULL);
-    ASSERT_FALSE(gw.enemies.empty());
 
     AudioEngine audio;
     PlayerInput idle;
 
-    // --- PART 1: 45-second Patrol navigation test on robots in region (0,0) ---
-    gw.player.position = {10.0f, 1.0f, 10.0f}; // Out of sight in same region
+    // Place 2 test robots in region (0, 0) corridors for patrol & chase navigation verification
+    gw.enemies.clear();
+    Enemy r0;
+    r0.pos = {97.5f, 1.0f, 64.5f}; r0.dirX = 1; r0.dirZ = 0; r0.pendingDirX = 1; r0.pendingDirZ = 0;
+    r0.yaw = PI * 0.5f; r0.regX = 0; r0.regZ = 0;
+    Enemy r1;
+    r1.pos = {64.5f, 1.0f, 114.5f}; r1.dirX = 0; r1.dirZ = 1; r1.pendingDirX = 0; r1.pendingDirZ = 1;
+    r1.yaw = 0.0f; r1.regX = 0; r1.regZ = 0;
+    gw.enemies.push_back(r0);
+    gw.enemies.push_back(r1);
+
+    // --- PART 1: 45-second Patrol navigation test ---
+    gw.player.position = {10.0f, 1.0f, 10.0f};
     std::printf("=== MAP NAVIGATION: PATROL (45s) ===\n");
-    std::vector<int> reg0Idx;
-    for (size_t i = 0; i < gw.enemies.size(); ++i) {
-        if (gw.enemies[i].regX == 0 && gw.enemies[i].regZ == 0) {
-            reg0Idx.push_back(static_cast<int>(i));
-        }
-    }
-    ASSERT_FALSE(reg0Idx.empty());
+    std::vector<int> reg0Idx = {0, 1};
 
     std::vector<Vec3> prevCheckpoint(reg0Idx.size());
     std::vector<int> turnCount(reg0Idx.size(), 0);

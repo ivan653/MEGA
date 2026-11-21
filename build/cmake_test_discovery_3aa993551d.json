@@ -40,7 +40,7 @@
       "tests": 1,
       "testsuite": [
         {
-          "name": "RaycastAndEnemySpawningWork",
+          "name": "RaycastAndStarterRoomSurvivalWork",
           "file": "\/home\/ivan\/ImportantFiles\/My Games\/MEGA\/tests\/CoreTests.cpp",
           "line": 75
         }
@@ -53,12 +53,12 @@
         {
           "name": "ObservePatrolAndChaseFootKinematics",
           "file": "\/home\/ivan\/ImportantFiles\/My Games\/MEGA\/tests\/CoreTests.cpp",
-          "line": 86
+          "line": 157
         },
         {
           "name": "ObserveMapNavigationPatrolAndChase",
           "file": "\/home\/ivan\/ImportantFiles\/My Games\/MEGA\/tests\/CoreTests.cpp",
-          "line": 160
+          "line": 231
         }
       ]
     }

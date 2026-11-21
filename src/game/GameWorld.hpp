@@ -67,6 +67,7 @@ struct Enemy {
     float hurtFlash = 0.0f;
     int regX = 0;
     int regZ = 0;
+    int sawPlayerEnterLockerIdx = -1;
     bool alerted = false;
     bool alive = true;
 };
@@ -92,12 +93,58 @@ struct Particle {
     Vec3 color{1.0f, 0.8f, 0.3f};
 };
 
+enum class ItemType : int {
+    Flashlight = 0,
+    Battery    = 1,
+    Food       = 2,
+    Water      = 3
+};
+
+struct WorldItem {
+    Vec3 pos;
+    ItemType type = ItemType::Battery;
+    bool pickedUp = false;
+    int regX = 0;
+    int regZ = 0;
+};
+
+struct HingeDoor {
+    Vec3 hingePos;
+    float width = 1.0f;
+    float height = 2.8f;
+    float thickness = 0.08f;
+    float closedYaw = 0.0f;
+    float angle = 0.0f;      // 0..maxAngle
+    float maxAngle = 1.85f;  // ~106 degrees
+    float angularVel = 0.0f;
+    float openSign = 1.0f;
+    bool isCabinet = false;
+    bool isLocker = false;
+    AABB lockerInterior{};
+    int regX = 0;
+    int regZ = 0;
+
+    float currentYaw() const { return closedYaw + openSign * angle; }
+    AABB worldBounds() const;
+};
+
+struct Inventory {
+    bool hasFlashlight = false;
+    float flashlightBattery = 100.0f;
+    int batteries = 0;
+    int food = 0;
+    int water = 0;
+};
+
 class GameWorld {
 public:
     GameSettings settings;
     MegaResult map;
     Player player;
+    Inventory inventory;
     std::vector<Enemy> enemies;
+    std::vector<HingeDoor> doors;
+    std::vector<WorldItem> worldItems;
     std::vector<Pickup> pickups;
     std::vector<Projectile> projectiles;
     std::vector<Particle> particles;
@@ -105,26 +152,46 @@ public:
     int depth = 1;
     uint64_t baseSeed = 0x4D4547410001ULL;
     float health = 100.0f;
+    float hunger = 100.0f;
+    float thirst = 100.0f;
+    float energy = 100.0f; // Stamina for sprint & jump
     float oxygen = 100.0f;
-    float energy = 100.0f;
     int ammo = 48;
     int kills = 0;
     WeaponType weapon = WeaponType::Bolter;
     float fireCooldown = 0.0f;
     float damageFlash = 0.0f;
-    bool flashlightOn = true;
+    bool flashlightOn = false;
     bool showMinimap = true;
+    bool inventoryOpen = false;
     bool gameOver = false;
     bool worldStreamChanged = false;
+
+    // Amnesia-style interaction state
+    int hoveredDoorIdx = -1;
+    int hoveredItemIdx = -1;
+    int grabbedDoorIdx = -1;
 
     void startNewRun(uint64_t seed);
     void generateLevel(uint64_t seed);
     void update(const PlayerInput& input, bool firePressed, float dt, AudioEngine& audio);
     void fireWeapon(AudioEngine& audio);
+
+    // Amnesia-style grab & drag interaction
+    void updateHover();
+    bool beginInteract(AudioEngine& audio);
+    void dragGrabbedDoor(float mouseDx, float mouseDy);
+    void endInteract();
+    bool useInventoryItem(ItemType type, AudioEngine& audio);
+
     void gatherBillboards(std::vector<BillboardInstance>& out, float timeSec) const;
     void gatherRobots(std::vector<RobotRenderState>& out) const;
     void gatherRobotLights(std::vector<PointLight3D>& out) const;
+    void gatherInteractables(std::vector<DoorRenderState>& outDoors,
+                             std::vector<ItemRenderState>& outItems) const;
     void spawnRobotsInLoadedRegions();
+    void syncLockersFromMap();
+    int playerHiddenLockerIdx() const;
 
     const char* currentBiomeName() const;
     BiomeType currentBiome() const;

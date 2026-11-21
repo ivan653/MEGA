@@ -7,14 +7,65 @@
 
 namespace mega {
 
+namespace {
+
+bool rayIntersectAABB(const Vec3& orig, const Vec3& dir, const AABB& b, float maxDist, float& outT) {
+    float tmin = 0.0f;
+    float tmax = maxDist;
+    float o[3] = {orig.x, orig.y, orig.z};
+    float d[3] = {dir.x, dir.y, dir.z};
+    float mn[3] = {b.min.x, b.min.y, b.min.z};
+    float mx[3] = {b.max.x, b.max.y, b.max.z};
+
+    for (int i = 0; i < 3; ++i) {
+        if (std::abs(d[i]) < 1e-6f) {
+            if (o[i] < mn[i] || o[i] > mx[i]) return false;
+        } else {
+            float inv = 1.0f / d[i];
+            float t1 = (mn[i] - o[i]) * inv;
+            float t2 = (mx[i] - o[i]) * inv;
+            if (t1 > t2) std::swap(t1, t2);
+            tmin = std::max(tmin, t1);
+            tmax = std::min(tmax, t2);
+            if (tmin > tmax) return false;
+        }
+    }
+    outT = tmin;
+    return true;
+}
+
+} // namespace
+
+AABB HingeDoor::worldBounds() const {
+    float y = currentYaw();
+    float c = std::cos(y), s = std::sin(y);
+    // Door extends along local +X (width) and local +-Z (thickness/2)
+    float dx = c * width;
+    float dz = -s * width;
+    float pad = thickness * 0.5f + 0.03f;
+    float minX = std::min(hingePos.x, hingePos.x + dx) - pad;
+    float maxX = std::max(hingePos.x, hingePos.x + dx) + pad;
+    float minZ = std::min(hingePos.z, hingePos.z + dz) - pad;
+    float maxZ = std::max(hingePos.z, hingePos.z + dz) + pad;
+    return {{minX, hingePos.y, minZ}, {maxX, hingePos.y + height, maxZ}};
+}
+
 void GameWorld::startNewRun(uint64_t seed) {
     baseSeed = seed;
     depth = 1;
     health = 100.0f;
-    oxygen = 100.0f;
+    hunger = 100.0f;
+    thirst = 100.0f;
     energy = 100.0f;
+    oxygen = 100.0f;
     ammo = 48;
     kills = 0;
+    inventory = Inventory{};
+    flashlightOn = false;
+    inventoryOpen = false;
+    hoveredDoorIdx = -1;
+    hoveredItemIdx = -1;
+    grabbedDoorIdx = -1;
     weapon = WeaponType::Bolter;
     gameOver = false;
     damageFlash = 0.0f;
@@ -25,16 +76,93 @@ void GameWorld::generateLevel(uint64_t seed) {
     map = MegaGenerator::generate(seed, settings);
     player.position = map.spawnPos;
     player.velocity = {0.0f, 0.0f, 0.0f};
-    player.yaw = 0.0f;
+    player.yaw = -PI * 0.5f; // Face West toward the table with Flashlight & Batteries
     player.pitch = 0.0f;
     worldStreamChanged = true;
 
     enemies.clear();
+    doors.clear();
+    worldItems.clear();
     pickups.clear();
     projectiles.clear();
     particles.clear();
 
+    // 1) 2-meter Metal Exit Door leading East out of starter room (x=61.0, z=58..59) into spineNS1
+    HingeDoor exitDoor;
+    exitDoor.hingePos = {61.05f, 1.0f, 58.0f};
+    exitDoor.width = 1.0f;
+    exitDoor.height = 2.0f;
+    exitDoor.thickness = 0.09f;
+    exitDoor.closedYaw = -PI * 0.5f; // +X rotated by -PI/2 lies along +Z (58.0 .. 59.0)
+    exitDoor.openSign = 1.0f;        // Swings outward into corridor (+X)
+    exitDoor.maxAngle = 1.85f;
+    exitDoor.isCabinet = false;
+    doors.push_back(exitDoor);
+
+    // 2) Hinged Cabinet Door on the Food/Water cabinet against the North wall (x=57.36..58.64, z=56.05)
+    HingeDoor cabDoor;
+    cabDoor.hingePos = {57.36f, 1.04f, 56.05f};
+    cabDoor.width = 1.28f;
+    cabDoor.height = 1.76f;
+    cabDoor.thickness = 0.05f;
+    cabDoor.closedYaw = 0.0f;        // Lies along +X (57.36 .. 58.64)
+    cabDoor.openSign = -1.0f;        // Swings open into the room (+Z)
+    cabDoor.maxAngle = 1.85f;
+    cabDoor.isCabinet = true;
+    doors.push_back(cabDoor);
+
+    // 3) Starter Room Items on West Table (x=55.15..56.15, z=57.0..58.8, y=1.84)
+    worldItems.push_back({{55.65f, 1.84f, 58.25f}, ItemType::Flashlight, false, 0, 0});
+    worldItems.push_back({{55.55f, 1.84f, 57.45f}, ItemType::Battery, false, 0, 0});
+    worldItems.push_back({{55.78f, 1.84f, 57.60f}, ItemType::Battery, false, 0, 0});
+
+    // 4) Starter Room Items inside North Cabinet (Food on y=2.16, Water on y=1.64)
+    worldItems.push_back({{57.78f, 2.16f, 55.55f}, ItemType::Food, false, 0, 0});
+    worldItems.push_back({{58.22f, 2.16f, 55.55f}, ItemType::Food, false, 0, 0});
+    worldItems.push_back({{57.78f, 1.64f, 55.55f}, ItemType::Water, false, 0, 0});
+    worldItems.push_back({{58.22f, 1.64f, 55.55f}, ItemType::Water, false, 0, 0});
+
+    syncLockersFromMap();
     spawnRobotsInLoadedRegions();
+}
+
+void GameWorld::syncLockersFromMap() {
+    for (const auto& lp : map.lockers) {
+        bool exists = false;
+        for (const auto& d : doors) {
+            if (d.isLocker && lengthSq(d.hingePos - lp.hingePos) < 0.01f) {
+                exists = true;
+                break;
+            }
+        }
+        if (exists) continue;
+
+        HingeDoor ld;
+        ld.hingePos = lp.hingePos;
+        ld.width = lp.width;
+        ld.height = lp.height;
+        ld.thickness = 0.05f;
+        ld.closedYaw = lp.closedYaw;
+        ld.openSign = lp.openSign;
+        ld.maxAngle = 1.90f;
+        ld.isCabinet = true;
+        ld.isLocker = true;
+        ld.lockerInterior = lp.interiorBox;
+        ld.regX = lp.regX;
+        ld.regZ = lp.regZ;
+        doors.push_back(ld);
+    }
+}
+
+int GameWorld::playerHiddenLockerIdx() const {
+    AABB pBox = player.boundingBox();
+    for (size_t i = 0; i < doors.size(); ++i) {
+        if (!doors[i].isLocker) continue;
+        if (doors[i].angle < 0.55f && doors[i].lockerInterior.intersects(pBox)) {
+            return static_cast<int>(i);
+        }
+    }
+    return -1;
 }
 
 void GameWorld::spawnRobotsInLoadedRegions() {
@@ -89,6 +217,8 @@ void GameWorld::spawnRobotsInLoadedRegions() {
             }
 
             Vec3 cand{px, 1.0f, pz};
+            // Robots ONLY spawn within 500m of the 2km^2 biome edge (max(|x-64|, |z-64|) >= 204m)
+            if (!MegaGenerator::isRobotSpawnAllowed(px, pz)) continue;
             if (lengthSq(cand - map.spawnPos) < 14.0f * 14.0f) continue;
 
             int ix = static_cast<int>(std::floor(px));
@@ -244,7 +374,96 @@ void GameWorld::update(const PlayerInput& input, bool firePressed, float dt, Aud
     if (fireCooldown > 0.0f) fireCooldown -= dt;
     if (damageFlash > 0.0f) damageFlash = std::max(0.0f, damageFlash - dt * 2.5f);
 
-    player.update(input, map.world, dt);
+    // Collect closed/partially closed door colliders so player cannot walk through closed doors
+    std::vector<AABB> doorColliders;
+    for (const auto& d : doors) {
+        if (d.angle < 0.85f) {
+            doorColliders.push_back(d.worldBounds());
+        }
+    }
+
+    // Stamina/Energy & Thirst gating for sprint & jump
+    PlayerInput modInput = input;
+    bool tryingSprint = modInput.sprint && (std::abs(modInput.moveForward) > 0.1f || std::abs(modInput.moveRight) > 0.1f);
+    if (thirst <= 1.0f || energy <= 2.0f) {
+        modInput.sprint = false;
+        tryingSprint = false;
+    }
+    if (modInput.jump && energy < 8.0f) {
+        modInput.jump = false;
+    }
+    bool didJump = modInput.jump && player.grounded;
+
+    player.update(modInput, map.world, dt, doorColliders);
+
+    // Update Hunger, Thirst, Energy (Stamina) & Flashlight Battery
+    hunger = std::max(0.0f, hunger - 0.16f * dt);
+    thirst = std::max(0.0f, thirst - (tryingSprint ? 0.42f : 0.24f) * dt);
+
+    if (tryingSprint) {
+        energy = std::max(0.0f, energy - 18.0f * dt);
+    } else {
+        float regenScale = (hunger > 15.0f ? 1.0f : 0.45f) * (thirst > 15.0f ? 1.0f : 0.45f);
+        energy = std::min(100.0f, energy + 13.0f * regenScale * dt);
+    }
+    if (didJump) {
+        energy = std::max(0.0f, energy - 10.0f);
+    }
+
+    if (hunger <= 0.0f) health -= 1.5f * dt;
+    if (thirst <= 0.0f) health -= 2.0f * dt;
+
+    if (flashlightOn) {
+        if (!inventory.hasFlashlight || inventory.flashlightBattery <= 0.0f) {
+            flashlightOn = false;
+        } else {
+            inventory.flashlightBattery = std::max(0.0f, inventory.flashlightBattery - 1.15f * dt);
+            if (inventory.flashlightBattery <= 0.0f) flashlightOn = false;
+        }
+    }
+
+    // Update hinged door physics (Amnesia-style inertia, damping & wall collision!)
+    for (auto& d : doors) {
+        if (std::abs(d.angularVel) < 1e-4f) continue;
+        float prevAngle = d.angle;
+        float nextAngle = clampf(d.angle + d.angularVel * dt, 0.0f, d.maxAngle);
+        d.angle = nextAngle;
+
+        // Check if swinging door leaf collides with any solid WorldGrid wall block
+        bool hitWall = false;
+        float y = d.currentYaw();
+        Vec3 dir{std::cos(y), 0.0f, -std::sin(y)};
+        for (float frac : {0.42f, 0.70f, 0.94f}) {
+            Vec3 p = d.hingePos + dir * (d.width * frac);
+            int ix = static_cast<int>(std::floor(p.x));
+            int iz = static_cast<int>(std::floor(p.z));
+            int iyLow = static_cast<int>(std::floor(d.hingePos.y + 0.35f));
+            int iyHigh = static_cast<int>(std::floor(d.hingePos.y + d.height - 0.25f));
+            if (map.world.getCell(ix, iyLow, iz).isSolid() ||
+                map.world.getCell(ix, iyHigh, iz).isSolid()) {
+                hitWall = true;
+                break;
+            }
+        }
+
+        if (hitWall) {
+            d.angle = prevAngle;
+            d.angularVel = 0.0f;
+        } else {
+            if (d.angle <= 0.0f || d.angle >= d.maxAngle) {
+                d.angularVel = 0.0f;
+            }
+            d.angularVel *= std::exp(-6.5f * dt);
+        }
+    }
+
+    // Update hovered interactable object
+    updateHover();
+    if (grabbedDoorIdx >= 0 && grabbedDoorIdx < static_cast<int>(doors.size())) {
+        if (length(doors[grabbedDoorIdx].hingePos - player.eyePosition()) > 3.2f) {
+            grabbedDoorIdx = -1;
+        }
+    }
 
     // Infinite map streaming check as player moves across regions
     int rx = WorldGrid::floorDiv(static_cast<int>(std::floor(player.position.x)), cfg::REGION_SIZE);
@@ -252,6 +471,7 @@ void GameWorld::update(const PlayerInput& input, bool firePressed, float dt, Aud
     if (rx != map.currentRegX || rz != map.currentRegZ) {
         if (MegaGenerator::updateInfiniteStream(map, player.position, settings)) {
             worldStreamChanged = true;
+            syncLockersFromMap();
             spawnRobotsInLoadedRegions();
         }
     }
@@ -260,23 +480,7 @@ void GameWorld::update(const PlayerInput& input, bool firePressed, float dt, Aud
         fireWeapon(audio);
     }
 
-    // Survival resource drain
-    BiomeType b = currentBiome();
-    float o2Drain = 0.55f; // Baseline atmospheric leak
-    if (b == BiomeType::CorrosionSewers || b == BiomeType::BioMechanicalRift) {
-        o2Drain = 1.65f; // Hazardous atmosphere
-    }
-    oxygen = std::max(0.0f, oxygen - o2Drain * dt);
-    if (oxygen <= 0.0f) {
-        health -= 6.0f * dt;
-    }
-
-    if (flashlightOn) {
-        energy = std::max(0.0f, energy - 1.8f * dt);
-        if (energy <= 0.0f) flashlightOn = false;
-    } else {
-        energy = std::min(100.0f, energy + 2.5f * dt);
-    }
+    // Survival resource drain handled above (hunger, thirst, stamina, flashlight battery)
 
     // Pickups
     for (auto& p : pickups) {
@@ -392,21 +596,50 @@ void GameWorld::update(const PlayerInput& input, bool firePressed, float dt, Aud
         Vec3 toPlayer = target - eEye;
         float dist = length(toPlayer);
 
-        // Check line-of-sight to player
+        // Check line-of-sight to player (blocked by walls AND closed doors/lockers!)
+        int hiddenIdx = playerHiddenLockerIdx();
         bool canSeePlayer = false;
         if (dist <= 30.0f && dist > 0.1f) {
             Vec3 forward{std::sin(e.yaw), 0.0f, std::cos(e.yaw)};
             Vec3 toPlayerHoriz = normalize({toPlayer.x, 0.0f, toPlayer.z});
             bool inCone = (e.aiState == EnemyAIState::Chase || e.aiState == EnemyAIState::InvestigateLastSeen)
                               ? (dot(forward, toPlayerHoriz) > -0.2f)
-                              : (dot(forward, toPlayerHoriz) > 0.35f); // Patrol: front only
+                              : (dot(forward, toPlayerHoriz) > 0.35f);
             if (inCone) {
                 Vec3 dir = toPlayer / dist;
                 float wall = raycastWorld(eEye, dir, dist);
-                if (wall >= dist - 0.6f) {
+                bool blockedByDoor = false;
+                for (const auto& d : doors) {
+                    if (d.angle < 0.65f) {
+                        float dtHit = 0.0f;
+                        if (rayIntersectAABB(eEye, dir, d.worldBounds(), dist, dtHit)) {
+                            blockedByDoor = true;
+                            break;
+                        }
+                    }
+                }
+                if (wall >= dist - 0.6f && !blockedByDoor) {
                     canSeePlayer = true;
                 }
             }
+        }
+
+        // If robot was actively chasing/seeing the player and the player just closed a locker door in front of it,
+        // the robot remembers which locker the player entered!
+        if (hiddenIdx >= 0 && e.aiState == EnemyAIState::Chase) {
+            Vec3 lockerCenter{
+                0.5f * (doors[hiddenIdx].lockerInterior.min.x + doors[hiddenIdx].lockerInterior.max.x),
+                1.0f,
+                0.5f * (doors[hiddenIdx].lockerInterior.min.z + doors[hiddenIdx].lockerInterior.max.z)
+            };
+            float lDist = length(lockerCenter - eEye);
+            if (lDist <= 28.0f && raycastWorld(eEye, normalize(lockerCenter - eEye), lDist) >= lDist - 1.2f) {
+                e.sawPlayerEnterLockerIdx = hiddenIdx;
+                e.lastSeenPos = lockerCenter;
+            }
+        }
+        if (hiddenIdx < 0 && e.sawPlayerEnterLockerIdx >= 0 && canSeePlayer) {
+            e.sawPlayerEnterLockerIdx = -1;
         }
 
         if (canSeePlayer) {
@@ -508,8 +741,22 @@ void GameWorld::update(const PlayerInput& input, bool firePressed, float dt, Aud
 
             Vec3 goalPos = (e.aiState == EnemyAIState::Chase) ? player.position : e.lastSeenPos;
 
+            // If robot saw player enter a locker, walk right up to it and rip the locker door open!
+            if (e.aiState == EnemyAIState::InvestigateLastSeen && e.sawPlayerEnterLockerIdx >= 0 &&
+                e.sawPlayerEnterLockerIdx < static_cast<int>(doors.size())) {
+                auto& ld = doors[e.sawPlayerEnterLockerIdx];
+                float dToLocker = length({ld.hingePos.x - e.pos.x, 0.0f, ld.hingePos.z - e.pos.z});
+                if (dToLocker < 2.2f) {
+                    ld.angularVel = 5.5f;
+                    ld.angle = std::max(ld.angle, 0.75f);
+                    e.sawPlayerEnterLockerIdx = -1;
+                    e.aiState = EnemyAIState::Chase;
+                }
+            }
+
             if (e.aiState == EnemyAIState::InvestigateLastSeen &&
                 lengthSq({goalPos.x - e.pos.x, 0.0f, goalPos.z - e.pos.z}) < 1.25f * 1.25f) {
+                e.sawPlayerEnterLockerIdx = -1;
                 e.aiState = EnemyAIState::ReturnToAggro;
                 e.alerted = false;
                 e.pathTimer = 0.0f;
@@ -752,6 +999,134 @@ void GameWorld::gatherRobots(std::vector<RobotRenderState>& out) const {
         rs.alerted = e.alerted;
         rs.hurt = e.hurtFlash > 0.0f;
         out.push_back(rs);
+    }
+}
+
+void GameWorld::updateHover() {
+    hoveredDoorIdx = -1;
+    hoveredItemIdx = -1;
+    Vec3 orig = player.eyePosition();
+    Vec3 dir = player.forwardDir();
+    float wallT = raycastWorld(orig, dir, 2.7f);
+    float bestT = wallT;
+
+    // Check doors first so closed cabinet door blocks grabbing items behind it
+    for (size_t i = 0; i < doors.size(); ++i) {
+        float t = 0.0f;
+        if (rayIntersectAABB(orig, dir, doors[i].worldBounds(), bestT, t)) {
+            bestT = t;
+            hoveredDoorIdx = static_cast<int>(i);
+            hoveredItemIdx = -1;
+        }
+    }
+
+    for (size_t i = 0; i < worldItems.size(); ++i) {
+        if (worldItems[i].pickedUp) continue;
+        AABB itemBox{
+            {worldItems[i].pos.x - 0.18f, worldItems[i].pos.y - 0.05f, worldItems[i].pos.z - 0.18f},
+            {worldItems[i].pos.x + 0.18f, worldItems[i].pos.y + 0.28f, worldItems[i].pos.z + 0.18f}
+        };
+        float t = 0.0f;
+        if (rayIntersectAABB(orig, dir, itemBox, bestT, t)) {
+            bestT = t;
+            hoveredItemIdx = static_cast<int>(i);
+            hoveredDoorIdx = -1;
+        }
+    }
+}
+
+bool GameWorld::beginInteract(AudioEngine& audio) {
+    updateHover();
+    if (hoveredItemIdx >= 0 && hoveredItemIdx < static_cast<int>(worldItems.size())) {
+        auto& it = worldItems[hoveredItemIdx];
+        it.pickedUp = true;
+        audio.play(SoundId::Pickup, 0.9f);
+        switch (it.type) {
+            case ItemType::Flashlight:
+                inventory.hasFlashlight = true;
+                inventory.flashlightBattery = 100.0f;
+                break;
+            case ItemType::Battery:
+                inventory.batteries++;
+                break;
+            case ItemType::Food:
+                inventory.food++;
+                break;
+            case ItemType::Water:
+                inventory.water++;
+                break;
+        }
+        hoveredItemIdx = -1;
+        return true;
+    }
+    if (hoveredDoorIdx >= 0 && hoveredDoorIdx < static_cast<int>(doors.size())) {
+        grabbedDoorIdx = hoveredDoorIdx;
+        return true;
+    }
+    return false;
+}
+
+void GameWorld::dragGrabbedDoor(float mouseDx, float mouseDy) {
+    if (grabbedDoorIdx < 0 || grabbedDoorIdx >= static_cast<int>(doors.size())) return;
+    auto& d = doors[grabbedDoorIdx];
+    // True 3D camera-relative door drag:
+    // Derivative of latch direction (cos(y), 0, -sin(y)) w.r.t. angle is openSign * (-sin(y), 0, -cos(y))
+    float y = d.currentYaw();
+    Vec3 swingDir = Vec3{-std::sin(y), 0.0f, -std::cos(y)} * d.openSign;
+    Vec3 mouseWorldMove = player.rightDir() * mouseDx + player.forwardDir() * (-mouseDy);
+    float pull = dot(mouseWorldMove, swingDir) * 0.018f;
+    d.angularVel = clampf(d.angularVel + pull * 8.5f, -5.5f, 5.5f);
+}
+
+void GameWorld::endInteract() {
+    grabbedDoorIdx = -1;
+}
+
+bool GameWorld::useInventoryItem(ItemType type, AudioEngine& audio) {
+    switch (type) {
+        case ItemType::Battery:
+            if (inventory.batteries > 0 && inventory.hasFlashlight && inventory.flashlightBattery < 99.5f) {
+                inventory.batteries--;
+                inventory.flashlightBattery = std::min(100.0f, inventory.flashlightBattery + 45.0f);
+                audio.play(SoundId::Pickup, 0.7f);
+                return true;
+            }
+            return false;
+        case ItemType::Food:
+            if (inventory.food > 0 && hunger < 99.5f) {
+                inventory.food--;
+                hunger = std::min(100.0f, hunger + 35.0f);
+                audio.play(SoundId::Pickup, 0.7f);
+                return true;
+            }
+            return false;
+        case ItemType::Water:
+            if (inventory.water > 0 && thirst < 99.5f) {
+                inventory.water--;
+                thirst = std::min(100.0f, thirst + 40.0f);
+                audio.play(SoundId::Pickup, 0.7f);
+                return true;
+            }
+            return false;
+        default:
+            return false;
+    }
+}
+
+void GameWorld::gatherInteractables(std::vector<DoorRenderState>& outDoors,
+                                    std::vector<ItemRenderState>& outItems) const {
+    outDoors.clear();
+    for (size_t i = 0; i < doors.size(); ++i) {
+        const auto& d = doors[i];
+        bool hl = (static_cast<int>(i) == hoveredDoorIdx || static_cast<int>(i) == grabbedDoorIdx);
+        outDoors.push_back({d.hingePos, d.width, d.height, d.thickness, d.currentYaw(), d.isCabinet, hl});
+    }
+
+    outItems.clear();
+    for (size_t i = 0; i < worldItems.size(); ++i) {
+        if (worldItems[i].pickedUp) continue;
+        bool hl = (static_cast<int>(i) == hoveredItemIdx);
+        outItems.push_back({worldItems[i].pos, static_cast<int>(worldItems[i].type), hl});
     }
 }
 

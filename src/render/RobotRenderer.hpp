@@ -18,6 +18,22 @@ struct RobotRenderState {
     bool hurt = false;
 };
 
+struct DoorRenderState {
+    Vec3 hingePos;
+    float width = 1.0f;
+    float height = 2.2f;
+    float thickness = 0.08f;
+    float yaw = 0.0f; // closedYaw + openSign * angle
+    bool isCabinet = false;
+    bool highlighted = false;
+};
+
+struct ItemRenderState {
+    Vec3 pos;
+    int itemKind = 0; // 0=Flashlight, 1=Battery, 2=Food, 3=Water
+    bool highlighted = false;
+};
+
 class RobotRenderer {
 public:
     RobotRenderer() = default;
@@ -26,6 +42,10 @@ public:
     bool init();
     void render(const Mat4& view, const Mat4& proj, const Vec3& camPos,
                 const std::vector<RobotRenderState>& robots);
+    void renderInteractables(const Shader& worldShader, const Mat4& view, const Mat4& proj,
+                             const Vec3& camPos,
+                             const std::vector<DoorRenderState>& doors,
+                             const std::vector<ItemRenderState>& items);
 
 private:
     GLuint vao_ = 0;

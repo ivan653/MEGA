@@ -32,17 +32,30 @@ out float vAO;
 out float vEmissive;
 out float vViewDist;
 
+uniform mat4 uModel;
 uniform mat4 uView;
 uniform mat4 uProj;
+uniform vec3 uPartScale;
+uniform float uTexLayerOverride;
+uniform float uEmissiveOverride;
 
 void main() {
-    vWorldPos = aPos;
-    vNormal = aNormal;
-    vUVLayer = aUVLayer;
-    vAO = aAO;
-    vEmissive = aEmissive;
+    vec4 worldPos = uModel * vec4(aPos, 1.0);
+    vWorldPos = worldPos.xyz;
+    vNormal = normalize(mat3(uModel) * aNormal);
 
-    vec4 viewPos = uView * vec4(aPos, 1.0);
+    vec2 uv = aUVLayer.xy;
+    if (uPartScale.x > 0.001) {
+        if (abs(aNormal.x) > 0.5) uv *= vec2(uPartScale.z, uPartScale.y);
+        else if (abs(aNormal.y) > 0.5) uv *= vec2(uPartScale.x, uPartScale.z);
+        else uv *= vec2(uPartScale.x, uPartScale.y);
+    }
+    float layer = (uTexLayerOverride >= 0.0) ? uTexLayerOverride : aUVLayer.z;
+    vUVLayer = vec3(uv, layer);
+    vAO = aAO;
+    vEmissive = (uEmissiveOverride >= 0.0) ? uEmissiveOverride : aEmissive;
+
+    vec4 viewPos = uView * worldPos;
     vViewDist = length(viewPos.xyz);
     gl_Position = uProj * viewPos;
 }
@@ -63,6 +76,7 @@ uniform sampler2DArray uAtlas;
 uniform vec3 uCamPos;
 uniform vec3 uCamDir;
 uniform float uFlashlight;
+uniform vec3 uTint;
 
 uniform float uAmbientBrightness;
 uniform float uFlashlightIntensity;
@@ -201,7 +215,7 @@ void main() {
         totalSpec = floor(totalSpec * uLightSteps + 0.5) / uLightSteps;
     }
 
-    vec3 litColor = tex.rgb * (totalDiffuse * mix(0.35, 1.0, vAO)) + totalSpec * mix(0.5, 1.0, vAO);
+    vec3 litColor = (tex.rgb * uTint) * (totalDiffuse * mix(0.35, 1.0, vAO)) + totalSpec * mix(0.5, 1.0, vAO);
 
     float fogFactor = 1.0 - exp(-max(0.0, vViewDist - 4.0) * uFogDensity);
     vec3 fogColor = vec3(0.014, 0.018, 0.024);
@@ -296,6 +310,8 @@ int main(int, char**) {
     int winH = cfg::WINDOW_HEIGHT;
     std::vector<BillboardInstance> spriteQueue;
     std::vector<RobotRenderState> robotQueue;
+    std::vector<DoorRenderState> doorQueue;
+    std::vector<ItemRenderState> itemQueue;
 
     auto reloadConfig = [&]() {
         gw.settings = GameSettings::loadOrCreate("mega.cfg");
@@ -347,10 +363,32 @@ int main(int, char**) {
                     keyDown[ev.key.scancode] = true;
                 }
                 if (ev.key.key == SDLK_ESCAPE) {
-                    mouseCaptured = !mouseCaptured;
+                    if (gw.inventoryOpen) {
+                        gw.inventoryOpen = false;
+                        mouseCaptured = true;
+                        SDL_SetWindowRelativeMouseMode(window, true);
+                    } else {
+                        mouseCaptured = !mouseCaptured;
+                        SDL_SetWindowRelativeMouseMode(window, mouseCaptured);
+                    }
+                } else if (ev.key.key == SDLK_TAB || ev.key.key == SDLK_I) {
+                    gw.inventoryOpen = !gw.inventoryOpen;
+                    gw.endInteract();
+                    mouseCaptured = !gw.inventoryOpen;
                     SDL_SetWindowRelativeMouseMode(window, mouseCaptured);
                 } else if (ev.key.key == SDLK_F) {
-                    gw.flashlightOn = !gw.flashlightOn;
+                    if (gw.inventory.hasFlashlight && gw.inventory.flashlightBattery > 0.0f) {
+                        gw.flashlightOn = !gw.flashlightOn;
+                    }
+                } else if (ev.key.key == SDLK_E && !gw.inventoryOpen) {
+                    gw.beginInteract(audio);
+                    gw.endInteract();
+                } else if (ev.key.key == SDLK_1) {
+                    gw.useInventoryItem(ItemType::Battery, audio);
+                } else if (ev.key.key == SDLK_2) {
+                    gw.useInventoryItem(ItemType::Food, audio);
+                } else if (ev.key.key == SDLK_3) {
+                    gw.useInventoryItem(ItemType::Water, audio);
                 } else if (ev.key.key == SDLK_M) {
                     gw.showMinimap = !gw.showMinimap;
                 } else if (ev.key.key == SDLK_F5) {
@@ -365,14 +403,35 @@ int main(int, char**) {
                     running = false;
                 }
             } else if (ev.type == SDL_EVENT_MOUSE_MOTION && mouseCaptured) {
-                yawDelta += ev.motion.xrel * cfg::MOUSE_SENS;
-                pitchDelta -= ev.motion.yrel * cfg::MOUSE_SENS;
+                if (gw.grabbedDoorIdx >= 0) {
+                    gw.dragGrabbedDoor(ev.motion.xrel, ev.motion.yrel);
+                } else {
+                    yawDelta += ev.motion.xrel * cfg::MOUSE_SENS;
+                    pitchDelta -= ev.motion.yrel * cfg::MOUSE_SENS;
+                }
+            } else if (ev.type == SDL_EVENT_MOUSE_BUTTON_UP) {
+                if (ev.button.button == SDL_BUTTON_LEFT) {
+                    gw.endInteract();
+                }
             } else if (ev.type == SDL_EVENT_MOUSE_BUTTON_DOWN) {
-                if (!mouseCaptured) {
+                if (gw.inventoryOpen && ev.button.button == SDL_BUTTON_LEFT) {
+                    // Convert click to HUD coordinates (1280x720)
+                    float mx = ev.button.x * (static_cast<float>(cfg::RETRO_WIDTH) / std::max(1, winW));
+                    float my = ev.button.y * (static_cast<float>(cfg::RETRO_HEIGHT) / std::max(1, winH));
+                    int ix = cfg::RETRO_WIDTH / 2 - 180;
+                    int iy = cfg::RETRO_HEIGHT / 2 - 125;
+                    if (mx >= ix + 18 && mx <= ix + 342) {
+                        if (my >= iy + 86 && my <= iy + 122) gw.useInventoryItem(ItemType::Battery, audio);
+                        else if (my >= iy + 132 && my <= iy + 168) gw.useInventoryItem(ItemType::Food, audio);
+                        else if (my >= iy + 178 && my <= iy + 214) gw.useInventoryItem(ItemType::Water, audio);
+                    }
+                } else if (!mouseCaptured) {
                     mouseCaptured = true;
                     SDL_SetWindowRelativeMouseMode(window, true);
                 } else if (ev.button.button == SDL_BUTTON_LEFT) {
-                    fireClicked = true;
+                    if (!gw.beginInteract(audio)) {
+                        fireClicked = true;
+                    }
                 }
             }
         }
@@ -418,6 +477,11 @@ int main(int, char**) {
         Vec3 camDir = gw.player.forwardDir();
 
         worldShader.use();
+        worldShader.setMat4("uModel", Mat4::identity());
+        worldShader.setVec3("uPartScale", {0.0f, 0.0f, 0.0f});
+        worldShader.setFloat("uTexLayerOverride", -1.0f);
+        worldShader.setFloat("uEmissiveOverride", -1.0f);
+        worldShader.setVec3("uTint", {1.0f, 1.0f, 1.0f});
         worldShader.setMat4("uProj", proj);
         worldShader.setMat4("uView", view);
         worldShader.setInt("uAtlas", 0);
@@ -465,6 +529,9 @@ int main(int, char**) {
 
         gw.gatherRobots(robotQueue);
         robotRenderer.render(view, proj, camPos, robotQueue);
+
+        gw.gatherInteractables(doorQueue, itemQueue);
+        robotRenderer.renderInteractables(worldShader, view, proj, camPos, doorQueue, itemQueue);
 
         gw.gatherBillboards(spriteQueue, totalTime);
         billboards.render(view, proj, camPos, spriteQueue);

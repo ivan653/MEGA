@@ -28,8 +28,8 @@ set_tests_properties([=[MegaGeneratorTest.GeneratesConnectedMultiBiomeMegastruct
     SKIP_REGULAR_EXPRESSION [==[\[  SKIPPED \]]==]
     
 )
-add_test([=[GameWorldTest.RaycastAndEnemySpawningWork]=]  [==[/home/ivan/ImportantFiles/My Games/MEGA/build/mega_tests]==] [==[--gtest_filter=GameWorldTest.RaycastAndEnemySpawningWork]==] --gtest_also_run_disabled_tests)
-set_tests_properties([=[GameWorldTest.RaycastAndEnemySpawningWork]=]
+add_test([=[GameWorldTest.RaycastAndStarterRoomSurvivalWork]=]  [==[/home/ivan/ImportantFiles/My Games/MEGA/build/mega_tests]==] [==[--gtest_filter=GameWorldTest.RaycastAndStarterRoomSurvivalWork]==] --gtest_also_run_disabled_tests)
+set_tests_properties([=[GameWorldTest.RaycastAndStarterRoomSurvivalWork]=]
   PROPERTIES
     
     _CMAKE_TEST_BUILD_DEPENDS [==[/home/ivan/ImportantFiles/My Games/MEGA/build/mega_tests]==]
@@ -43,7 +43,7 @@ set_tests_properties([=[RobotSimTest.ObservePatrolAndChaseFootKinematics]=]
   PROPERTIES
     
     _CMAKE_TEST_BUILD_DEPENDS [==[/home/ivan/ImportantFiles/My Games/MEGA/build/mega_tests]==]
-    DEF_SOURCE_LINE [==[/home/ivan/ImportantFiles/My Games/MEGA/tests/CoreTests.cpp:86]==]
+    DEF_SOURCE_LINE [==[/home/ivan/ImportantFiles/My Games/MEGA/tests/CoreTests.cpp:157]==]
     WORKING_DIRECTORY [==[/home/ivan/ImportantFiles/My Games/MEGA/build]==]
     SKIP_REGULAR_EXPRESSION [==[\[  SKIPPED \]]==]
     
@@ -53,9 +53,9 @@ set_tests_properties([=[RobotSimTest.ObserveMapNavigationPatrolAndChase]=]
   PROPERTIES
     
     _CMAKE_TEST_BUILD_DEPENDS [==[/home/ivan/ImportantFiles/My Games/MEGA/build/mega_tests]==]
-    DEF_SOURCE_LINE [==[/home/ivan/ImportantFiles/My Games/MEGA/tests/CoreTests.cpp:160]==]
+    DEF_SOURCE_LINE [==[/home/ivan/ImportantFiles/My Games/MEGA/tests/CoreTests.cpp:231]==]
     WORKING_DIRECTORY [==[/home/ivan/ImportantFiles/My Games/MEGA/build]==]
     SKIP_REGULAR_EXPRESSION [==[\[  SKIPPED \]]==]
     
 )
-set(mega_tests_TESTS [==[WorldGridTest.BoundsAndBlockPlacement]==] [==[PlayerPhysicsTest.GravityLandsOnFloorAndStepUpWorks]==] [==[MegaGeneratorTest.GeneratesConnectedMultiBiomeMegastructureQuickly]==] [==[GameWorldTest.RaycastAndEnemySpawningWork]==] [==[RobotSimTest.ObservePatrolAndChaseFootKinematics]==] [==[RobotSimTest.ObserveMapNavigationPatrolAndChase]==])
+set(mega_tests_TESTS [==[WorldGridTest.BoundsAndBlockPlacement]==] [==[PlayerPhysicsTest.GravityLandsOnFloorAndStepUpWorks]==] [==[MegaGeneratorTest.GeneratesConnectedMultiBiomeMegastructureQuickly]==] [==[GameWorldTest.RaycastAndStarterRoomSurvivalWork]==] [==[RobotSimTest.ObservePatrolAndChaseFootKinematics]==] [==[RobotSimTest.ObserveMapNavigationPatrolAndChase]==])
