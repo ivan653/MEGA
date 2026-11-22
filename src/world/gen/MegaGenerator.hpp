@@ -25,7 +25,8 @@ struct CorridorSegment {
     int x0, z0, x1, z1;
     int width = 3;         // 2..4 meters
     bool alongX = false;
-    int connections = 0;   // Strictly 2..3 connections
+    bool isLoopReturn = false; // True for L-shaped ring/donut return corridor legs
+    int connections = 0;   // Base 1..3 connections (+1 when a ring loop reconnects)
     int targetConnections = 2;
     int regX = 0;
     int regZ = 0;
@@ -52,14 +53,28 @@ struct DoubleCabinetPlacement {
     float rightOpenSign = -1.0f;
     float leafWidth = 0.56f;
     float height = 1.96f;
+    bool isRare = false; // Rare reinforced cabinet in 3x4 dead-end rooms
     int regX = 0;
     int regZ = 0;
 };
 
-// Flat surface where loot items can spawn (crates, metal cabinet shelves, shelving racks, lockers)
+// Hinged metal door separating a 3x4 dead-end room from its corridor
+struct RoomDoorPlacement {
+    Vec3 hingePos;
+    float closedYaw = 0.0f;
+    float openSign = 1.0f;
+    float width = 1.0f;
+    float height = 2.0f;
+    int regX = 0;
+    int regZ = 0;
+};
+
+// 3D interior clearance volume where loot items can spawn, plus optional adjacent floor zone beside storage
 struct LootSurface {
     LootSource source = LootSource::Crate;
-    AABB surfaceBox; // min.y == max.y == surface Y height
+    AABB surfaceBox;        // min.y = shelf floor, max.y = exact vertical clearance below next shelf/ceiling
+    bool hasAdjacentFloor = false;
+    AABB adjacentFloorBox{}; // Floor clearance zone right beside storage (ideal for tall brooms/mops!)
     int regX = 0;
     int regZ = 0;
 };
@@ -73,10 +88,13 @@ struct MegaResult {
     std::vector<PointLight3D> pointLights;
     std::vector<LockerPlacement> lockers;
     std::vector<DoubleCabinetPlacement> cabinets;
+    std::vector<RoomDoorPlacement> roomDoors;
     std::vector<LootSurface> lootSurfaces;
     std::set<std::pair<int, int>> loadedRegions;
     int currentRegX = 0;
     int currentRegZ = 0;
+    int ringLoopsCreated = 0;
+    int deadEndRoomsCreated = 0;
     double generationMs = 0.0;
 
     MegaResult() : world(WorldGrid::createInfinite(BlockType::Concrete)) {}

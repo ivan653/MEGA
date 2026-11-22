@@ -20,6 +20,10 @@ struct Glyph3x5 { char ch; uint8_t rows[5]; };
 constexpr Glyph3x5 FONT[] = {
     {' ', {0b000,0b000,0b000,0b000,0b000}},
     {'-', {0b000,0b000,0b111,0b000,0b000}},
+    {'+', {0b000,0b010,0b111,0b010,0b000}},
+    {'>', {0b100,0b010,0b001,0b010,0b100}},
+    {'(', {0b010,0b100,0b100,0b100,0b010}},
+    {')', {0b010,0b001,0b001,0b001,0b010}},
     {':', {0b000,0b010,0b000,0b010,0b000}},
     {'/', {0b001,0b001,0b010,0b100,0b100}},
     {'[', {0b110,0b100,0b100,0b100,0b110}},
@@ -272,6 +276,15 @@ void HudRenderer::render(const GameWorld& gw) {
         int dw = static_cast<int>(std::strlen(dbuf)) * 8;
         fillRect(cx - dw / 2 - 10, 44, dw + 20, 24, rgba(12, 20, 28, 220));
         drawText(cx - dw / 2, 51, dbuf, rgba(140, 235, 255, 245), 2);
+    } else if (gw.hasHeldItem && gw.heldPlaceMode) {
+        Int3 sz = gw.heldItemOrient.applyToSize(itemBaseGridSize(gw.heldItemType));
+        char pbuf[112];
+        std::snprintf(pbuf, sizeof(pbuf), "PLACE %s %dX%dX%d  [LMB] CONFIRM  [R/T/Y] ROTATE  [RMB] CANCEL",
+                      itemDisplayName(gw.heldItemType), sz.x, sz.y, sz.z);
+        int pw = static_cast<int>(std::strlen(pbuf)) * 8;
+        fillRect(cx - pw / 2 - 10, 44, pw + 20, 24, rgba(12, 22, 26, 220));
+        drawText(cx - pw / 2, 51, pbuf, rgba(140, 245, 220, 245), 2);
+        fillRect(cx - 2, cy - 2, 5, 5, rgba(120, 240, 220, 195));
     } else if (gw.hoveredBackpackItemId >= 0) {
         const PackedItem* pi = gw.backpack.findById(gw.hoveredBackpackItemId);
         if (pi) {
@@ -327,19 +340,49 @@ void HudRenderer::render(const GameWorld& gw) {
 
     // Diegetic 3D Backpack controls header when held in hands
     if (gw.backpackMode == BackpackMode::InHands && !gw.draggingItem) {
-        const char* bpHint = "3D BACKPACK 6X8X4  [LMB] TAKE  [RMB] DRAG  [B] DROP PACK  [TAB] CLOSE";
+        const char* bpHint = "PACK 6X8X4 + REAR 2X30X6  [HOLD RMB] SPIN  [LMB] HAND  [RMB] DRAG  [B] DROP";
         int bw = static_cast<int>(std::strlen(bpHint)) * 8;
         fillRect(cx - bw / 2 - 10, 44, bw + 20, 24, rgba(12, 18, 26, 215));
         drawText(cx - bw / 2, 51, bpHint, rgba(180, 225, 250, 240), 2);
     }
 
+    // Immersive Surface Crafting popup when compatible items are arranged near each other on a 3D grid!
+    if (!gw.availableCrafts.empty() && !gw.lockpick.active && gw.backpackMode != BackpackMode::InHands) {
+        int maxLen = 22;
+        for (const auto& c : gw.availableCrafts) {
+            maxLen = std::max(maxLen, static_cast<int>(c.label.size()));
+        }
+        int cw = maxLen * 8 + 24;
+        int ch = 26 + static_cast<int>(gw.availableCrafts.size()) * 20 + 8;
+        int cbx = cx - cw / 2;
+        int cby = cy + 46;
+        fillRect(cbx, cby, cw, ch, rgba(12, 22, 26, 225));
+        fillRect(cbx, cby, cw, 2, rgba(95, 225, 195, 240));
+        fillRect(cbx, cby + ch - 2, cw, 2, rgba(95, 225, 195, 240));
+        drawText(cbx + 12, cby + 8, "SURFACE CRAFTING", rgba(115, 245, 210, 245), 2);
+        for (size_t i = 0; i < gw.availableCrafts.size(); ++i) {
+            drawText(cbx + 12, cby + 28 + static_cast<int>(i) * 20,
+                     gw.availableCrafts[i].label.c_str(), rgba(245, 235, 165, 245), 2);
+        }
+    }
+
     // Bottom-right hand item indicator & backpack count summary
     {
-        char hbuf[96];
+        char hbuf[112];
         if (gw.hasHeldItem) {
             Int3 sz = gw.heldItemOrient.applyToSize(itemBaseGridSize(gw.heldItemType));
-            std::snprintf(hbuf, sizeof(hbuf), "HAND: %s %dX%dX%d  [E] USE  [RMB] PLACE  [R/T/Y] ROT",
-                          itemDisplayName(gw.heldItemType), sz.x, sz.y, sz.z);
+            if (isMeleeWeapon(gw.heldItemType)) {
+                if ((gw.heldItemType == ItemType::Broom || gw.heldItemType == ItemType::Mop) && gw.heldItemDurability > 0) {
+                    std::snprintf(hbuf, sizeof(hbuf), "HAND: %s %dX%dX%d (HITS:%d)  [LMB] STRIKE  [RMB] PLACE  [R/T/Y] ROT",
+                                  itemDisplayName(gw.heldItemType), sz.x, sz.y, sz.z, gw.heldItemDurability);
+                } else {
+                    std::snprintf(hbuf, sizeof(hbuf), "HAND: %s %dX%dX%d  [LMB] STRIKE  [RMB] PLACE  [R/T/Y] ROT",
+                                  itemDisplayName(gw.heldItemType), sz.x, sz.y, sz.z);
+                }
+            } else {
+                std::snprintf(hbuf, sizeof(hbuf), "HAND: %s %dX%dX%d  [E] USE  [RMB] PLACE  [R/T/Y] ROT",
+                              itemDisplayName(gw.heldItemType), sz.x, sz.y, sz.z);
+            }
             int hw = static_cast<int>(std::strlen(hbuf)) * 8;
             fillRect(width_ - hw - 26, height_ - 36, hw + 18, 24, rgba(12, 18, 24, 210));
             drawText(width_ - hw - 18, height_ - 29, hbuf, rgba(255, 225, 140, 240), 2);

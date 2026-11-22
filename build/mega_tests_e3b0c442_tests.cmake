@@ -138,4 +138,24 @@ set_tests_properties([=[DoubleDoorAndLootTableTest.Lockers90PercentOpenMetalCabi
     SKIP_REGULAR_EXPRESSION [==[\[  SKIPPED \]]==]
     
 )
-set(mega_tests_TESTS [==[WorldGridTest.BoundsAndBlockPlacement]==] [==[PlayerPhysicsTest.GravityLandsOnFloorAndStepUpWorks]==] [==[MegaGeneratorTest.GeneratesConnectedMultiBiomeMegastructureQuickly]==] [==[GameWorldTest.RaycastAndStarterRoomSurvivalWork]==] [==[LockpickTest.SlowPushOverforceBreakAndGentleTapPhysics]==] [==[RobotSimTest.ObservePatrolAndChaseFootKinematics]==] [==[RobotSimTest.ObserveMapNavigationPatrolAndChase]==] [==[Audio3DAcousticsTest.PanningObstacleThicknessAndConditionalEcho]==] [==[LockpickItemAndExitDoorTest.FivePercentBreakChanceAndSafeExitDoor]==] [==[ConfigHotReloadTest.ParsesPlayerLightingAndAudioSettings]==] [==[RobotNavigationTest.CenterlineBypassAndCooperativePassing]==] [==[GodModeTest.NoclipInvisibilityAndSpeedWork]==] [==[Inventory3DTest.VolumeRotationTopBlockingAndWorldGridPlacement]==] [==[DoubleDoorAndLootTableTest.Lockers90PercentOpenMetalCabinetsAlwaysLockedAndLootTablesWork]==])
+add_test([=[RingLoopsAndRareRoomsTest.DeadEndsConvertToRingLoopsAndRareCabinetRooms]=]  [==[/home/ivan/ImportantFiles/My Games/MEGA/build/mega_tests]==] [==[--gtest_filter=RingLoopsAndRareRoomsTest.DeadEndsConvertToRingLoopsAndRareCabinetRooms]==] --gtest_also_run_disabled_tests)
+set_tests_properties([=[RingLoopsAndRareRoomsTest.DeadEndsConvertToRingLoopsAndRareCabinetRooms]=]
+  PROPERTIES
+    
+    _CMAKE_TEST_BUILD_DEPENDS [==[/home/ivan/ImportantFiles/My Games/MEGA/build/mega_tests]==]
+    DEF_SOURCE_LINE [==[/home/ivan/ImportantFiles/My Games/MEGA/tests/CoreTests.cpp:907]==]
+    WORKING_DIRECTORY [==[/home/ivan/ImportantFiles/My Games/MEGA/build]==]
+    SKIP_REGULAR_EXPRESSION [==[\[  SKIPPED \]]==]
+    
+)
+add_test([=[BackSlotMeleeAndCraftingTest.RearStrapSlotBreakingWeaponsAndSurfaceSpearCraft]=]  [==[/home/ivan/ImportantFiles/My Games/MEGA/build/mega_tests]==] [==[--gtest_filter=BackSlotMeleeAndCraftingTest.RearStrapSlotBreakingWeaponsAndSurfaceSpearCraft]==] --gtest_also_run_disabled_tests)
+set_tests_properties([=[BackSlotMeleeAndCraftingTest.RearStrapSlotBreakingWeaponsAndSurfaceSpearCraft]=]
+  PROPERTIES
+    
+    _CMAKE_TEST_BUILD_DEPENDS [==[/home/ivan/ImportantFiles/My Games/MEGA/build/mega_tests]==]
+    DEF_SOURCE_LINE [==[/home/ivan/ImportantFiles/My Games/MEGA/tests/CoreTests.cpp:1012]==]
+    WORKING_DIRECTORY [==[/home/ivan/ImportantFiles/My Games/MEGA/build]==]
+    SKIP_REGULAR_EXPRESSION [==[\[  SKIPPED \]]==]
+    
+)
+set(mega_tests_TESTS [==[WorldGridTest.BoundsAndBlockPlacement]==] [==[PlayerPhysicsTest.GravityLandsOnFloorAndStepUpWorks]==] [==[MegaGeneratorTest.GeneratesConnectedMultiBiomeMegastructureQuickly]==] [==[GameWorldTest.RaycastAndStarterRoomSurvivalWork]==] [==[LockpickTest.SlowPushOverforceBreakAndGentleTapPhysics]==] [==[RobotSimTest.ObservePatrolAndChaseFootKinematics]==] [==[RobotSimTest.ObserveMapNavigationPatrolAndChase]==] [==[Audio3DAcousticsTest.PanningObstacleThicknessAndConditionalEcho]==] [==[LockpickItemAndExitDoorTest.FivePercentBreakChanceAndSafeExitDoor]==] [==[ConfigHotReloadTest.ParsesPlayerLightingAndAudioSettings]==] [==[RobotNavigationTest.CenterlineBypassAndCooperativePassing]==] [==[GodModeTest.NoclipInvisibilityAndSpeedWork]==] [==[Inventory3DTest.VolumeRotationTopBlockingAndWorldGridPlacement]==] [==[DoubleDoorAndLootTableTest.Lockers90PercentOpenMetalCabinetsAlwaysLockedAndLootTablesWork]==] [==[RingLoopsAndRareRoomsTest.DeadEndsConvertToRingLoopsAndRareCabinetRooms]==] [==[BackSlotMeleeAndCraftingTest.RearStrapSlotBreakingWeaponsAndSurfaceSpearCraft]==])

@@ -363,6 +363,12 @@ int main(int argc, char** argv) {
     float mouseWinX = static_cast<float>(winW) * 0.5f;
     float mouseWinY = static_cast<float>(winH) * 0.5f;
     bool prevFreeCursor = false;
+    bool rmbDownInPack = false;
+    bool rmbRotatedPack = false;
+    float rmbPressX = 0.0f;
+    float rmbPressY = 0.0f;
+    float rmbLastX = 0.0f;
+    float rmbLastY = 0.0f;
 
     auto computeCursorRay = [&](Vec3& outOrig, Vec3& outDir) {
         outOrig = gw.player.eyePosition();
@@ -424,6 +430,9 @@ int main(int argc, char** argv) {
                         Vec3 ro, rd;
                         computeCursorRay(ro, rd);
                         gw.handleSecondaryClick(ro, rd, audio);
+                    } else if (gw.heldPlaceMode) {
+                        gw.heldPlaceMode = false;
+                        gw.placementPreview = GhostPreviewState{};
                     } else if (gw.backpackMode == BackpackMode::InHands) {
                         gw.toggleBackpackInHands();
                     } else {
@@ -455,11 +464,14 @@ int main(int argc, char** argv) {
                         gw.endInteract();
                     }
                 } else if (ev.key.key == SDLK_1) {
-                    gw.useInventoryItem(ItemType::Battery, audio);
+                    if (!gw.availableCrafts.empty()) gw.performCraft(0, audio);
+                    else gw.useInventoryItem(ItemType::Battery, audio);
                 } else if (ev.key.key == SDLK_2) {
-                    gw.useInventoryItem(ItemType::Food, audio);
+                    if (gw.availableCrafts.size() >= 2) gw.performCraft(1, audio);
+                    else gw.useInventoryItem(ItemType::Food, audio);
                 } else if (ev.key.key == SDLK_3) {
-                    gw.useInventoryItem(ItemType::Water, audio);
+                    if (gw.availableCrafts.size() >= 3) gw.performCraft(2, audio);
+                    else gw.useInventoryItem(ItemType::Water, audio);
                 } else if (ev.key.key == SDLK_M) {
                     gw.showMinimap = !gw.showMinimap;
                 } else if (ev.key.key == SDLK_G) {
@@ -513,6 +525,18 @@ int main(int argc, char** argv) {
                 if (freeCursor) {
                     mouseWinX = ev.motion.x;
                     mouseWinY = ev.motion.y;
+                    if (rmbDownInPack && gw.backpackMode == BackpackMode::InHands && !gw.draggingItem) {
+                        float dx = mouseWinX - rmbLastX;
+                        float dy = mouseWinY - rmbLastY;
+                        rmbLastX = mouseWinX;
+                        rmbLastY = mouseWinY;
+                        if (std::hypot(mouseWinX - rmbPressX, mouseWinY - rmbPressY) > 5.0f) {
+                            rmbRotatedPack = true;
+                        }
+                        if (rmbRotatedPack) {
+                            gw.rotateBackpackView(dx, dy);
+                        }
+                    }
                 } else if (mouseCaptured) {
                     if (gw.lockpick.active) {
                         gw.lockpick.handleMouseMove(ev.motion.xrel, ev.motion.yrel);
@@ -526,6 +550,20 @@ int main(int argc, char** argv) {
             } else if (ev.type == SDL_EVENT_MOUSE_BUTTON_UP) {
                 if (ev.button.button == SDL_BUTTON_LEFT) {
                     gw.endInteract();
+                } else if (ev.button.button == SDL_BUTTON_RIGHT) {
+                    if (rmbDownInPack) {
+                        bool wasSpin = rmbRotatedPack;
+                        rmbDownInPack = false;
+                        rmbRotatedPack = false;
+                        // Quick RMB click without dragging -> drag hovered item to floor/surface
+                        if (!wasSpin && gw.backpackMode == BackpackMode::InHands) {
+                            mouseWinX = ev.button.x;
+                            mouseWinY = ev.button.y;
+                            Vec3 ro, rd;
+                            computeCursorRay(ro, rd);
+                            gw.handleSecondaryClick(ro, rd, audio);
+                        }
+                    }
                 }
             } else if (ev.type == SDL_EVENT_MOUSE_BUTTON_DOWN) {
                 bool freeCursor = (gw.backpackMode == BackpackMode::InHands || gw.draggingItem);
@@ -537,7 +575,17 @@ int main(int argc, char** argv) {
                     if (ev.button.button == SDL_BUTTON_LEFT) {
                         gw.handlePrimaryClick(ro, rd, audio);
                     } else if (ev.button.button == SDL_BUTTON_RIGHT) {
-                        gw.handleSecondaryClick(ro, rd, audio);
+                        if (gw.backpackMode == BackpackMode::InHands && !gw.draggingItem) {
+                            // Hold RMB + move mouse to spin 3D backpack; release quickly to drag item!
+                            rmbDownInPack = true;
+                            rmbRotatedPack = false;
+                            rmbPressX = mouseWinX;
+                            rmbPressY = mouseWinY;
+                            rmbLastX = mouseWinX;
+                            rmbLastY = mouseWinY;
+                        } else {
+                            gw.handleSecondaryClick(ro, rd, audio);
+                        }
                     }
                 } else if (!mouseCaptured) {
                     mouseCaptured = true;

@@ -1,5 +1,5 @@
 {
-  "tests": 14,
+  "tests": 16,
   "name": "AllTests",
   "testsuites": [
     {
@@ -147,6 +147,28 @@
           "name": "Lockers90PercentOpenMetalCabinetsAlwaysLockedAndLootTablesWork",
           "file": "\/home\/ivan\/ImportantFiles\/My Games\/MEGA\/tests\/CoreTests.cpp",
           "line": 847
+        }
+      ]
+    },
+    {
+      "name": "RingLoopsAndRareRoomsTest",
+      "tests": 1,
+      "testsuite": [
+        {
+          "name": "DeadEndsConvertToRingLoopsAndRareCabinetRooms",
+          "file": "\/home\/ivan\/ImportantFiles\/My Games\/MEGA\/tests\/CoreTests.cpp",
+          "line": 907
+        }
+      ]
+    },
+    {
+      "name": "BackSlotMeleeAndCraftingTest",
+      "tests": 1,
+      "testsuite": [
+        {
+          "name": "RearStrapSlotBreakingWeaponsAndSurfaceSpearCraft",
+          "file": "\/home\/ivan\/ImportantFiles\/My Games\/MEGA\/tests\/CoreTests.cpp",
+          "line": 1012
         }
       ]
     }

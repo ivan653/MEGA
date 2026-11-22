@@ -27,12 +27,13 @@ struct DoorRenderState {
     float thickness = 0.08f;
     float yaw = 0.0f; // closedYaw + openSign * angle
     bool isCabinet = false;
+    bool isRareCabinet = false;
     bool highlighted = false;
 };
 
 struct ItemRenderState {
     Vec3 pos;               // World bottom-center or min corner of item
-    int itemKind = 0;       // 0=Flashlight, 1=Battery, 2=Food, 3=Water, 4=Lockpick
+    int itemKind = 0;       // ItemType index (0..Count-1)
     ItemOrientation orient{};
     bool highlighted = false;
 };
@@ -41,6 +42,7 @@ struct GhostPreviewState {
     bool active = false;
     bool valid = false;
     bool inBackpack = false;
+    bool inBackSlot = false; // True when snapping to rear 2x30x6 strap slot
     ItemType type = ItemType::Food;
     ItemOrientation orient{};
     Vec3 worldPos{};        // World bottom-center when !inBackpack

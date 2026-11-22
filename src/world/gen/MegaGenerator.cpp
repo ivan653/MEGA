@@ -100,6 +100,37 @@ void placeWallLamp(WorldGrid& w, std::vector<PointLight3D>& lights,
     lights.push_back(pl);
 }
 
+// Find a clear floor zone right beside a wall-mounted storage prop (for tall brooms/mops!)
+bool findAdjacentFloorZone(const WorldGrid& w, const AABB& propOuter,
+                           int normalX, int normalZ, const Vec3& spawnPos,
+                           AABB& outFloorBox) {
+    float y0 = static_cast<float>(FLOOR_Y);
+    float zoneW = 0.34f;
+    float depthX = propOuter.max.x - propOuter.min.x;
+    float depthZ = propOuter.max.z - propOuter.min.z;
+
+    for (float side : {1.0f, -1.0f}) {
+        AABB cand;
+        if (normalX != 0) {
+            // Wall runs along Z -> adjacent spots are at +Z and -Z of propOuter
+            float zA = (side > 0.0f) ? (propOuter.max.z + 0.04f) : (propOuter.min.z - 0.04f - zoneW);
+            cand = {{propOuter.min.x + 0.02f, y0, zA},
+                    {propOuter.min.x + std::min(depthX, 0.42f), y0 + 2.35f, zA + zoneW}};
+        } else {
+            // Wall runs along X -> adjacent spots are at +X and -X of propOuter
+            float xA = (side > 0.0f) ? (propOuter.max.x + 0.04f) : (propOuter.min.x - 0.04f - zoneW);
+            cand = {{xA, y0, propOuter.min.z + 0.02f},
+                    {xA + zoneW, y0 + 2.35f, propOuter.min.z + std::min(depthZ, 0.42f)}};
+        }
+        (void)normalZ;
+        if (canPlaceProp(w, cand, spawnPos, 0.04f)) {
+            outFloorBox = cand;
+            return true;
+        }
+    }
+    return false;
+}
+
 void placeWoodenCrates(WorldGrid& w, std::vector<LootSurface>& lootSurfaces,
                        float wallX, float wallZ, int normalX, int normalZ,
                        int regX, int regZ, const Vec3& spawnPos, Rng& rng) {
@@ -107,6 +138,7 @@ void placeWoodenCrates(WorldGrid& w, std::vector<LootSurface>& lootSurfaces,
     float width = 0.78f + rng.nextFloat() * 0.22f;
     float height = 0.76f + rng.nextFloat() * 0.14f;
     float y0 = static_cast<float>(FLOOR_Y);
+    float ceilY = static_cast<float>(FLOOR_Y + CEIL_H) - 0.15f;
 
     AABB baseBox;
     if (normalX != 0) {
@@ -135,11 +167,13 @@ void placeWoodenCrates(WorldGrid& w, std::vector<LootSurface>& lootSurfaces,
         w.addProp(topBox, BlockType::HazardStripe, true, false, true, regX, regZ);
         topSurface = topBox;
     }
+    AABB adjBox{};
+    bool hasAdj = findAdjacentFloorZone(w, baseBox, normalX, normalZ, spawnPos, adjBox);
     lootSurfaces.push_back({
         LootSource::Crate,
-        {{topSurface.min.x + 0.08f, topSurface.max.y, topSurface.min.z + 0.08f},
-         {topSurface.max.x - 0.08f, topSurface.max.y, topSurface.max.z - 0.08f}},
-        regX, regZ
+        {{topSurface.min.x + 0.05f, topSurface.max.y, topSurface.min.z + 0.05f},
+         {topSurface.max.x - 0.05f, ceilY, topSurface.max.z - 0.05f}},
+        hasAdj, adjBox, regX, regZ
     });
 
     if (rng.chance(0.45f)) {
@@ -156,26 +190,31 @@ void placeWoodenCrates(WorldGrid& w, std::vector<LootSurface>& lootSurfaces,
         sideBox.max.y = y0 + sideH;
         if (canPlaceProp(w, sideBox, spawnPos, 0.02f)) {
             w.addProp(sideBox, BlockType::HazardStripe, true, false, true, regX, regZ);
+            AABB sideAdj{};
+            bool hasSideAdj = findAdjacentFloorZone(w, sideBox, normalX, normalZ, spawnPos, sideAdj);
             lootSurfaces.push_back({
                 LootSource::Crate,
-                {{sideBox.min.x + 0.08f, sideBox.max.y, sideBox.min.z + 0.08f},
-                 {sideBox.max.x - 0.08f, sideBox.max.y, sideBox.max.z - 0.08f}},
-                regX, regZ
+                {{sideBox.min.x + 0.05f, sideBox.max.y, sideBox.min.z + 0.05f},
+                 {sideBox.max.x - 0.05f, ceilY, sideBox.max.z - 0.05f}},
+                hasSideAdj, sideAdj, regX, regZ
             });
         }
     }
 }
 
 // Hollow Metal Storage Cabinet with interior shelves, double doors (2 handles) & 1 shared lock (always locked!)
+// Rare variant (isRare = true) spawns in 3x4 dead-end rooms with DarkSteel chassis, 3 shelves + tall broom/mop bay!
 void placeMetalCabinet(WorldGrid& w, std::vector<DoubleCabinetPlacement>& cabinets,
                        std::vector<LootSurface>& lootSurfaces,
                        float wallX, float wallZ, int normalX, int normalZ,
-                       int regX, int regZ, const Vec3& spawnPos, Rng& rng) {
-    float depth = 0.58f;
-    float width = rng.chance(0.55f) ? 1.16f : 1.44f;
-    float height = 2.08f;
+                       int regX, int regZ, const Vec3& spawnPos, Rng& rng,
+                       bool isRare = false) {
+    float depth = isRare ? 0.68f : 0.58f;
+    float width = isRare ? 1.56f : (rng.chance(0.55f) ? 1.16f : 1.44f);
+    float height = isRare ? 2.22f : 2.08f;
     float y0 = static_cast<float>(FLOOR_Y);
     float t = 0.055f;
+    BlockType bodyMat = isRare ? BlockType::DarkSteel : BlockType::RustPlate;
 
     AABB outer;
     if (normalX != 0) {
@@ -190,40 +229,92 @@ void placeMetalCabinet(WorldGrid& w, std::vector<DoubleCabinetPlacement>& cabine
                  {wallX + width * 0.5f, y0 + height, std::max(zA, zB)}};
     }
 
-    if (!canPlaceProp(w, outer, spawnPos)) return;
+    if (!isRare && !canPlaceProp(w, outer, spawnPos)) return;
 
     // Top & bottom plates
     w.addProp({{outer.min.x, outer.max.y - t, outer.min.z}, {outer.max.x, outer.max.y, outer.max.z}},
-              BlockType::RustPlate, true, false, true, regX, regZ);
+              bodyMat, true, false, true, regX, regZ);
     w.addProp({{outer.min.x, y0, outer.min.z}, {outer.max.x, y0 + t, outer.max.z}},
-              BlockType::RustPlate, true, false, true, regX, regZ);
+              bodyMat, true, false, true, regX, regZ);
 
-    // 3 interior steel shelves + loot surfaces
     AABB inner{{outer.min.x + t, y0 + t, outer.min.z + t},
                {outer.max.x - t, outer.max.y - t, outer.max.z - t}};
-    const float shelfOffsets[3] = {0.52f, 1.04f, 1.54f};
-    for (float sh : shelfOffsets) {
-        float sy = y0 + sh;
-        w.addProp({{inner.min.x, sy, inner.min.z}, {inner.max.x, sy + 0.045f, inner.max.z}},
-                  BlockType::Grate, true, false, true, regX, regZ);
-        lootSurfaces.push_back({
-            LootSource::CabinetShelf,
-            {{inner.min.x + 0.06f, sy + 0.045f, inner.min.z + 0.06f},
-             {inner.max.x - 0.06f, sy + 0.045f, inner.max.z - 0.06f}},
-            regX, regZ
-        });
+    // Extra clearance at front door face so items never clip through closed cabinet doors
+    AABB safeInner = inner;
+    if (normalX > 0) safeInner.max.x -= 0.04f;
+    else if (normalX < 0) safeInner.min.x += 0.04f;
+    else if (normalZ > 0) safeInner.max.z -= 0.04f;
+    else safeInner.min.z += 0.04f;
+
+    AABB adjBox{};
+    bool hasAdj = findAdjacentFloorZone(w, outer, normalX, normalZ, spawnPos, adjBox);
+
+    if (isRare) {
+        // Rare cabinet: left half has 3 shelves for small/medium loot, right half is a tall utility bay for Brooms/Mops!
+        float midX = 0.5f * (inner.min.x + inner.max.x);
+        float midZ = 0.5f * (inner.min.z + inner.max.z);
+        bool splitAlongZ = (normalX != 0);
+
+        // Center divider wall
+        if (splitAlongZ) {
+            w.addProp({{inner.min.x, inner.min.y, midZ - 0.02f}, {inner.max.x, inner.max.y, midZ + 0.02f}},
+                      BlockType::Grate, true, false, true, regX, regZ);
+        } else {
+            w.addProp({{midX - 0.02f, inner.min.y, inner.min.z}, {midX + 0.02f, inner.max.y, inner.max.z}},
+                      BlockType::Grate, true, false, true, regX, regZ);
+        }
+
+        // 3 shelves on half A with exact vertical clearance to next shelf / cabinet roof
+        const float shelfOffsets[3] = {0.48f, 0.98f, 1.48f};
+        for (int s = 0; s < 3; ++s) {
+            float sy = y0 + shelfOffsets[s];
+            float ceilingY = (s < 2) ? (y0 + shelfOffsets[s + 1] - 0.01f) : (inner.max.y - 0.01f);
+            AABB sBox = splitAlongZ
+                            ? AABB{{inner.min.x, sy, inner.min.z}, {inner.max.x, sy + 0.045f, midZ - 0.02f}}
+                            : AABB{{inner.min.x, sy, inner.min.z}, {midX - 0.02f, sy + 0.045f, inner.max.z}};
+            w.addProp(sBox, BlockType::Grate, true, false, true, regX, regZ);
+            AABB vol = splitAlongZ
+                           ? AABB{{safeInner.min.x + 0.02f, sy + 0.045f, safeInner.min.z + 0.02f},
+                                  {safeInner.max.x - 0.02f, ceilingY, midZ - 0.04f}}
+                           : AABB{{safeInner.min.x + 0.02f, sy + 0.045f, safeInner.min.z + 0.02f},
+                                  {midX - 0.04f, ceilingY, safeInner.max.z - 0.02f}};
+            lootSurfaces.push_back({LootSource::RareCabinet, vol, hasAdj && (s == 0), adjBox, regX, regZ});
+        }
+        // Bottom floor on half B (tall 2.10m utility bay for standing Broom/Mop + extra loot)
+        AABB bayBox = splitAlongZ
+                          ? AABB{{safeInner.min.x + 0.02f, y0 + t, midZ + 0.04f},
+                                 {safeInner.max.x - 0.02f, inner.max.y - 0.02f, safeInner.max.z - 0.02f}}
+                          : AABB{{midX + 0.04f, y0 + t, safeInner.min.z + 0.02f},
+                                 {safeInner.max.x - 0.02f, inner.max.y - 0.02f, safeInner.max.z - 0.02f}};
+        lootSurfaces.push_back({LootSource::RareCabinet, bayBox, hasAdj, adjBox, regX, regZ});
+    } else {
+        // Standard metal cabinet: 3 full-width interior shelves with exact height clearance (~0.45m each)
+        const float shelfOffsets[3] = {0.52f, 1.04f, 1.54f};
+        for (int s = 0; s < 3; ++s) {
+            float sy = y0 + shelfOffsets[s];
+            float ceilingY = (s < 2) ? (y0 + shelfOffsets[s + 1] - 0.01f) : (inner.max.y - 0.01f);
+            w.addProp({{inner.min.x, sy, inner.min.z}, {inner.max.x, sy + 0.045f, inner.max.z}},
+                      BlockType::Grate, true, false, true, regX, regZ);
+            lootSurfaces.push_back({
+                LootSource::CabinetShelf,
+                {{safeInner.min.x + 0.02f, sy + 0.045f, safeInner.min.z + 0.02f},
+                 {safeInner.max.x - 0.02f, ceilingY, safeInner.max.z - 0.02f}},
+                hasAdj && (s == 0), adjBox, regX, regZ
+            });
+        }
     }
 
     DoubleCabinetPlacement cp;
     cp.leafWidth = (width - t * 2.0f) * 0.5f - 0.005f;
     cp.height = height - t * 2.0f;
+    cp.isRare = isRare;
     cp.regX = regX;
     cp.regZ = regZ;
 
     if (normalX > 0) { // Back at min.x, opens toward +X at max.x
-        w.addProp({{outer.min.x, y0, outer.min.z}, {outer.min.x + t, outer.max.y, outer.max.z}}, BlockType::RustPlate, true, false, true, regX, regZ);
-        w.addProp({{outer.min.x, y0, outer.min.z}, {outer.max.x, outer.max.y, outer.min.z + t}}, BlockType::RustPlate, true, false, true, regX, regZ);
-        w.addProp({{outer.min.x, y0, outer.max.z - t}, {outer.max.x, outer.max.y, outer.max.z}}, BlockType::RustPlate, true, false, true, regX, regZ);
+        w.addProp({{outer.min.x, y0, outer.min.z}, {outer.min.x + t, outer.max.y, outer.max.z}}, bodyMat, true, false, true, regX, regZ);
+        w.addProp({{outer.min.x, y0, outer.min.z}, {outer.max.x, outer.max.y, outer.min.z + t}}, bodyMat, true, false, true, regX, regZ);
+        w.addProp({{outer.min.x, y0, outer.max.z - t}, {outer.max.x, outer.max.y, outer.max.z}}, bodyMat, true, false, true, regX, regZ);
         cp.leftHingePos  = {outer.max.x, y0 + t, outer.min.z + t};
         cp.leftClosedYaw = -PI * 0.5f;
         cp.leftOpenSign  = 1.0f;
@@ -231,9 +322,9 @@ void placeMetalCabinet(WorldGrid& w, std::vector<DoubleCabinetPlacement>& cabine
         cp.rightClosedYaw = PI * 0.5f;
         cp.rightOpenSign  = -1.0f;
     } else if (normalX < 0) { // Back at max.x, opens toward -X at min.x
-        w.addProp({{outer.max.x - t, y0, outer.min.z}, {outer.max.x, outer.max.y, outer.max.z}}, BlockType::RustPlate, true, false, true, regX, regZ);
-        w.addProp({{outer.min.x, y0, outer.min.z}, {outer.max.x, outer.max.y, outer.min.z + t}}, BlockType::RustPlate, true, false, true, regX, regZ);
-        w.addProp({{outer.min.x, y0, outer.max.z - t}, {outer.max.x, outer.max.y, outer.max.z}}, BlockType::RustPlate, true, false, true, regX, regZ);
+        w.addProp({{outer.max.x - t, y0, outer.min.z}, {outer.max.x, outer.max.y, outer.max.z}}, bodyMat, true, false, true, regX, regZ);
+        w.addProp({{outer.min.x, y0, outer.min.z}, {outer.max.x, outer.max.y, outer.min.z + t}}, bodyMat, true, false, true, regX, regZ);
+        w.addProp({{outer.min.x, y0, outer.max.z - t}, {outer.max.x, outer.max.y, outer.max.z}}, bodyMat, true, false, true, regX, regZ);
         cp.leftHingePos  = {outer.min.x, y0 + t, outer.max.z - t};
         cp.leftClosedYaw = PI * 0.5f;
         cp.leftOpenSign  = 1.0f;
@@ -241,9 +332,9 @@ void placeMetalCabinet(WorldGrid& w, std::vector<DoubleCabinetPlacement>& cabine
         cp.rightClosedYaw = -PI * 0.5f;
         cp.rightOpenSign  = -1.0f;
     } else if (normalZ > 0) { // Back at min.z, opens toward +Z at max.z
-        w.addProp({{outer.min.x, y0, outer.min.z}, {outer.max.x, outer.max.y, outer.min.z + t}}, BlockType::RustPlate, true, false, true, regX, regZ);
-        w.addProp({{outer.min.x, y0, outer.min.z}, {outer.min.x + t, outer.max.y, outer.max.z}}, BlockType::RustPlate, true, false, true, regX, regZ);
-        w.addProp({{outer.max.x - t, y0, outer.min.z}, {outer.max.x, outer.max.y, outer.max.z}}, BlockType::RustPlate, true, false, true, regX, regZ);
+        w.addProp({{outer.min.x, y0, outer.min.z}, {outer.max.x, outer.max.y, outer.min.z + t}}, bodyMat, true, false, true, regX, regZ);
+        w.addProp({{outer.min.x, y0, outer.min.z}, {outer.min.x + t, outer.max.y, outer.max.z}}, bodyMat, true, false, true, regX, regZ);
+        w.addProp({{outer.max.x - t, y0, outer.min.z}, {outer.max.x, outer.max.y, outer.max.z}}, bodyMat, true, false, true, regX, regZ);
         cp.leftHingePos  = {outer.min.x + t, y0 + t, outer.max.z};
         cp.leftClosedYaw = 0.0f;
         cp.leftOpenSign  = -1.0f;
@@ -251,9 +342,9 @@ void placeMetalCabinet(WorldGrid& w, std::vector<DoubleCabinetPlacement>& cabine
         cp.rightClosedYaw = PI;
         cp.rightOpenSign  = 1.0f;
     } else { // Back at max.z, opens toward -Z at min.z
-        w.addProp({{outer.min.x, y0, outer.max.z - t}, {outer.max.x, outer.max.y, outer.max.z}}, BlockType::RustPlate, true, false, true, regX, regZ);
-        w.addProp({{outer.min.x, y0, outer.min.z}, {outer.min.x + t, outer.max.y, outer.max.z}}, BlockType::RustPlate, true, false, true, regX, regZ);
-        w.addProp({{outer.max.x - t, y0, outer.min.z}, {outer.max.x, outer.max.y, outer.max.z}}, BlockType::RustPlate, true, false, true, regX, regZ);
+        w.addProp({{outer.min.x, y0, outer.max.z - t}, {outer.max.x, outer.max.y, outer.max.z}}, bodyMat, true, false, true, regX, regZ);
+        w.addProp({{outer.min.x, y0, outer.min.z}, {outer.min.x + t, outer.max.y, outer.max.z}}, bodyMat, true, false, true, regX, regZ);
+        w.addProp({{outer.max.x - t, y0, outer.min.z}, {outer.max.x, outer.max.y, outer.max.z}}, bodyMat, true, false, true, regX, regZ);
         cp.leftHingePos  = {outer.max.x - t, y0 + t, outer.min.z};
         cp.leftClosedYaw = PI;
         cp.leftOpenSign  = -1.0f;
@@ -298,6 +389,9 @@ void placeShelvingRack(WorldGrid& w, std::vector<LootSurface>& lootSurfaces,
         }
     }
 
+    AABB rackAdj{};
+    bool hasRackAdj = findAdjacentFloorZone(w, bounds, normalX, normalZ, spawnPos, rackAdj);
+
     const float shelfHeights[4] = {0.18f, 0.78f, 1.38f, 1.98f};
     for (int s = 0; s < 4; ++s) {
         float sy = y0 + shelfHeights[s];
@@ -313,11 +407,12 @@ void placeShelvingRack(WorldGrid& w, std::vector<LootSurface>& lootSurfaces,
                        {bounds.max.x - marginX, sy + 0.05f + boxH, bounds.max.z - marginZ}},
                       BlockType::HazardStripe, false, false, true, regX, regZ);
         } else if (s < 3) {
+            float nextShelfY = y0 + shelfHeights[s + 1] - 0.01f;
             lootSurfaces.push_back({
                 LootSource::ShelvingRack,
-                {{bounds.min.x + 0.08f, sy + 0.05f, bounds.min.z + 0.08f},
-                 {bounds.max.x - 0.08f, sy + 0.05f, bounds.max.z - 0.08f}},
-                regX, regZ
+                {{bounds.min.x + postT + 0.02f, sy + 0.05f, bounds.min.z + postT + 0.02f},
+                 {bounds.max.x - postT - 0.02f, nextShelfY, bounds.max.z - postT - 0.02f}},
+                hasRackAdj && (s == 0), rackAdj, regX, regZ
             });
         }
     }
@@ -435,11 +530,13 @@ void placeHideableLocker(WorldGrid& w, std::vector<LockerPlacement>& lockers,
         lp.openSign = -1.0f;
     }
     lockers.push_back(lp);
+    AABB lockAdj{};
+    bool hasLockAdj = findAdjacentFloorZone(w, outer, normalX, normalZ, spawnPos, lockAdj);
     lootSurfaces.push_back({
         LootSource::Locker,
-        {{lp.interiorBox.min.x + 0.12f, y0 + 0.03f, lp.interiorBox.min.z + 0.12f},
-         {lp.interiorBox.max.x - 0.12f, y0 + 0.03f, lp.interiorBox.max.z - 0.12f}},
-        regX, regZ
+        {{lp.interiorBox.min.x + 0.04f, y0 + 0.03f, lp.interiorBox.min.z + 0.04f},
+         {lp.interiorBox.max.x - 0.04f, lp.interiorBox.max.y - 0.04f, lp.interiorBox.max.z - 0.04f}},
+        hasLockAdj, lockAdj, regX, regZ
     });
 }
 
@@ -604,8 +701,16 @@ void MegaGenerator::generateRegion(MegaResult& state, int regX, int regZ,
     spineWE2.regZ = regZ;
     regCorridors.push_back(spineWE2);
 
+    struct BranchInfo {
+        int parentIdx = -1;
+        int tipX = 0;
+        int tipZ = 0;
+        int dir = 1; // +1 or -1 along branch axis
+    };
+    std::vector<BranchInfo> branchMeta(regCorridors.size());
+
     // 3. Grow sparse branching corridors where each corridor connects to ONLY 2..3 others
-    for (int attempt = 0; attempt < 40 && regCorridors.size() < 9; ++attempt) {
+    for (int attempt = 0; attempt < 48 && regCorridors.size() < 10; ++attempt) {
         int pIdx = rng.rangeInt(0, static_cast<int>(regCorridors.size()) - 1);
         auto& parent = regCorridors[pIdx];
         if (parent.connections >= parent.targetConnections) continue;
@@ -623,28 +728,36 @@ void MegaGenerator::generateRegion(MegaResult& state, int regX, int regZ,
         cand.regX = regX;
         cand.regZ = regZ;
 
+        BranchInfo meta;
+        meta.parentIdx = pIdx;
+        meta.dir = dir;
+
         if (childAlongX) {
             int pMinZ = std::min(parent.z0, parent.z1) + 6;
             int pMaxZ = std::max(parent.z0, parent.z1) - 6;
             if (pMaxZ <= pMinZ) continue;
             int branchZ = rng.rangeInt(pMinZ, pMaxZ);
             int startX = parent.x0;
-            int endX = std::clamp(startX + dir * len, baseX + 6, baseX + cfg::REGION_SIZE - 6);
+            int endX = std::clamp(startX + dir * len, baseX + 10, baseX + cfg::REGION_SIZE - 10);
             if (std::abs(endX - startX) < settings.corridorMinLen) continue;
             cand.x0 = std::min(startX, endX);
             cand.x1 = std::max(startX, endX);
             cand.z0 = cand.z1 = branchZ;
+            meta.tipX = endX;
+            meta.tipZ = branchZ;
         } else {
             int pMinX = std::min(parent.x0, parent.x1) + 6;
             int pMaxX = std::max(parent.x0, parent.x1) - 6;
             if (pMaxX <= pMinX) continue;
             int branchX = rng.rangeInt(pMinX, pMaxX);
             int startZ = parent.z0;
-            int endZ = std::clamp(startZ + dir * len, baseZ + 6, baseZ + cfg::REGION_SIZE - 6);
+            int endZ = std::clamp(startZ + dir * len, baseZ + 10, baseZ + cfg::REGION_SIZE - 10);
             if (std::abs(endZ - startZ) < settings.corridorMinLen) continue;
             cand.x0 = cand.x1 = branchX;
             cand.z0 = std::min(startZ, endZ);
             cand.z1 = std::max(startZ, endZ);
+            meta.tipX = branchX;
+            meta.tipZ = endZ;
         }
 
         // Validate against all existing corridors AND starter room in region (0, 0):
@@ -653,8 +766,6 @@ void MegaGenerator::generateRegion(MegaResult& state, int regX, int regZ,
             intervalsOverlap(cand.z0, cand.z1, 53, 62, 2)) {
             continue;
         }
-        // - Must maintain minParallelSpacing from parallel corridors
-        // - Must NOT cross any perpendicular corridor other than pIdx
         bool valid = true;
         for (size_t j = 0; j < regCorridors.size(); ++j) {
             if (static_cast<int>(j) == pIdx) continue;
@@ -674,7 +785,6 @@ void MegaGenerator::generateRegion(MegaResult& state, int regX, int regZ,
                     }
                 }
             } else {
-                // Perpendicular: do not intersect other corridors
                 bool crossX = cand.alongX
                                   ? intervalsOverlap(cand.x0, cand.x1, other.x0, other.x0 + other.width, 2)
                                   : intervalsOverlap(other.x0, other.x1, cand.x0, cand.x0 + cand.width, 2);
@@ -692,15 +802,211 @@ void MegaGenerator::generateRegion(MegaResult& state, int regX, int regZ,
 
         parent.connections++;
         regCorridors.push_back(cand);
+        branchMeta.push_back(meta);
     }
 
-    // Pass 1: Place outer concrete shells for all corridors (and any already-loaded overlapping corridors)
+    // 4. Dead-end reduction:
+    //    - 1/3 of dead ends -> flush L-shaped return corridor loop ("donut/ring") back to parent corridor
+    //    - 1/3 of dead ends -> walled 3x4 room with 1x2m doorway + hinged metal door + Rare Reinforced Cabinet
+    //    - 1/3 of dead ends -> standard dead end
+    struct DeadEndRoom {
+        int x0, z0, x1, z1;
+        int doorX, doorZ;
+        RoomDoorPlacement door;
+        float cabWallX, cabWallZ;
+        int cabNormalX, cabNormalZ;
+    };
+    std::vector<DeadEndRoom> deadEndRooms;
+    std::vector<CorridorSegment> loopCorridors;
+
+    int deadEndOrdinal = 0;
+    size_t origCount = regCorridors.size();
+    for (size_t i = 4; i < origCount; ++i) {
+        if (regCorridors[i].connections != 1) continue;
+        int pIdx = branchMeta[i].parentIdx;
+        if (pIdx < 0 || pIdx >= static_cast<int>(origCount)) continue;
+
+        const auto& seg = regCorridors[i];
+        const auto& par = regCorridors[pIdx];
+        int d = branchMeta[i].dir;
+        int mode = deadEndOrdinal % 3;
+        deadEndOrdinal++;
+
+        auto hitsStarter = [&](int ax0, int ax1, int az0, int az1) {
+            return (regX == 0 && regZ == 0 &&
+                    intervalsOverlap(ax0, ax1, 52, 63, 2) &&
+                    intervalsOverlap(az0, az1, 52, 63, 2));
+        };
+
+        if (mode == 0) {
+            // 1/3 -> Build an exact flush L-shaped return loop back to parent corridor ("donut / ring")
+            int w = seg.width;
+            int loopOffset = rng.rangeInt(14, 22);
+            CorridorSegment leg1, leg2;
+            leg1.width = w; leg1.regX = regX; leg1.regZ = regZ; leg1.connections = 2; leg1.isLoopReturn = true;
+            leg2.width = w; leg2.regX = regX; leg2.regZ = regZ; leg2.connections = 2; leg2.isLoopReturn = true;
+
+            bool built = false;
+            if (seg.alongX) {
+                // seg spans x=[seg.x0..seg.x1], z=[seg.z0..seg.z0+w-1]; parent spans x=[par.x0..par.x0+par.width-1]
+                int pMinZ = std::min(par.z0, par.z1) + 4;
+                int pMaxZ = std::max(par.z0, par.z1) - w - 3;
+                for (int sign : {1, -1}) {
+                    int retZ = seg.z0 + sign * loopOffset;
+                    if (retZ < pMinZ || retZ > pMaxZ) continue;
+                    // Flush leg1 X coordinate: aligns outer wall exactly with seg's dead-end tip!
+                    int leg1X = (d > 0) ? (seg.x1 - (w - 1)) : seg.x0;
+                    int envMinX = std::min(leg1X, par.x0);
+                    int envMaxX = std::max(leg1X + w - 1, par.x0 + par.width - 1);
+                    int envMinZ = std::min(seg.z0, retZ);
+                    int envMaxZ = std::max(seg.z0, retZ) + w - 1;
+                    if (hitsStarter(envMinX, envMaxX, envMinZ, envMaxZ)) continue;
+
+                    leg1.alongX = false;
+                    leg1.x0 = leg1.x1 = leg1X;
+                    leg1.z0 = envMinZ;
+                    leg1.z1 = envMaxZ;
+
+                    leg2.alongX = true;
+                    leg2.z0 = leg2.z1 = retZ;
+                    leg2.x0 = envMinX;
+                    leg2.x1 = envMaxX;
+                    built = true;
+                    break;
+                }
+            } else {
+                // seg spans z=[seg.z0..seg.z1], x=[seg.x0..seg.x0+w-1]; parent spans z=[par.z0..par.z0+par.width-1]
+                int pMinX = std::min(par.x0, par.x1) + 4;
+                int pMaxX = std::max(par.x0, par.x1) - w - 3;
+                for (int sign : {1, -1}) {
+                    int retX = seg.x0 + sign * loopOffset;
+                    if (retX < pMinX || retX > pMaxX) continue;
+                    // Flush leg1 Z coordinate: aligns outer wall exactly with seg's dead-end tip!
+                    int leg1Z = (d > 0) ? (seg.z1 - (w - 1)) : seg.z0;
+                    int envMinX = std::min(seg.x0, retX);
+                    int envMaxX = std::max(seg.x0, retX) + w - 1;
+                    int envMinZ = std::min(leg1Z, par.z0);
+                    int envMaxZ = std::max(leg1Z + w - 1, par.z0 + par.width - 1);
+                    if (hitsStarter(envMinX, envMaxX, envMinZ, envMaxZ)) continue;
+
+                    leg1.alongX = true;
+                    leg1.z0 = leg1.z1 = leg1Z;
+                    leg1.x0 = envMinX;
+                    leg1.x1 = envMaxX;
+
+                    leg2.alongX = false;
+                    leg2.x0 = leg2.x1 = retX;
+                    leg2.z0 = envMinZ;
+                    leg2.z1 = envMaxZ;
+                    built = true;
+                    break;
+                }
+            }
+
+            if (built) {
+                regCorridors[i].connections++;
+                regCorridors[pIdx].connections++;
+                loopCorridors.push_back(leg1);
+                loopCorridors.push_back(leg2);
+                state.ringLoopsCreated++;
+            }
+        } else if (mode == 1) {
+            // 1/3 -> Walled 3x4 room at dead-end tip with separating wall, 1x2m doorway, hinged door & Rare Cabinet
+            DeadEndRoom rm{};
+            rm.door.width = 1.0f;
+            rm.door.height = 2.0f;
+            rm.door.regX = regX;
+            rm.door.regZ = regZ;
+            if (seg.alongX) {
+                // 3m deep along X, 4m wide along Z, with 1m separating wall between corridor and room
+                int midZ = seg.z0 + seg.width / 2;
+                rm.z0 = midZ - 2;
+                rm.z1 = rm.z0 + 3; // 4 cells wide (inclusive)
+                rm.doorZ = midZ;
+                if (d > 0) {
+                    rm.doorX = seg.x1 + 1;   // Solid dividing wall at x = seg.x1 + 1
+                    rm.x0 = seg.x1 + 2;      // Room interior starts after dividing wall
+                    rm.x1 = rm.x0 + 2;       // 3 cells deep
+                    rm.door.hingePos = {static_cast<float>(rm.doorX) + 0.92f, static_cast<float>(FLOOR_Y), static_cast<float>(midZ)};
+                    rm.door.closedYaw = -PI * 0.5f;
+                    rm.door.openSign = 1.0f; // Swings inward (+X) into room
+                    rm.cabWallX = static_cast<float>(rm.x1 + 1);
+                    rm.cabWallZ = 0.5f * (rm.z0 + rm.z1 + 1);
+                    rm.cabNormalX = -1;
+                    rm.cabNormalZ = 0;
+                } else {
+                    rm.doorX = seg.x0 - 1;
+                    rm.x1 = seg.x0 - 2;
+                    rm.x0 = rm.x1 - 2;
+                    rm.door.hingePos = {static_cast<float>(rm.doorX) + 0.08f, static_cast<float>(FLOOR_Y), static_cast<float>(midZ + 1)};
+                    rm.door.closedYaw = PI * 0.5f;
+                    rm.door.openSign = 1.0f; // Swings inward (-X) into room
+                    rm.cabWallX = static_cast<float>(rm.x0);
+                    rm.cabWallZ = 0.5f * (rm.z0 + rm.z1 + 1);
+                    rm.cabNormalX = 1;
+                    rm.cabNormalZ = 0;
+                }
+            } else {
+                // 3m deep along Z, 4m wide along X, with 1m separating wall between corridor and room
+                int midX = seg.x0 + seg.width / 2;
+                rm.x0 = midX - 2;
+                rm.x1 = rm.x0 + 3; // 4 cells wide
+                rm.doorX = midX;
+                if (d > 0) {
+                    rm.doorZ = seg.z1 + 1;
+                    rm.z0 = seg.z1 + 2;
+                    rm.z1 = rm.z0 + 2; // 3 cells deep
+                    rm.door.hingePos = {static_cast<float>(midX), static_cast<float>(FLOOR_Y), static_cast<float>(rm.doorZ) + 0.92f};
+                    rm.door.closedYaw = 0.0f;
+                    rm.door.openSign = -1.0f; // Swings inward (+Z) into room
+                    rm.cabWallX = 0.5f * (rm.x0 + rm.x1 + 1);
+                    rm.cabWallZ = static_cast<float>(rm.z1 + 1);
+                    rm.cabNormalX = 0;
+                    rm.cabNormalZ = -1;
+                } else {
+                    rm.doorZ = seg.z0 - 1;
+                    rm.z1 = seg.z0 - 2;
+                    rm.z0 = rm.z1 - 2;
+                    rm.door.hingePos = {static_cast<float>(midX + 1), static_cast<float>(FLOOR_Y), static_cast<float>(rm.doorZ) + 0.08f};
+                    rm.door.closedYaw = PI;
+                    rm.door.openSign = -1.0f; // Swings inward (-Z) into room
+                    rm.cabWallX = 0.5f * (rm.x0 + rm.x1 + 1);
+                    rm.cabWallZ = static_cast<float>(rm.z0);
+                    rm.cabNormalX = 0;
+                    rm.cabNormalZ = 1;
+                }
+            }
+
+            if (!hitsStarter(rm.x0 - 1, rm.x1 + 1, rm.z0 - 1, rm.z1 + 1)) {
+                deadEndRooms.push_back(rm);
+                state.deadEndRoomsCreated++;
+            }
+        }
+    }
+
+    for (const auto& lc : loopCorridors) {
+        regCorridors.push_back(lc);
+    }
+
+    // Pass 1: Place outer concrete shells for all corridors & 3x4 dead-end rooms (including dividing wall!)
     for (const auto& seg : regCorridors) {
         fillCorridorShell(state.world, seg);
     }
-    // Pass 2: Carve air/floor/ceiling for all corridors so no shell ever seals a junction!
+    for (const auto& rm : deadEndRooms) {
+        state.world.fillBox(rm.x0 - 1, FLOOR_Y - 1, rm.z0 - 1, rm.x1 + 1, FLOOR_Y + CEIL_H, rm.z1 + 1, BlockType::Concrete);
+    }
+    // Pass 2: Carve air/floor/ceiling for all corridors, 3x4 rooms & their 1x2m doorways
     for (const auto& seg : regCorridors) {
         carveCorridor(state.world, seg);
+    }
+    for (const auto& rm : deadEndRooms) {
+        state.world.fillBox(rm.x0, FLOOR_Y, rm.z0, rm.x1, FLOOR_Y + CEIL_H - 1, rm.z1, BlockType::Air);
+        state.world.fillBox(rm.x0, FLOOR_Y - 1, rm.z0, rm.x1, FLOOR_Y - 1, rm.z1, BlockType::TechPanel);
+        state.world.fillBox(rm.x0, FLOOR_Y + CEIL_H, rm.z0, rm.x1, FLOOR_Y + CEIL_H, rm.z1, BlockType::DarkSteel);
+        // Carve 1m x 2m doorway through the separating concrete wall
+        state.world.fillBox(rm.doorX, FLOOR_Y, rm.doorZ, rm.doorX, FLOOR_Y + 1, rm.doorZ, BlockType::Air);
+        state.world.setBlock(rm.doorX, FLOOR_Y - 1, rm.doorZ, BlockType::TechPanel);
+        state.roomDoors.push_back(rm.door);
     }
     for (const auto& existing : state.corridors) {
         if (std::abs(existing.regX - regX) <= 1 && std::abs(existing.regZ - regZ) <= 1) {
@@ -713,6 +1019,15 @@ void MegaGenerator::generateRegion(MegaResult& state, int regX, int regZ,
         populateCorridor(state.world, seg, state.pointLights, state.lockers,
                          state.cabinets, state.lootSurfaces, state.spawnPos, settings, rng);
         state.corridors.push_back(seg);
+    }
+
+    // Furnish each 3x4 dead-end room with a warm wall lamp & a Rare Reinforced Cabinet (increased loot!)
+    for (const auto& rm : deadEndRooms) {
+        placeWallLamp(state.world, state.pointLights, rm.cabWallX, rm.cabWallZ,
+                      rm.cabNormalX, rm.cabNormalZ, regX, regZ, settings);
+        placeMetalCabinet(state.world, state.cabinets, state.lootSurfaces,
+                          rm.cabWallX, rm.cabWallZ, rm.cabNormalX, rm.cabNormalZ,
+                          regX, regZ, state.spawnPos, rng, true);
     }
 
     // Build the Central Starter Room in region (0, 0) at x=[55..60], z=[55..60]
@@ -812,6 +1127,13 @@ bool MegaGenerator::updateInfiniteStream(MegaResult& state, const Vec3& playerPo
                                       std::abs(c.regZ - rz) > keepRadius;
                            }),
             state.cabinets.end());
+        state.roomDoors.erase(
+            std::remove_if(state.roomDoors.begin(), state.roomDoors.end(),
+                           [&](const RoomDoorPlacement& d) {
+                               return std::abs(d.regX - rx) > keepRadius ||
+                                      std::abs(d.regZ - rz) > keepRadius;
+                           }),
+            state.roomDoors.end());
         state.lootSurfaces.erase(
             std::remove_if(state.lootSurfaces.begin(), state.lootSurfaces.end(),
                            [&](const LootSurface& s) {

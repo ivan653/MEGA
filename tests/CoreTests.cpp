@@ -56,14 +56,14 @@ TEST(MegaGeneratorTest, GeneratesConnectedMultiBiomeMegastructureQuickly) {
         EXPECT_GT(res.pointLights.size(), 15u);
         EXPECT_EQ(res.loadedRegions.size(), 9u); // 3x3 active streaming window
 
-        // Verify corridor dimensions (2..4m width, 30..80m length) & sparse 1..3 connections
+        // Verify corridor dimensions (2..4m width, 30..80m primary length, 12..80m ring-loop legs) & sparse connections
         for (const auto& seg : res.corridors) {
             EXPECT_GE(seg.width, cfg.corridorMinWidth);
             EXPECT_LE(seg.width, cfg.corridorMaxWidth);
             int len = seg.alongX ? std::abs(seg.x1 - seg.x0) : std::abs(seg.z1 - seg.z0);
-            EXPECT_GE(len, cfg.corridorMinLen);
+            EXPECT_GE(len, seg.isLoopReturn ? 12 : cfg.corridorMinLen);
             EXPECT_LE(len, cfg.corridorMaxLen);
-            EXPECT_LE(seg.connections, cfg.maxConnections);
+            EXPECT_LE(seg.connections, cfg.maxConnections + 2);
         }
 
         // Verify infinite streaming loads new regions when player walks far away
@@ -835,13 +835,13 @@ TEST(Inventory3DTest, VolumeRotationTopBlockingAndWorldGridPlacement) {
     EXPECT_TRUE(gw.togglePlaceBackpackOnGround(audio));
     EXPECT_EQ(gw.backpackMode, BackpackMode::OnBack);
 
-    // 3D world-grid snap places item cleanly on floor snapped to CELL_SIZE (0.06m)
+    // 3D world-grid snap places item cleanly on floor snapped to CELL_SIZE (0.05m)
     Vec3 snapped{};
     Vec3 downOrig = {58.0f, 2.2f, 58.0f};
     Vec3 downDir  = {0.0f, -1.0f, 0.0f};
     ASSERT_TRUE(gw.computeWorldGridSnap(downOrig, downDir, ItemType::Food, {}, snapped));
     EXPECT_NEAR(snapped.y, 1.0f, 0.02f);
-    EXPECT_NEAR(std::fmod(std::abs(snapped.x), Backpack3D::CELL_SIZE), 0.0f, 0.002f);
+    EXPECT_NEAR(snapped.x, std::round(snapped.x / Backpack3D::CELL_SIZE) * Backpack3D::CELL_SIZE, 0.001f);
 }
 
 TEST(DoubleDoorAndLootTableTest, Lockers90PercentOpenMetalCabinetsAlwaysLockedAndLootTablesWork) {
@@ -855,7 +855,11 @@ TEST(DoubleDoorAndLootTableTest, Lockers90PercentOpenMetalCabinetsAlwaysLockedAn
             << "crate.weight_flashlight = 0.0\n"
             << "crate.weight_battery = 0.0\n"
             << "crate.weight_food = 0.0\n"
-            << "crate.weight_water = 0.0\n";
+            << "crate.weight_water = 0.0\n"
+            << "crate.weight_broom = 0.0\n"
+            << "crate.weight_mop = 0.0\n"
+            << "crate.weight_tape = 0.0\n"
+            << "crate.weight_knife = 0.0\n";
     }
     LootTables lt = LootTables::loadOrCreate(tmpLoot);
     EXPECT_FLOAT_EQ(lt.get(LootSource::Crate).spawnChance, 1.0f);
@@ -898,4 +902,234 @@ TEST(DoubleDoorAndLootTableTest, Lockers90PercentOpenMetalCabinetsAlwaysLockedAn
     EXPECT_GT(openPct, 0.70f); // Statistically ~90% open
     EXPECT_GT(gw.map.lootSurfaces.size(), 10u);
     EXPECT_GT(gw.worldItems.size(), 15u);
+}
+
+TEST(RingLoopsAndRareRoomsTest, DeadEndsConvertToRingLoopsAndRareCabinetRooms) {
+    GameSettings cfg = GameSettings::loadOrCreate("mega.cfg");
+    int totalRings = 0;
+    int totalRooms = 0;
+    int totalRoomDoors = 0;
+    int totalRareCabinets = 0;
+    int totalRareSurfaces = 0;
+
+    for (uint64_t seed : {101ULL, 202ULL, 303ULL, 404ULL}) {
+        GameWorld gw;
+        gw.settings = cfg;
+        gw.startNewRun(seed);
+        totalRings += gw.map.ringLoopsCreated;
+        totalRooms += gw.map.deadEndRoomsCreated;
+        totalRoomDoors += static_cast<int>(gw.map.roomDoors.size());
+
+        // Verify every 3x4 dead-end room has a hinged metal door in GameWorld::doors
+        EXPECT_EQ(gw.map.roomDoors.size(), static_cast<size_t>(gw.map.deadEndRoomsCreated));
+        for (const auto& rd : gw.map.roomDoors) {
+            bool foundDoor = false;
+            for (const auto& d : gw.doors) {
+                if (!d.isCabinet && !d.isLocker && !d.isExitDoor && lengthSq(d.hingePos - rd.hingePos) < 0.01f) {
+                    foundDoor = true;
+                    break;
+                }
+            }
+            EXPECT_TRUE(foundDoor);
+        }
+
+        // Verify flush ring-loop corners: every pair of consecutive isLoopReturn legs shares exact corner overlap (w x w)
+        for (size_t i = 0; i + 1 < gw.map.corridors.size(); ++i) {
+            const auto& a = gw.map.corridors[i];
+            const auto& b = gw.map.corridors[i + 1];
+            if (a.isLoopReturn && b.isLoopReturn && a.alongX != b.alongX && a.regX == b.regX && a.regZ == b.regZ) {
+                int aMinX = std::min(a.x0, a.x1);
+                int aMaxX = a.alongX ? std::max(a.x0, a.x1) : (aMinX + a.width - 1);
+                int aMinZ = std::min(a.z0, a.z1);
+                int aMaxZ = a.alongX ? (aMinZ + a.width - 1) : std::max(a.z0, a.z1);
+
+                int bMinX = std::min(b.x0, b.x1);
+                int bMaxX = b.alongX ? std::max(b.x0, b.x1) : (bMinX + b.width - 1);
+                int bMinZ = std::min(b.z0, b.z1);
+                int bMaxZ = b.alongX ? (bMinZ + b.width - 1) : std::max(b.z0, b.z1);
+
+                int ovX = std::min(aMaxX, bMaxX) - std::max(aMinX, bMinX) + 1;
+                int ovZ = std::min(aMaxZ, bMaxZ) - std::max(aMinZ, bMinZ) + 1;
+                EXPECT_EQ(ovX, a.width);
+                EXPECT_EQ(ovZ, a.width);
+                ++i; // Advance past paired leg
+            }
+        }
+
+        for (const auto& d : gw.doors) {
+            if (d.isRareCabinet) {
+                totalRareCabinets++;
+                EXPECT_TRUE(d.locked);
+                EXPECT_GE(d.linkedDoorIdx, 0);
+            }
+        }
+        for (const auto& ls : gw.map.lootSurfaces) {
+            if (ls.source == LootSource::RareCabinet) totalRareSurfaces++;
+            EXPECT_GT(ls.surfaceBox.max.y, ls.surfaceBox.min.y); // Every storage surface has real 3D height clearance!
+        }
+    }
+
+    // Verify 3D storage fit + adjacent floor placement: force 100% Broom spawns on shelves & verify NO Broom clips a 0.45m shelf!
+    {
+        GameWorld gw;
+        for (auto& s : gw.lootTables.sources) {
+            s.spawnChance = 1.0f;
+            s.maxItems = 1;
+            s.weights.fill(0.0f);
+            s.weights[static_cast<int>(ItemType::Broom)] = 1.0f;
+        }
+        gw.startNewRun(777ULL);
+        int broomsOnFloor = 0;
+        int broomsClippingLowShelf = 0;
+        for (const auto& wi : gw.worldItems) {
+            if (wi.type != ItemType::Broom) continue;
+            if (wi.pos.y <= 1.08f) broomsOnFloor++; // Placed in tall utility bay OR adjacent floor beside storage!
+            // A 1.50m broom must NEVER be placed on a low 0.45m-tall interior cabinet/rack shelf (y ~ 1.2..2.6 inside cabinet)
+            for (const auto& ls : gw.map.lootSurfaces) {
+                if ((ls.source == LootSource::CabinetShelf || ls.source == LootSource::ShelvingRack) &&
+                    (ls.surfaceBox.max.y - ls.surfaceBox.min.y) < 1.0f) {
+                    if (std::abs(wi.pos.y - ls.surfaceBox.min.y) < 0.05f &&
+                        wi.pos.x >= ls.surfaceBox.min.x && wi.pos.x <= ls.surfaceBox.max.x &&
+                        wi.pos.z >= ls.surfaceBox.min.z && wi.pos.z <= ls.surfaceBox.max.z) {
+                        broomsClippingLowShelf++;
+                    }
+                }
+            }
+        }
+        EXPECT_EQ(broomsClippingLowShelf, 0);
+        EXPECT_GT(broomsOnFloor, 0);
+    }
+
+    std::printf("[DEAD-END REWRITE] 4 seeds: ringLoops=%d | deadEnd3x4Rooms=%d | roomDoors=%d | rareCabinetLeaves=%d | rareLootSurfaces=%d\n",
+                totalRings, totalRooms, totalRoomDoors, totalRareCabinets, totalRareSurfaces);
+    EXPECT_GT(totalRings, 0);
+    EXPECT_GT(totalRooms, 0);
+    EXPECT_GT(totalRoomDoors, 0);
+    EXPECT_GT(totalRareCabinets, 0);
+    EXPECT_GT(totalRareSurfaces, 0);
+}
+
+TEST(BackSlotMeleeAndCraftingTest, RearStrapSlotBreakingWeaponsAndSurfaceSpearCraft) {
+    // 1. Rear 2x30x6 strap slot accepts tall items (>= 20 cells) and rejects short items (< 20 cells)!
+    Backpack3D bp;
+    EXPECT_TRUE(Backpack3D::isEligibleForBackSlot(ItemType::Broom, {}));
+    EXPECT_TRUE(Backpack3D::isEligibleForBackSlot(ItemType::Mop, {}));
+    EXPECT_TRUE(Backpack3D::isEligibleForBackSlot(ItemType::Stick, {}));
+    EXPECT_TRUE(Backpack3D::isEligibleForBackSlot(ItemType::Spear, {}));
+
+    // Short items must be rejected from the rear strap slot
+    EXPECT_FALSE(Backpack3D::isEligibleForBackSlot(ItemType::Knife, {}));      // 1x6x1 (< 20)
+    EXPECT_FALSE(Backpack3D::isEligibleForBackSlot(ItemType::Tape, {}));       // 2x1x2 (< 20)
+    EXPECT_FALSE(Backpack3D::isEligibleForBackSlot(ItemType::Flashlight, {})); // 2x2x4 (< 20)
+    EXPECT_FALSE(bp.canPlaceInBackSlot(0, 0, 0, ItemType::Knife, {}));
+    EXPECT_FALSE(bp.canPlaceInBackSlot(0, 0, 0, ItemType::Tape, {}));
+
+    // Rotating Broom horizontally (rotX=1 -> 2x2x30) makes height 2 (< 20) -> rejected!
+    ItemOrientation flatOri;
+    flatOri.rotX = 1;
+    EXPECT_FALSE(Backpack3D::isEligibleForBackSlot(ItemType::Broom, flatOri));
+
+    // Upright Broom & Mop fit cleanly side-by-side inside the 6x30x2 rear strap slot!
+    int broomId = bp.tryAutoAdd(ItemType::Broom, 2);
+    int mopId = bp.tryAutoAdd(ItemType::Mop, 3);
+    ASSERT_GT(broomId, 0);
+    ASSERT_GT(mopId, 0);
+    ASSERT_NE(bp.findById(broomId), nullptr);
+    ASSERT_NE(bp.findById(mopId), nullptr);
+    EXPECT_TRUE(bp.findById(broomId)->inBackSlot);
+    EXPECT_TRUE(bp.findById(mopId)->inBackSlot);
+    EXPECT_FALSE(bp.isBlockedFromAbove(broomId));
+    EXPECT_FALSE(bp.isBlockedFromAbove(mopId));
+
+    // 2. RMB-hold rotation changes backpackWorldMatrix cleanly
+    AudioEngine audio;
+    GameWorld gw;
+    gw.startNewRun(9001ULL);
+    gw.toggleBackpackInHands();
+    EXPECT_EQ(gw.backpackMode, BackpackMode::InHands);
+    Mat4 mBefore = gw.backpackWorldMatrix();
+    gw.rotateBackpackView(180.0f, 40.0f);
+    Mat4 mAfter = gw.backpackWorldMatrix();
+    EXPECT_GT(std::abs(gw.backpackViewYaw), 0.5f);
+    EXPECT_NE(mBefore.m[0], mAfter.m[0]);
+    gw.toggleBackpackInHands(); // Closes backpack and resets rotation
+
+    // 3. Melee combat: Broom/Mop damages robot and breaks after 1..3 hits into Stick!
+    gw.player.position = {58.0f, 1.0f, 58.0f};
+    gw.player.yaw = 0.0f; // Facing -Z
+    gw.player.pitch = 0.0f;
+    gw.enemies.clear();
+    Enemy targetBot;
+    targetBot.pos = {58.0f, 1.0f, 56.2f}; // 1.8m straight ahead (-Z)
+    targetBot.hp = 100.0f;
+    targetBot.alive = true;
+    gw.enemies.push_back(targetBot);
+
+    gw.hasHeldItem = true;
+    gw.heldItemType = ItemType::Broom;
+    gw.heldItemDurability = 2; // Breaks on 2nd hit
+    gw.meleeCooldown = 0.0f;
+
+    EXPECT_TRUE(gw.performMeleeAttack(audio));
+    EXPECT_LT(gw.enemies[0].hp, 100.0f);
+    EXPECT_EQ(gw.heldItemType, ItemType::Broom);
+    EXPECT_EQ(gw.heldItemDurability, 1);
+
+    gw.meleeCooldown = 0.0f;
+    EXPECT_TRUE(gw.performMeleeAttack(audio));
+    EXPECT_EQ(gw.heldItemType, ItemType::Stick); // Broom head snapped -> transformed into Stick!
+
+    // 4. Surface Crafting: Stick + Tape + Knife placed near each other on a 3D surface crafts Spear!
+    gw.hasHeldItem = false;
+    gw.worldItems.clear();
+    gw.doors.clear();
+    // Place all 3 ingredients near each other on the starter room floor in front of player (y=1.0)
+    gw.worldItems.push_back({{58.00f, 1.0f, 57.00f}, ItemType::Stick, false, 0, 0, {1, 0, 0}, 0});
+    gw.worldItems.push_back({{58.15f, 1.0f, 57.05f}, ItemType::Tape,  false, 0, 0, {}, 0});
+    gw.worldItems.push_back({{57.85f, 1.0f, 57.05f}, ItemType::Knife, false, 0, 0, {}, 0});
+
+    // Aim directly down-forward at the Tape at (58.15, 1.025, 57.05) from (58.15, 2.58, 57.55)
+    gw.player.position = {58.15f, 1.0f, 57.55f};
+    Vec3 toTape = Vec3{58.15f, 1.025f, 57.05f} - gw.player.eyePosition();
+    gw.player.yaw = std::atan2(toTape.x, -toTape.z);
+    gw.player.pitch = std::atan2(toTape.y, std::hypot(toTape.x, toTape.z));
+
+    gw.updateHover();
+    ASSERT_GE(gw.hoveredItemIdx, 0);
+    ASSERT_FALSE(gw.availableCrafts.empty());
+    EXPECT_EQ(gw.availableCrafts[0].result, ItemType::Spear);
+
+    size_t prevCount = gw.worldItems.size();
+    EXPECT_TRUE(gw.performCraft(0, audio));
+    EXPECT_TRUE(gw.worldItems[0].pickedUp); // Stick consumed
+    EXPECT_TRUE(gw.worldItems[1].pickedUp); // Tape consumed
+    EXPECT_TRUE(gw.worldItems[2].pickedUp); // Knife consumed
+    ASSERT_EQ(gw.worldItems.size(), prevCount + 1);
+    EXPECT_EQ(gw.worldItems.back().type, ItemType::Spear);
+    EXPECT_FALSE(gw.worldItems.back().pickedUp);
+
+    // 5. Held-item ground placement preview appears ONLY after pressing RMB (heldPlaceMode)!
+    gw.hasHeldItem = true;
+    gw.heldPlaceMode = false;
+    gw.heldItemType = ItemType::Food;
+    gw.heldItemOrient = {};
+    gw.hoveredDoorIdx = -1;
+    gw.hoveredItemIdx = -1;
+    Vec3 downOrig{58.0f, 2.2f, 58.0f};
+    Vec3 downDir{0.0f, -1.0f, 0.0f};
+
+    // Before pressing RMB -> NO placement ghost preview on the floor!
+    gw.updateCursorHover(downOrig, downDir);
+    EXPECT_FALSE(gw.placementPreview.active);
+
+    // Press RMB with item in hand -> enters heldPlaceMode and shows ground placement preview!
+    EXPECT_TRUE(gw.handleSecondaryClick(downOrig, downDir, audio));
+    EXPECT_TRUE(gw.heldPlaceMode);
+    EXPECT_TRUE(gw.placementPreview.active);
+
+    // Click LMB -> places item onto floor and exits heldPlaceMode!
+    EXPECT_TRUE(gw.handlePrimaryClick(downOrig, downDir, audio));
+    EXPECT_FALSE(gw.hasHeldItem);
+    EXPECT_FALSE(gw.heldPlaceMode);
+    EXPECT_FALSE(gw.placementPreview.active);
 }

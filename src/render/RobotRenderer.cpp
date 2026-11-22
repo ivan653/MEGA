@@ -314,7 +314,7 @@ void RobotRenderer::renderInteractables(const Shader& worldShader, const Mat4& v
                                         const ItemOrientation& heldOrient,
                                         const Mat4& heldMatrix) {
     if (doors.empty() && items.empty() && !backpackState.visible && !ghost.active && !hasHeldItem) return;
-    (void)view; (void)proj; (void)camPos;
+    (void)view; (void)proj; (void)camPos; (void)heldOrient;
 
     // Render doors, items & 3D backpack using the exact same real-time 3D world lighting shader!
     worldShader.use();
@@ -338,37 +338,76 @@ void RobotRenderer::renderInteractables(const Shader& worldShader, const Mat4& v
         float sy = bsz.y * C;
         float sz = bsz.z * C;
 
-        if (type == ItemType::Flashlight) { // 2 x 2 x 4 -> 0.12 x 0.12 x 0.24m
+        if (type == ItemType::Flashlight) { // 2 x 2 x 4
             drawLitPart(centerM * Mat4::translate({0.0f, 0.0f, -0.02f}) * Mat4::scale({sx * 0.65f, sy * 0.65f, sz * 0.78f}),
                         {sx * 0.65f, sy * 0.65f, sz * 0.78f}, 10.0f, forceEmissive, tint);
             drawLitPart(centerM * Mat4::translate({0.0f, 0.0f, sz * 0.38f}) * Mat4::scale({sx * 0.85f, sy * 0.85f, sz * 0.22f}),
                         {sx * 0.85f, sy * 0.85f, sz * 0.22f}, 6.0f, 1.0f, {0.85f, 0.96f, 1.15f});
-        } else if (type == ItemType::Battery) { // 1 x 2 x 1 -> 0.06 x 0.12 x 0.06m
+        } else if (type == ItemType::Battery) { // 1 x 2 x 1
             drawLitPart(centerM * Mat4::translate({0.0f, -0.008f, 0.0f}) * Mat4::scale({sx * 0.82f, sy * 0.84f, sz * 0.82f}),
                         {sx * 0.82f, sy * 0.84f, sz * 0.82f}, 3.0f, forceEmissive, Vec3{1.25f, 1.02f, 0.35f} * tint.x);
             drawLitPart(centerM * Mat4::translate({0.0f, sy * 0.44f, 0.0f}) * Mat4::scale({sx * 0.48f, sy * 0.14f, sz * 0.48f}),
                         {sx * 0.48f, sy * 0.14f, sz * 0.48f}, 4.0f, forceEmissive, tint);
-        } else if (type == ItemType::Food) { // 1 x 1 x 2 -> 0.06 x 0.06 x 0.12m ration bar
+        } else if (type == ItemType::Food) { // 1 x 1 x 2 ration bar
             drawLitPart(centerM * Mat4::scale({sx * 0.88f, sy * 0.78f, sz * 0.92f}),
                         {sx * 0.88f, sy * 0.78f, sz * 0.92f}, 3.0f, forceEmissive, Vec3{1.05f, 0.72f, 0.42f} * tint.x);
-        } else if (type == ItemType::Water) { // 2 x 3 x 2 -> 0.12 x 0.18 x 0.12m bottle
+        } else if (type == ItemType::Water) { // 2 x 3 x 2 bottle
             drawLitPart(centerM * Mat4::translate({0.0f, -0.012f, 0.0f}) * Mat4::scale({sx * 0.78f, sy * 0.82f, sz * 0.78f}),
                         {sx * 0.78f, sy * 0.82f, sz * 0.78f}, 9.0f, forceEmissive, Vec3{0.55f, 0.98f, 1.38f} * tint.x);
             drawLitPart(centerM * Mat4::translate({0.0f, sy * 0.43f, 0.0f}) * Mat4::scale({sx * 0.42f, sy * 0.16f, sz * 0.42f}),
                         {sx * 0.42f, sy * 0.16f, sz * 0.42f}, 1.0f, forceEmissive, tint);
-        } else { // ItemType::Lockpick: 1 x 1 x 3 -> 0.06 x 0.06 x 0.18m L-shaped steel pick
+        } else if (type == ItemType::Lockpick) { // 1 x 1 x 3 L-shaped steel pick
             drawLitPart(centerM * Mat4::translate({0.0f, 0.0f, -sz * 0.30f}) * Mat4::scale({sx * 0.40f, sy * 0.35f, sz * 0.38f}),
                         {sx * 0.40f, sy * 0.35f, sz * 0.38f}, 10.0f, forceEmissive, Vec3{0.55f, 0.68f, 0.85f} * tint.x);
             drawLitPart(centerM * Mat4::translate({0.0f, 0.0f, sz * 0.12f}) * Mat4::scale({sx * 0.18f, sy * 0.18f, sz * 0.66f}),
                         {sx * 0.18f, sy * 0.18f, sz * 0.66f}, 4.0f, forceEmissive, Vec3{1.25f, 1.30f, 1.38f} * tint.x);
             drawLitPart(centerM * Mat4::translate({sx * 0.25f, 0.0f, sz * 0.42f}) * Mat4::scale({sx * 0.50f, sy * 0.18f, sz * 0.10f}),
                         {sx * 0.50f, sy * 0.18f, sz * 0.10f}, 4.0f, forceEmissive, Vec3{1.25f, 1.30f, 1.38f} * tint.x);
+        } else if (type == ItemType::Broom) { // 2 x 30 x 2 -> wooden pole + wide straw bristle head
+            drawLitPart(centerM * Mat4::translate({0.0f, sy * 0.11f, 0.0f}) * Mat4::scale({0.032f, sy * 0.78f, 0.032f}),
+                        {0.032f, sy * 0.78f, 0.032f}, 3.0f, forceEmissive, Vec3{0.82f, 0.58f, 0.34f} * tint.x);
+            drawLitPart(centerM * Mat4::translate({0.0f, -sy * 0.29f, 0.0f}) * Mat4::scale({sx * 0.72f, sy * 0.045f, sz * 0.55f}),
+                        {sx * 0.72f, sy * 0.045f, sz * 0.55f}, 10.0f, forceEmissive, Vec3{0.42f, 0.45f, 0.48f} * tint.x);
+            drawLitPart(centerM * Mat4::translate({0.0f, -sy * 0.40f, 0.0f}) * Mat4::scale({sx * 1.48f, sy * 0.20f, sz * 0.72f}),
+                        {sx * 1.48f, sy * 0.20f, sz * 0.72f}, 3.0f, forceEmissive, Vec3{0.96f, 0.80f, 0.38f} * tint.x);
+        } else if (type == ItemType::Mop) { // 2 x 30 x 2 -> long pole + clamp + cotton mop head
+            drawLitPart(centerM * Mat4::translate({0.0f, sy * 0.09f, 0.0f}) * Mat4::scale({0.032f, sy * 0.82f, 0.032f}),
+                        {0.032f, sy * 0.82f, 0.032f}, 3.0f, forceEmissive, Vec3{0.72f, 0.68f, 0.60f} * tint.x);
+            drawLitPart(centerM * Mat4::translate({0.0f, -sy * 0.33f, 0.0f}) * Mat4::scale({sx * 1.38f, sy * 0.04f, sz * 0.46f}),
+                        {sx * 1.38f, sy * 0.04f, sz * 0.46f}, 9.0f, forceEmissive, Vec3{0.34f, 0.54f, 0.78f} * tint.x);
+            drawLitPart(centerM * Mat4::translate({0.0f, -sy * 0.42f, 0.0f}) * Mat4::scale({sx * 1.56f, sy * 0.16f, sz * 0.90f}),
+                        {sx * 1.56f, sy * 0.16f, sz * 0.90f}, 1.0f, forceEmissive, Vec3{0.90f, 0.90f, 0.84f} * tint.x);
+        } else if (type == ItemType::Tape) { // 2 x 1 x 2 -> electrical tape roll
+            drawLitPart(centerM * Mat4::scale({sx * 0.90f, sy * 0.84f, sz * 0.90f}),
+                        {sx * 0.90f, sy * 0.84f, sz * 0.90f}, 9.0f, forceEmissive, Vec3{0.20f, 0.46f, 0.96f} * tint.x);
+            drawLitPart(centerM * Mat4::scale({sx * 0.42f, sy * 0.90f, sz * 0.42f}),
+                        {sx * 0.42f, sy * 0.90f, sz * 0.42f}, 3.0f, forceEmissive, Vec3{0.72f, 0.58f, 0.40f} * tint.x);
+        } else if (type == ItemType::Knife) { // 1 x 6 x 1 -> handle + guard + steel blade
+            drawLitPart(centerM * Mat4::translate({0.0f, -sy * 0.31f, 0.0f}) * Mat4::scale({sx * 0.62f, sy * 0.36f, sz * 0.52f}),
+                        {sx * 0.62f, sy * 0.36f, sz * 0.52f}, 10.0f, forceEmissive, Vec3{0.32f, 0.30f, 0.28f} * tint.x);
+            drawLitPart(centerM * Mat4::translate({0.0f, -sy * 0.11f, 0.0f}) * Mat4::scale({sx * 0.92f, sy * 0.05f, sz * 0.64f}),
+                        {sx * 0.92f, sy * 0.05f, sz * 0.64f}, 4.0f, forceEmissive, Vec3{0.68f, 0.72f, 0.78f} * tint.x);
+            drawLitPart(centerM * Mat4::translate({0.0f, sy * 0.20f, 0.0f}) * Mat4::scale({sx * 0.44f, sy * 0.58f, sz * 0.18f}),
+                        {sx * 0.44f, sy * 0.58f, sz * 0.18f}, 4.0f, forceEmissive, Vec3{1.28f, 1.34f, 1.42f} * tint.x);
+        } else if (type == ItemType::Stick) { // 1 x 26 x 1 -> wooden pole left after broom/mop head breaks
+            drawLitPart(centerM * Mat4::scale({0.032f, sy * 0.96f, 0.032f}),
+                        {0.032f, sy * 0.96f, 0.032f}, 3.0f, forceEmissive, Vec3{0.78f, 0.54f, 0.32f} * tint.x);
+            drawLitPart(centerM * Mat4::translate({0.0f, -sy * 0.48f, 0.0f}) * Mat4::scale({0.022f, sy * 0.04f, 0.022f}),
+                        {0.022f, sy * 0.04f, 0.022f}, 3.0f, forceEmissive, Vec3{0.92f, 0.76f, 0.54f} * tint.x);
+        } else { // ItemType::Spear: 1 x 30 x 1 -> wooden pole + blue electrical tape binding + knife blade tip!
+            drawLitPart(centerM * Mat4::translate({0.0f, -sy * 0.10f, 0.0f}) * Mat4::scale({0.032f, sy * 0.80f, 0.032f}),
+                        {0.032f, sy * 0.80f, 0.032f}, 3.0f, forceEmissive, Vec3{0.78f, 0.54f, 0.32f} * tint.x);
+            drawLitPart(centerM * Mat4::translate({0.0f, sy * 0.27f, 0.0f}) * Mat4::scale({0.046f, sy * 0.075f, 0.046f}),
+                        {0.046f, sy * 0.075f, 0.046f}, 9.0f, forceEmissive, Vec3{0.20f, 0.48f, 0.98f} * tint.x);
+            drawLitPart(centerM * Mat4::translate({0.0f, sy * 0.40f, 0.0f}) * Mat4::scale({0.026f, sy * 0.20f, 0.012f}),
+                        {0.026f, sy * 0.20f, 0.012f}, 4.0f, forceEmissive, Vec3{1.35f, 1.40f, 1.48f} * tint.x);
         }
     };
 
-    // 1) Render hinged doors (2m metal exit door + double-door cabinets + hideable lockers)
+    // 1) Render hinged doors (2m metal exit door + double-door cabinets + rare cabinets + hideable lockers)
     for (const auto& d : doors) {
-        Vec3 tint = d.highlighted ? Vec3{1.25f, 1.35f, 1.50f} : Vec3{1.0f, 1.0f, 1.0f};
+        Vec3 baseTint = d.isRareCabinet ? Vec3{0.62f, 0.70f, 0.82f} : Vec3{1.0f, 1.0f, 1.0f};
+        Vec3 tint = d.highlighted ? (baseTint * 1.32f) : baseTint;
         float layer = d.isCabinet ? 11.0f : 12.0f;
         Mat4 pivot = Mat4::translate(d.hingePos) * Mat4::rotateY(d.yaw);
 
@@ -380,20 +419,28 @@ void RobotRenderer::renderInteractables(const Shader& worldShader, const Mat4& v
         Vec3 handleSize{0.045f, 0.14f, d.thickness + 0.075f};
         float handleX = std::max(0.07f, d.width - 0.08f);
         Mat4 handleM = pivot * Mat4::translate({handleX, d.height * 0.48f, 0.0f}) * Mat4::scale(handleSize);
-        drawLitPart(handleM, handleSize, 4.0f, 0.0f, tint);
+        Vec3 handleTint = d.isRareCabinet ? Vec3{1.35f, 1.12f, 0.52f} : tint;
+        drawLitPart(handleM, handleSize, 4.0f, 0.0f, handleTint);
+
+        if (d.isRareCabinet) {
+            // Reinforced hazard/gold trim strip on rare 3x4 room cabinets
+            Vec3 trimSize{d.width * 0.86f, 0.06f, d.thickness + 0.02f};
+            Mat4 trimM = pivot * Mat4::translate({d.width * 0.5f, d.height * 0.82f, 0.0f}) * Mat4::scale(trimSize);
+            drawLitPart(trimM, trimSize, 7.0f, 0.0f, tint);
+        }
     }
 
     // 2) Render 3D world pickup items with their exact 3D orientation & dimensions
     for (const auto& it : items) {
         Vec3 tint = it.highlighted ? Vec3{1.40f, 1.50f, 1.65f} : Vec3{1.0f, 1.0f, 1.0f};
-        ItemType t = static_cast<ItemType>(std::clamp(it.itemKind, 0, 4));
+        ItemType t = static_cast<ItemType>(std::clamp(it.itemKind, 0, ITEM_TYPE_COUNT - 1));
         Int3 osz = it.orient.applyToSize(itemBaseGridSize(t));
         float cy = osz.y * Backpack3D::CELL_SIZE * 0.5f;
         Mat4 centerM = Mat4::translate({it.pos.x, it.pos.y + cy, it.pos.z}) * it.orient.toMatrix();
         drawItemCentered(centerM, t, tint, 0.0f);
     }
 
-    // 3) Render Diegetic 3D Backpack (6 x 8 x 4 cavity — tilted in hands OR placed upright on ground!)
+    // 3) Render Diegetic 3D Backpack (6 x 8 x 4 cavity + rear 2 x 30 x 6 dual-strap slot!)
     if (backpackState.visible && backpackState.backpack) {
         constexpr float C = Backpack3D::CELL_SIZE;
         constexpr float W = Backpack3D::DIM_X * C;
@@ -403,6 +450,8 @@ void RobotRenderer::renderInteractables(const Shader& worldShader, const Mat4& v
         const Mat4& B = backpackState.worldMatrix;
         Vec3 shellTint{0.42f, 0.48f, 0.40f}; // Olive-slate tactical pack
         Vec3 trimTint{0.25f, 0.30f, 0.34f};
+        Vec3 strapTint{0.22f, 0.20f, 0.18f};
+        Vec3 buckleTint{0.78f, 0.80f, 0.84f};
 
         // Bottom, back, left, right, and slightly lower front lip so interior layers are clearly visible
         drawLitPart(B * Mat4::translate({W * 0.5f, -WT * 0.5f, D * 0.5f}) * Mat4::scale({W + WT * 2, WT, D + WT * 2}),
@@ -416,6 +465,28 @@ void RobotRenderer::renderInteractables(const Shader& worldShader, const Mat4& v
         drawLitPart(B * Mat4::translate({W * 0.5f, H * 0.34f, D + WT * 0.5f}) * Mat4::scale({W + WT * 2, H * 0.68f, WT}),
                     {W, H * 0.68f, WT}, 3.0f, 0.0f, trimTint);
 
+        // Rear 2 x 30 x 6 dual-strap attachment harness on the back spine (z = BACK_OFFSET_Z .. -WT)
+        constexpr float BZ = Backpack3D::BACK_OFFSET_Z;
+        constexpr float BD = Backpack3D::BACK_DIM_Z * C;
+        for (float strapY : {H * 0.24f, H * 0.76f}) {
+            // Outer horizontal tightening strap band
+            drawLitPart(B * Mat4::translate({W * 0.5f, strapY, BZ - 0.006f}) * Mat4::scale({W + 0.012f, 0.028f, 0.010f}),
+                        {W, 0.028f, 0.010f}, 10.0f, 0.0f, strapTint);
+            // Left and right strap side loops connecting back to the pack spine
+            drawLitPart(B * Mat4::translate({-0.004f, strapY, BZ + BD * 0.5f}) * Mat4::scale({0.010f, 0.028f, BD + 0.014f}),
+                        {0.010f, 0.028f, BD}, 10.0f, 0.0f, strapTint);
+            drawLitPart(B * Mat4::translate({W + 0.004f, strapY, BZ + BD * 0.5f}) * Mat4::scale({0.010f, 0.028f, BD + 0.014f}),
+                        {0.010f, 0.028f, BD}, 10.0f, 0.0f, strapTint);
+            // Metallic quick-release buckle in center of strap
+            drawLitPart(B * Mat4::translate({W * 0.5f, strapY, BZ - 0.011f}) * Mat4::scale({0.042f, 0.036f, 0.010f}),
+                        {0.042f, 0.036f, 0.010f}, 4.0f, 0.0f, buckleTint);
+        }
+        // Subtle glowing rear slot guide rails so player clearly sees the 6-wide x 2-deep back harness grid
+        for (int gx = 0; gx <= Backpack3D::BACK_DIM_X; gx += 2) {
+            drawLitPart(B * Mat4::translate({gx * C, H * 0.5f, BZ + 0.004f}) * Mat4::scale({0.003f, H * 0.88f, 0.003f}),
+                        {0.01f, H, 0.01f}, 6.0f, 1.0f, {0.26f, 0.44f, 0.52f});
+        }
+
         // Subtle 3D floor grid guide lines (6x4 grid cells) so player can clearly align items
         for (int gx = 1; gx < Backpack3D::DIM_X; ++gx) {
             drawLitPart(B * Mat4::translate({gx * C, 0.002f, D * 0.5f}) * Mat4::scale({0.003f, 0.003f, D}),
@@ -426,14 +497,10 @@ void RobotRenderer::renderInteractables(const Shader& worldShader, const Mat4& v
                         {W, 0.01f, 0.01f}, 6.0f, 1.0f, {0.22f, 0.36f, 0.44f});
         }
 
-        // Render every 3D item packed inside the backpack
+        // Render every 3D item packed inside the backpack (main cavity AND rear 2x30x6 strap slot!)
         for (const auto& pi : backpackState.backpack->items) {
-            Int3 osz = pi.size();
-            Vec3 localCenter{
-                (pi.gx + osz.x * 0.5f) * C,
-                (pi.gy + osz.y * 0.5f) * C,
-                (pi.gz + osz.z * 0.5f) * C
-            };
+            AABB lb = Backpack3D::itemLocalBounds(pi);
+            Vec3 localCenter = (lb.min + lb.max) * 0.5f;
             bool isHov = (pi.id == backpackState.hoveredItemId);
             bool isBlk = backpackState.backpack->isBlockedFromAbove(pi.id);
             Vec3 tint = {1.15f, 1.15f, 1.15f};
@@ -447,7 +514,7 @@ void RobotRenderer::renderInteractables(const Shader& worldShader, const Mat4& v
         }
     }
 
-    // 4) Render 3D Grid Placement Ghost Preview (either inside backpack or on world floor/table/shelf)
+    // 4) Render 3D Grid Placement Ghost Preview (either inside backpack/back slot or on world floor/table/shelf)
     if (ghost.active) {
         constexpr float C = Backpack3D::CELL_SIZE;
         Int3 osz = ghost.orient.applyToSize(itemBaseGridSize(ghost.type));
@@ -456,7 +523,8 @@ void RobotRenderer::renderInteractables(const Shader& worldShader, const Mat4& v
 
         Mat4 gCenterM;
         if (ghost.inBackpack && backpackState.visible) {
-            Vec3 lc{(ghost.gx + osz.x * 0.5f) * C, (ghost.gy + osz.y * 0.5f) * C, (ghost.gz + osz.z * 0.5f) * C};
+            AABB lb = Backpack3D::itemLocalBounds(ghost.gx, ghost.gy, ghost.gz, osz, ghost.inBackSlot);
+            Vec3 lc = (lb.min + lb.max) * 0.5f;
             gCenterM = backpackState.worldMatrix * Mat4::translate(lc);
         } else {
             gCenterM = Mat4::translate({ghost.worldPos.x, ghost.worldPos.y + osz.y * C * 0.5f, ghost.worldPos.z});

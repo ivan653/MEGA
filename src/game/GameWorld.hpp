@@ -110,8 +110,17 @@ struct WorldItem {
     int regX = 0;
     int regZ = 0;
     ItemOrientation orient{};
+    int durability = 0; // 1..3 hits for Broom/Mop before head breaks into Stick
 
     AABB worldBounds() const;
+};
+
+struct CraftOption {
+    int recipeId = 0;
+    ItemType result = ItemType::Spear;
+    std::string label;
+    std::vector<int> ingredientWorldIdx;
+    Vec3 outputPos{};
 };
 
 struct HingeDoor {
@@ -126,6 +135,7 @@ struct HingeDoor {
     float openSign = 1.0f;
     float creakAccum = 0.0f; // Physical friction travel accumulator for creak synthesis
     bool isCabinet = false;
+    bool isRareCabinet = false;
     bool isLocker = false;
     bool isExitDoor = false; // Starter 2m heavy steel exit door (0% lockpick break chance)
     bool locked = false;
@@ -188,21 +198,29 @@ public:
     bool gameOver = false;
     bool worldStreamChanged = false;
 
-    // 3D Diegetic Backpack & Hand / Dragging state
+    // 3D Diegetic Backpack & Hand / Dragging / Melee / Surface Crafting state
     BackpackMode backpackMode = BackpackMode::OnBack;
     Vec3 backpackGroundPos{};
     float backpackGroundYaw = 0.0f;
+    float backpackViewYaw = 0.0f;     // RMB-hold rotation around backpack vertical axis
+    float backpackViewPitch = 0.0f;   // RMB-hold tilt around backpack horizontal axis
     bool hasHeldItem = false;
+    bool heldPlaceMode = false; // True ONLY after pressing RMB with an item in hand to preview/place on 3D grid
     ItemType heldItemType = ItemType::Food;
     ItemOrientation heldItemOrient{};
+    int heldItemDurability = 0;
+    float meleeSwingTimer = 0.0f;
+    float meleeCooldown = 0.0f;
     bool draggingItem = false;        // True when RMB-dragging an item with paused camera + free mouse cursor
     ItemType dragItemType = ItemType::Food;
     ItemOrientation dragItemOrient{};
+    int dragItemDurability = 0;
     int dragOriginBackpackId = -1;
     int hoveredBackpackItemId = -1;
     bool hoveredBackpackBlocked = false;
     bool hoveredGroundedBackpack = false;
     GhostPreviewState placementPreview{};
+    std::vector<CraftOption> availableCrafts;
 
     // God Mode debug/testing controls
     bool godMode = false;
@@ -241,7 +259,11 @@ public:
     bool handlePrimaryClick(const Vec3& rayOrig, const Vec3& rayDir, AudioEngine& audio);
     bool handleSecondaryClick(const Vec3& rayOrig, const Vec3& rayDir, AudioEngine& audio);
     void rotateActiveItem(int axis); // 0=X, 1=Y, 2=Z
+    void rotateBackpackView(float dx, float dy);
     bool useHeldItem(AudioEngine& audio);
+    bool performMeleeAttack(AudioEngine& audio);
+    void updateSurfaceCrafting();
+    bool performCraft(int optionIdx, AudioEngine& audio);
     bool computeWorldGridSnap(const Vec3& rayOrig, const Vec3& rayDir,
                               ItemType type, const ItemOrientation& orient,
                               Vec3& outSnappedPos) const;

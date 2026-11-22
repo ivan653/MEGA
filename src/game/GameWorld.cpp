@@ -92,13 +92,21 @@ void GameWorld::startNewRun(uint64_t seed) {
     inventory = Inventory{};
     backpack.clear();
     backpackMode = BackpackMode::OnBack;
+    backpackViewYaw = 0.0f;
+    backpackViewPitch = 0.0f;
     hasHeldItem = false;
+    heldPlaceMode = false;
+    heldItemDurability = 0;
+    meleeSwingTimer = 0.0f;
+    meleeCooldown = 0.0f;
     draggingItem = false;
+    dragItemDurability = 0;
     dragOriginBackpackId = -1;
     hoveredBackpackItemId = -1;
     hoveredBackpackBlocked = false;
     hoveredGroundedBackpack = false;
     placementPreview = GhostPreviewState{};
+    availableCrafts.clear();
     lockpick.close();
     flashlightOn = false;
     inventoryOpen = false;
@@ -251,6 +259,7 @@ void GameWorld::syncLockersFromMap() {
         leftLeaf.openSign = cp.leftOpenSign;
         leftLeaf.maxAngle = 1.85f;
         leftLeaf.isCabinet = true;
+        leftLeaf.isRareCabinet = cp.isRare;
         leftLeaf.locked = true; // Metal cabinets always spawn locked!
         leftLeaf.lockSeed = cSeed;
         leftLeaf.regX = cp.regX;
@@ -269,8 +278,134 @@ void GameWorld::syncLockersFromMap() {
         doors.push_back(rightLeaf);
     }
 
+    // 2.5) Hinged Metal Doors on Walled 3x4 Dead-End Rooms
+    for (const auto& rd : map.roomDoors) {
+        bool exists = false;
+        for (const auto& d : doors) {
+            if (!d.isCabinet && !d.isLocker && !d.isExitDoor && lengthSq(d.hingePos - rd.hingePos) < 0.01f) {
+                exists = true;
+                break;
+            }
+        }
+        if (exists) continue;
+
+        HingeDoor door;
+        door.hingePos = rd.hingePos;
+        door.width = rd.width;
+        door.height = rd.height;
+        door.thickness = 0.08f;
+        door.closedYaw = rd.closedYaw;
+        door.openSign = rd.openSign;
+        door.maxAngle = 1.85f;
+        door.isCabinet = false;
+        door.isLocker = false;
+        door.locked = false; // Room door opens freely; rare cabinet inside holds the lock
+        door.regX = rd.regX;
+        door.regZ = rd.regZ;
+        doors.push_back(door);
+    }
+
     // 3) Spawn Loot on Crates, Metal Cabinet Shelves, Shelving Racks & Lockers from configurable LootTables
+    //    Uses strict 3D volume fit checks so long items NEVER clip through storage walls/shelves,
+    //    and falls back to placing tall items (Brooms/Mops) neatly on the adjacent floor beside storage!
     constexpr float GRID = Backpack3D::CELL_SIZE;
+
+    auto tryPlaceInVolume = [&](const AABB& vol, ItemType itType, Rng& rng, uint64_t durSeed,
+                                int regX, int regZ, bool checkWorldSolid, WorldItem& outItem) -> bool {
+        float volW = vol.max.x - vol.min.x;
+        float volH = vol.max.y - vol.min.y;
+        float volD = vol.max.z - vol.min.z;
+        if (volW <= 0.02f || volH <= 0.02f || volD <= 0.02f) return false;
+
+        // Visual padding for flared Broom/Mop heads so bristles/cotton never poke through cabinet walls
+        float extraXZ = (itType == ItemType::Broom || itType == ItemType::Mop) ? 0.03f : 0.005f;
+        int startYaw = rng.rangeInt(0, 3);
+
+        // Try upright orientations first, then horizontal orientations (rotX=1, rotZ=1) if item is taller than cavity
+        ItemOrientation candidates[8] = {
+            {0, (startYaw + 0) & 3, 0},
+            {0, (startYaw + 1) & 3, 0},
+            {0, (startYaw + 2) & 3, 0},
+            {0, (startYaw + 3) & 3, 0},
+            {1, (startYaw + 0) & 3, 0},
+            {1, (startYaw + 1) & 3, 0},
+            {0, (startYaw + 0) & 3, 1},
+            {0, (startYaw + 1) & 3, 1}
+        };
+
+        for (const auto& ori : candidates) {
+            // Never lay a Broom/Mop flat on the floor beside storage — keep them standing neatly upright!
+            if (checkWorldSolid && (ori.rotX != 0 || ori.rotZ != 0) &&
+                (itType == ItemType::Broom || itType == ItemType::Mop || itType == ItemType::Stick || itType == ItemType::Spear)) {
+                continue;
+            }
+            Int3 sz = ori.applyToSize(itemBaseGridSize(itType));
+            float sx = sz.x * GRID + extraXZ * 2.0f;
+            float sy = sz.y * GRID;
+            float szM = sz.z * GRID + extraXZ * 2.0f;
+            if (sx > volW || sy > volH || szM > volD) continue;
+
+            float minX = vol.min.x + sx * 0.5f;
+            float maxX = vol.max.x - sx * 0.5f;
+            float minZ = vol.min.z + szM * 0.5f;
+            float maxZ = vol.max.z - szM * 0.5f;
+
+            for (int attempt = 0; attempt < 5; ++attempt) {
+                float px = (maxX > minX) ? (minX + rng.nextFloat() * (maxX - minX)) : 0.5f * (minX + maxX);
+                float pz = (maxZ > minZ) ? (minZ + rng.nextFloat() * (maxZ - minZ)) : 0.5f * (minZ + maxZ);
+                float snappedX = std::round(px / GRID) * GRID;
+                float snappedZ = std::round(pz / GRID) * GRID;
+                px = (snappedX >= minX && snappedX <= maxX) ? snappedX : clampf(px, minX, maxX);
+                pz = (snappedZ >= minZ && snappedZ <= maxZ) ? snappedZ : clampf(pz, minZ, maxZ);
+
+                int dur = defaultItemDurability(itType, durSeed);
+                WorldItem cand{{px, vol.min.y, pz}, itType, false, regX, regZ, ori, dur};
+                AABB cb = cand.worldBounds();
+
+                // Verify strict 3D containment inside target volume
+                if (cb.min.x < vol.min.x - 0.002f || cb.max.x > vol.max.x + 0.002f ||
+                    cb.min.y < vol.min.y - 0.002f || cb.max.y > vol.max.y + 0.002f ||
+                    cb.min.z < vol.min.z - 0.002f || cb.max.z > vol.max.z + 0.002f) {
+                    continue;
+                }
+
+                // For adjacent floor spots, also ensure zero collision with walls or props
+                if (checkWorldSolid) {
+                    bool blocked = false;
+                    int ix0 = static_cast<int>(std::floor(cb.min.x + 0.005f));
+                    int ix1 = static_cast<int>(std::floor(cb.max.x - 0.005f));
+                    int iy0 = static_cast<int>(std::floor(cb.min.y + 0.005f));
+                    int iy1 = static_cast<int>(std::floor(cb.max.y - 0.005f));
+                    int iz0 = static_cast<int>(std::floor(cb.min.z + 0.005f));
+                    int iz1 = static_cast<int>(std::floor(cb.max.z - 0.005f));
+                    for (int y = iy0; y <= iy1 && !blocked; ++y)
+                        for (int z = iz0; z <= iz1 && !blocked; ++z)
+                            for (int x = ix0; x <= ix1 && !blocked; ++x)
+                                if (map.world.getCell(x, y, z).isSolid()) blocked = true;
+                    if (blocked) continue;
+
+                    for (const auto& pc : map.world.propColliders()) {
+                        if (cb.intersects(pc)) { blocked = true; break; }
+                    }
+                    if (blocked) continue;
+                }
+
+                bool overlap = false;
+                for (const auto& wi : worldItems) {
+                    if (!wi.pickedUp && cb.intersects(wi.worldBounds())) {
+                        overlap = true;
+                        break;
+                    }
+                }
+                if (!overlap) {
+                    outItem = cand;
+                    return true;
+                }
+            }
+        }
+        return false;
+    };
+
     for (const auto& ls : map.lootSurfaces) {
         Vec3 surfCenter{
             0.5f * (ls.surfaceBox.min.x + ls.surfaceBox.max.x),
@@ -299,32 +434,30 @@ void GameWorld::syncLockersFromMap() {
         if (tbl.maxItems <= 0 || !sRng.chance(tbl.spawnChance)) continue;
 
         int count = sRng.rangeInt(1, tbl.maxItems);
-        float spanX = std::max(0.02f, ls.surfaceBox.max.x - ls.surfaceBox.min.x);
-        float spanZ = std::max(0.02f, ls.surfaceBox.max.z - ls.surfaceBox.min.z);
-
         for (int k = 0; k < count; ++k) {
             ItemType itType = tbl.rollItem(sRng);
-            ItemOrientation ori{};
-            ori.rotY = sRng.rangeInt(0, 3);
-            float px = ls.surfaceBox.min.x + sRng.nextFloat() * spanX;
-            float pz = ls.surfaceBox.min.z + sRng.nextFloat() * spanZ;
-            // Snap to 3D world grid
-            px = std::round(px / GRID) * GRID;
-            pz = std::round(pz / GRID) * GRID;
-            px = clampf(px, ls.surfaceBox.min.x, ls.surfaceBox.max.x);
-            pz = clampf(pz, ls.surfaceBox.min.z, ls.surfaceBox.max.z);
+            uint64_t durSeed = sSeed ^ static_cast<uint64_t>((k + 1) * 2654435761ULL);
+            WorldItem placed{};
 
-            WorldItem cand{{px, surfCenter.y, pz}, itType, false, ls.regX, ls.regZ, ori};
-            AABB cb = cand.worldBounds();
-            bool overlap = false;
-            for (const auto& wi : worldItems) {
-                if (!wi.pickedUp && cb.intersects(wi.worldBounds())) {
-                    overlap = true;
+            // Step A: Try fitting strictly inside the storage 3D volume (never pokes through walls/shelves!)
+            if (tryPlaceInVolume(ls.surfaceBox, itType, sRng, durSeed, ls.regX, ls.regZ, false, placed)) {
+                worldItems.push_back(placed);
+                continue;
+            }
+            // Step B: If too long/tall for inside storage (e.g. Broom/Mop), stand it neatly beside storage!
+            if (ls.hasAdjacentFloor &&
+                tryPlaceInVolume(ls.adjacentFloorBox, itType, sRng, durSeed, ls.regX, ls.regZ, true, placed)) {
+                worldItems.push_back(placed);
+                continue;
+            }
+            // Step C: Fallback re-rolls for smaller items that DO fit inside the storage cavity
+            for (int retry = 0; retry < 3; ++retry) {
+                ItemType altType = tbl.rollItem(sRng);
+                if (tryPlaceInVolume(ls.surfaceBox, altType, sRng, durSeed ^ static_cast<uint64_t>(retry * 97),
+                                     ls.regX, ls.regZ, false, placed)) {
+                    worldItems.push_back(placed);
                     break;
                 }
-            }
-            if (!overlap) {
-                worldItems.push_back(cand);
             }
         }
     }
@@ -578,6 +711,8 @@ void GameWorld::update(const PlayerInput& input, bool firePressed, float dt, Aud
     if (gameOver) return;
 
     if (fireCooldown > 0.0f) fireCooldown -= dt;
+    if (meleeSwingTimer > 0.0f) meleeSwingTimer = std::max(0.0f, meleeSwingTimer - dt);
+    if (meleeCooldown > 0.0f) meleeCooldown = std::max(0.0f, meleeCooldown - dt);
     if (damageFlash > 0.0f) damageFlash = std::max(0.0f, damageFlash - dt * 2.5f);
     if (hudNoticeTimer > 0.0f) hudNoticeTimer = std::max(0.0f, hudNoticeTimer - dt);
 
@@ -856,6 +991,7 @@ void GameWorld::update(const PlayerInput& input, bool firePressed, float dt, Aud
     // Measure exact corridor centerline & half-width along perpendicular axis (exact integer voxel walls, zero jitter)
     auto measureCorridorCenter = [&](float x, float z, int axisX, int axisZ,
                                      float& outCenter, float& outHalfWidth) -> bool {
+        (void)axisX;
         bool scanX = (axisZ != 0); // Moving along Z -> corridor width is along X
         int ix = static_cast<int>(std::floor(x));
         int iz = static_cast<int>(std::floor(z));
@@ -1659,6 +1795,7 @@ void GameWorld::syncInventoryCounts() {
             case ItemType::Food:       nFood++; break;
             case ItemType::Water:      nWater++; break;
             case ItemType::Lockpick:   nPick++; break;
+            default: break;
         }
     };
     if (hasHeldItem) countExtra(heldItemType);
@@ -1688,19 +1825,19 @@ Mat4 GameWorld::backpackWorldMatrix() const {
         bZ = cross(bX, bY);
         origin = backpackGroundPos - bX * (W * 0.5f) - bZ * (D * 0.5f);
     } else {
-        // Held in front of player's hands and tilted ~52 degrees so player looks right into the 6x8x4 cavity
+        // Held in front of player's hands and tilted ~46 degrees so player looks into cavity (and can RMB-spin 360 to rear slot!)
         Vec3 eye = player.eyePosition();
         Vec3 fwd = player.forwardDir();
         Vec3 right = player.rightDir();
         Vec3 up = normalize(cross(right, fwd));
 
-        float tilt = radians(52.0f);
+        float tilt = radians(46.0f);
         float ct = std::cos(tilt), st = std::sin(tilt);
         bX = right;
         bY = normalize(up * ct - fwd * st);
         bZ = cross(bX, bY); // Exact right-handed orthonormal frame
 
-        Vec3 center = eye + fwd * 0.66f - up * 0.11f;
+        Vec3 center = eye + fwd * 0.68f - up * 0.10f;
         origin = center - bX * (W * 0.5f) - bY * (H * 0.5f) - bZ * (D * 0.5f);
     }
 
@@ -1708,6 +1845,15 @@ Mat4 GameWorld::backpackWorldMatrix() const {
     M.m[4] = bY.x; M.m[5] = bY.y; M.m[6]  = bY.z; M.m[7]  = 0.0f;
     M.m[8] = bZ.x; M.m[9] = bZ.y; M.m[10] = bZ.z; M.m[11] = 0.0f;
     M.m[12] = origin.x; M.m[13] = origin.y; M.m[14] = origin.z; M.m[15] = 1.0f;
+
+    if (backpackMode == BackpackMode::InHands &&
+        (std::abs(backpackViewYaw) > 1e-4f || std::abs(backpackViewPitch) > 1e-4f)) {
+        Vec3 lc{W * 0.5f, H * 0.5f, D * 0.5f};
+        M = M * Mat4::translate(lc)
+              * Mat4::rotateY(backpackViewYaw)
+              * Mat4::rotateX(backpackViewPitch)
+              * Mat4::translate({-lc.x, -lc.y, -lc.z});
+    }
     return M;
 }
 
@@ -1716,8 +1862,31 @@ Mat4 GameWorld::heldItemWorldMatrix() const {
     Vec3 fwd = player.forwardDir();
     Vec3 right = player.rightDir();
     Vec3 up = normalize(cross(right, fwd));
-    Vec3 pos = eye + fwd * 0.42f + right * 0.22f - up * 0.16f;
-    return Mat4::translate(pos) * Mat4::rotateY(-player.yaw) * heldItemOrient.toMatrix();
+
+    bool longWeapon = (heldItemType == ItemType::Broom || heldItemType == ItemType::Mop ||
+                       heldItemType == ItemType::Stick || heldItemType == ItemType::Spear);
+    float swingS = (meleeSwingTimer > 0.0f) ? std::sin((meleeSwingTimer / 0.28f) * PI) : 0.0f;
+
+    Vec3 pos = longWeapon
+                   ? (eye + fwd * (0.56f + swingS * 0.28f) + right * (0.24f - swingS * 0.14f) - up * (0.28f + swingS * 0.08f))
+                   : (eye + fwd * (0.42f + swingS * 0.22f) + right * (0.22f - swingS * 0.10f) - up * 0.16f);
+
+    Mat4 swingM = Mat4::identity();
+    if (longWeapon) {
+        // Pitch pole slightly forward in resting guard; thrust/strike forward on swing!
+        swingM = Mat4::rotateX(-0.24f - swingS * 0.95f) * Mat4::rotateZ(swingS * 0.35f);
+    } else if (meleeSwingTimer > 0.0f) {
+        swingM = Mat4::rotateX(-swingS * 1.10f) * Mat4::rotateZ(swingS * 0.45f);
+    }
+    return Mat4::translate(pos) * Mat4::rotateY(-player.yaw) * swingM * heldItemOrient.toMatrix();
+}
+
+void GameWorld::rotateBackpackView(float dx, float dy) {
+    backpackViewYaw += dx * 0.0085f;
+    // Wrap yaw cleanly to [-PI, PI]
+    while (backpackViewYaw > PI) backpackViewYaw -= 2.0f * PI;
+    while (backpackViewYaw < -PI) backpackViewYaw += 2.0f * PI;
+    backpackViewPitch = clampf(backpackViewPitch + dy * 0.0075f, -1.25f, 1.25f);
 }
 
 void GameWorld::toggleBackpackInHands() {
@@ -1727,6 +1896,8 @@ void GameWorld::toggleBackpackInHands() {
     if (backpackMode == BackpackMode::OnGround) {
         if (length(backpackGroundPos - player.position) <= 3.4f) {
             backpackMode = BackpackMode::InHands;
+            backpackViewYaw = 0.0f;
+            backpackViewPitch = 0.0f;
             inventoryOpen = true;
             draggingItem = false;
         } else {
@@ -1738,19 +1909,26 @@ void GameWorld::toggleBackpackInHands() {
 
     if (backpackMode == BackpackMode::OnBack) {
         backpackMode = BackpackMode::InHands;
+        heldPlaceMode = false;
+        backpackViewYaw = 0.0f;
+        backpackViewPitch = 0.0f;
         inventoryOpen = true;
     } else {
         // Returning backpack to back: if currently dragging an item, put it back in backpack or hand
         if (draggingItem) {
-            if (backpack.tryAutoAdd(dragItemType) < 0 && !hasHeldItem) {
+            if (backpack.tryAutoAdd(dragItemType, dragItemDurability) < 0 && !hasHeldItem) {
                 hasHeldItem = true;
                 heldItemType = dragItemType;
                 heldItemOrient = dragItemOrient;
+                heldItemDurability = dragItemDurability;
             }
             draggingItem = false;
+            dragItemDurability = 0;
             syncInventoryCounts();
         }
         backpackMode = BackpackMode::OnBack;
+        backpackViewYaw = 0.0f;
+        backpackViewPitch = 0.0f;
         inventoryOpen = false;
         hoveredBackpackItemId = -1;
         placementPreview = GhostPreviewState{};
@@ -1764,6 +1942,8 @@ bool GameWorld::togglePlaceBackpackOnGround(AudioEngine& audio) {
     if (backpackMode == BackpackMode::OnGround) {
         if (length(backpackGroundPos - player.position) <= 3.4f) {
             backpackMode = BackpackMode::OnBack;
+            backpackViewYaw = 0.0f;
+            backpackViewPitch = 0.0f;
             inventoryOpen = false;
             draggingItem = false;
             hoveredBackpackItemId = -1;
@@ -1798,13 +1978,16 @@ bool GameWorld::togglePlaceBackpackOnGround(AudioEngine& audio) {
     placePos.z = std::round(placePos.z / G) * G;
 
     if (draggingItem) {
-        backpack.tryAutoAdd(dragItemType);
+        backpack.tryAutoAdd(dragItemType, dragItemDurability);
         draggingItem = false;
+        dragItemDurability = 0;
         syncInventoryCounts();
     }
 
     backpackGroundPos = placePos;
     backpackGroundYaw = player.yaw;
+    backpackViewYaw = 0.0f;
+    backpackViewPitch = 0.0f;
     backpackMode = BackpackMode::OnGround;
     inventoryOpen = false;
     audio.play3D(SoundId::DoorImpact, placePos, 0.32f, 0.0f, 0.35f);
@@ -1907,17 +2090,27 @@ void GameWorld::updateCursorHover(const Vec3& rayOrig, const Vec3& rayDir) {
         constexpr float W = Backpack3D::DIM_X * Backpack3D::CELL_SIZE;
         constexpr float H = Backpack3D::DIM_Y * Backpack3D::CELL_SIZE;
         constexpr float D = Backpack3D::DIM_Z * Backpack3D::CELL_SIZE;
-        AABB outerLocal{{-0.03f, -0.03f, -0.03f}, {W + 0.03f, H + 0.03f, D + 0.03f}};
+        AABB backOuter = Backpack3D::backSlotOuterBounds();
+        AABB outerLocal{
+            {std::min(-0.03f, backOuter.min.x - 0.03f),
+             std::min(-0.03f, backOuter.min.y - 0.03f),
+             std::min(-0.03f, backOuter.min.z - 0.03f)},
+            {std::max(W + 0.03f, backOuter.max.x + 0.03f),
+             std::max(H + 0.03f, backOuter.max.y + 0.03f),
+             std::max(D + 0.03f, backOuter.max.z + 0.03f)}
+        };
         float outerT = 0.0f;
         if (rayIntersectAABB(localOrig, localDir, outerLocal, 3.5f, outerT)) {
             if (backpackMode == BackpackMode::OnGround) hoveredGroundedBackpack = true;
 
             if (placingActive) {
                 int gx = 0, gy = 0, gz = 0;
-                if (backpack.raycastPlacementLocal(localOrig, localDir, 3.5f, activeType, activeOri, gx, gy, gz)) {
+                bool inBack = false;
+                if (backpack.raycastPlacementLocal(localOrig, localDir, 3.5f, activeType, activeOri, gx, gy, gz, inBack)) {
                     placementPreview.active = true;
                     placementPreview.valid = true;
                     placementPreview.inBackpack = true;
+                    placementPreview.inBackSlot = inBack;
                     placementPreview.type = activeType;
                     placementPreview.orient = activeOri;
                     placementPreview.gx = gx;
@@ -1936,13 +2129,14 @@ void GameWorld::updateCursorHover(const Vec3& rayOrig, const Vec3& rayDir) {
         }
     }
 
-    // 2) If dragging an item (RMB) or holding an item in hand -> show 3D world-grid placement preview!
-    if (draggingItem || (hasHeldItem && backpackMode != BackpackMode::InHands && hoveredDoorIdx < 0 && hoveredItemIdx < 0)) {
+    // 2) Show 3D world-grid placement preview when RMB-dragging from backpack OR when RMB placement mode is active for held item!
+    if (draggingItem || (hasHeldItem && heldPlaceMode && backpackMode != BackpackMode::InHands && hoveredDoorIdx < 0 && hoveredItemIdx < 0)) {
         Vec3 snapped{};
         bool ok = computeWorldGridSnap(rayOrig, rayDir, activeType, activeOri, snapped);
         placementPreview.active = ok;
         placementPreview.valid = ok;
         placementPreview.inBackpack = false;
+        placementPreview.inBackSlot = false;
         placementPreview.type = activeType;
         placementPreview.orient = activeOri;
         placementPreview.worldPos = snapped;
@@ -1959,6 +2153,183 @@ void GameWorld::rotateActiveItem(int axis) {
     else targetOri->rotateZ();
 }
 
+bool GameWorld::performMeleeAttack(AudioEngine& audio) {
+    if (gameOver || !hasHeldItem || !isMeleeWeapon(heldItemType) || meleeCooldown > 0.0f) return false;
+
+    meleeSwingTimer = 0.28f;
+    meleeCooldown = 0.42f;
+
+    float reach = 2.5f;
+    float damage = 14.0f;
+    switch (heldItemType) {
+        case ItemType::Spear: reach = 3.0f; damage = 42.0f; break;
+        case ItemType::Knife: reach = 2.0f; damage = 22.0f; break;
+        case ItemType::Broom:
+        case ItemType::Mop:   reach = 2.6f; damage = 16.0f; break;
+        case ItemType::Stick: reach = 2.5f; damage = 14.0f; break;
+        default: break;
+    }
+
+    Vec3 origin = player.eyePosition();
+    Vec3 fwd = player.forwardDir();
+    float wallT = raycastWorld(origin, fwd, reach);
+
+    Enemy* hitEnemy = nullptr;
+    float bestDist = std::min(wallT, reach);
+    for (auto& e : enemies) {
+        if (!e.alive) continue;
+        Vec3 eCenter{e.pos.x, e.pos.y + e.height * 0.55f, e.pos.z};
+        Vec3 toE = eCenter - origin;
+        float dist = length(toE);
+        if (dist > reach + e.radius || dist < 0.05f) continue;
+        Vec3 dirE = toE / dist;
+        if (dot(fwd, dirE) < 0.55f) continue;
+        float losT = raycastWorld(origin, dirE, dist);
+        if (losT >= dist - e.radius - 0.15f && dist < bestDist + e.radius) {
+            bestDist = dist;
+            hitEnemy = &e;
+        }
+    }
+
+    bool landedHit = false;
+    Rng rng(baseSeed ^ static_cast<uint64_t>(kills * 997 + worldItems.size() * 131 + static_cast<int>(origin.x * 100.0f)));
+    if (hitEnemy) {
+        landedHit = true;
+        hitEnemy->hp -= damage;
+        hitEnemy->hurtFlash = 0.18f;
+        hitEnemy->alerted = true;
+        hitEnemy->aiState = EnemyAIState::Chase;
+        hitEnemy->lastSeenPos = player.position;
+        audio.play(SoundId::HitEnemy, 1.0f);
+
+        Vec3 hitPos = origin + fwd * std::min(bestDist, reach);
+        for (int s = 0; s < 6; ++s) {
+            particles.push_back({
+                hitPos,
+                {(rng.nextFloat() - 0.5f) * 4.5f, rng.nextFloat() * 3.2f, (rng.nextFloat() - 0.5f) * 4.5f},
+                0.24f,
+                {1.0f, 0.35f, 0.25f}
+            });
+        }
+        if (hitEnemy->hp <= 0.0f) {
+            hitEnemy->alive = false;
+            kills++;
+        }
+    } else if (wallT < reach * 0.88f) {
+        landedHit = true;
+        Vec3 hitPos = origin + fwd * wallT;
+        audio.play3D(SoundId::DoorImpact, hitPos, 0.45f, 0.0f, 0.55f);
+        for (int s = 0; s < 4; ++s) {
+            particles.push_back({
+                hitPos,
+                {(rng.nextFloat() - 0.5f) * 3.0f, rng.nextFloat() * 2.2f, (rng.nextFloat() - 0.5f) * 3.0f},
+                0.18f,
+                {0.95f, 0.85f, 0.45f}
+            });
+        }
+    } else {
+        // Air swing swoosh
+        audio.play(SoundId::PlayerStep, 0.28f, 0.8f, 0.6f);
+    }
+
+    // Broom / Mop head breaks after 1..3 hits and transforms into a Stick!
+    if (landedHit && (heldItemType == ItemType::Broom || heldItemType == ItemType::Mop)) {
+        if (heldItemDurability <= 0) {
+            heldItemDurability = defaultItemDurability(heldItemType, baseSeed ^ static_cast<uint64_t>(kills * 31 + 7));
+        }
+        heldItemDurability--;
+        if (heldItemDurability <= 0) {
+            heldItemType = ItemType::Stick;
+            heldItemDurability = 0;
+            audio.play(SoundId::LockBreak, 0.95f);
+            hudNoticeText = "HEAD BROKE -> STICK";
+            hudNoticeTimer = 2.0f;
+            syncInventoryCounts();
+        }
+    }
+    return true;
+}
+
+void GameWorld::updateSurfaceCrafting() {
+    availableCrafts.clear();
+    if (lockpick.active || backpackMode == BackpackMode::InHands || draggingItem) return;
+    if (hoveredItemIdx < 0 || hoveredItemIdx >= static_cast<int>(worldItems.size())) return;
+
+    const auto& anchor = worldItems[hoveredItemIdx];
+    if (anchor.pickedUp) return;
+
+    // Scan items placed nearby on the same 3D grid surface (within 0.65m XZ and 0.18m height)
+    int stickIdx = -1, tapeIdx = -1, knifeIdx = -1;
+    float bestStickD = 1e9f, bestTapeD = 1e9f, bestKnifeD = 1e9f;
+    for (size_t i = 0; i < worldItems.size(); ++i) {
+        const auto& wi = worldItems[i];
+        if (wi.pickedUp) continue;
+        if (std::abs(wi.pos.y - anchor.pos.y) > 0.18f) continue;
+        float dx = wi.pos.x - anchor.pos.x;
+        float dz = wi.pos.z - anchor.pos.z;
+        float dSq = dx * dx + dz * dz;
+        if (dSq > 0.65f * 0.65f) continue;
+
+        if (wi.type == ItemType::Stick && dSq < bestStickD) {
+            bestStickD = dSq;
+            stickIdx = static_cast<int>(i);
+        } else if (wi.type == ItemType::Tape && dSq < bestTapeD) {
+            bestTapeD = dSq;
+            tapeIdx = static_cast<int>(i);
+        } else if (wi.type == ItemType::Knife && dSq < bestKnifeD) {
+            bestKnifeD = dSq;
+            knifeIdx = static_cast<int>(i);
+        }
+    }
+
+    if (stickIdx >= 0 && tapeIdx >= 0 && knifeIdx >= 0) {
+        constexpr float G = Backpack3D::CELL_SIZE;
+        Vec3 outPos = worldItems[stickIdx].pos;
+        outPos.x = std::round(outPos.x / G) * G;
+        outPos.z = std::round(outPos.z / G) * G;
+        CraftOption opt;
+        opt.recipeId = 1;
+        opt.result = ItemType::Spear;
+        opt.label = "[1] SPEAR (STICK + TAPE + KNIFE)";
+        opt.ingredientWorldIdx = {stickIdx, tapeIdx, knifeIdx};
+        opt.outputPos = outPos;
+        availableCrafts.push_back(opt);
+    }
+}
+
+bool GameWorld::performCraft(int optionIdx, AudioEngine& audio) {
+    if (optionIdx < 0 || optionIdx >= static_cast<int>(availableCrafts.size())) return false;
+    CraftOption opt = availableCrafts[optionIdx];
+
+    for (int idx : opt.ingredientWorldIdx) {
+        if (idx < 0 || idx >= static_cast<int>(worldItems.size()) || worldItems[idx].pickedUp) {
+            availableCrafts.clear();
+            return false;
+        }
+    }
+
+    // Preserve stick orientation if lying flat, else place crafted Spear neatly lying flat on the surface
+    ItemOrientation outOri{};
+    outOri.rotX = 1; // Lie horizontally on the table/floor surface (1x1x30)
+    for (int idx : opt.ingredientWorldIdx) {
+        if (worldItems[idx].type == ItemType::Stick) {
+            outOri = worldItems[idx].orient;
+        }
+        worldItems[idx].pickedUp = true;
+    }
+
+    int rx = WorldGrid::floorDiv(static_cast<int>(std::floor(opt.outputPos.x)), cfg::REGION_SIZE);
+    int rz = WorldGrid::floorDiv(static_cast<int>(std::floor(opt.outputPos.z)), cfg::REGION_SIZE);
+    worldItems.push_back({opt.outputPos, opt.result, false, rx, rz, outOri, 0});
+
+    audio.play3D(SoundId::Pickup, opt.outputPos, 1.0f);
+    hudNoticeText = "CRAFTED IMPROVISED SPEAR";
+    hudNoticeTimer = 2.2f;
+    availableCrafts.clear();
+    hoveredItemIdx = static_cast<int>(worldItems.size()) - 1;
+    return true;
+}
+
 bool GameWorld::useHeldItem(AudioEngine& audio) {
     if (!hasHeldItem) return false;
     switch (heldItemType) {
@@ -1967,6 +2338,7 @@ bool GameWorld::useHeldItem(AudioEngine& audio) {
                 inventory.flashlightBattery = std::min(settings.maxBattery,
                                                        inventory.flashlightBattery + settings.batteryRestore);
                 hasHeldItem = false;
+                heldPlaceMode = false;
                 syncInventoryCounts();
                 audio.play(SoundId::Pickup, 0.75f);
                 return true;
@@ -1976,6 +2348,7 @@ bool GameWorld::useHeldItem(AudioEngine& audio) {
             if (hunger < settings.maxHunger - 0.5f) {
                 hunger = std::min(settings.maxHunger, hunger + settings.foodRestore);
                 hasHeldItem = false;
+                heldPlaceMode = false;
                 syncInventoryCounts();
                 audio.play(SoundId::Pickup, 0.75f);
                 return true;
@@ -1985,6 +2358,7 @@ bool GameWorld::useHeldItem(AudioEngine& audio) {
             if (thirst < settings.maxThirst - 0.5f) {
                 thirst = std::min(settings.maxThirst, thirst + settings.waterRestore);
                 hasHeldItem = false;
+                heldPlaceMode = false;
                 syncInventoryCounts();
                 audio.play(SoundId::Pickup, 0.75f);
                 return true;
@@ -2005,20 +2379,26 @@ bool GameWorld::useHeldItem(AudioEngine& audio) {
 bool GameWorld::handlePrimaryClick(const Vec3& rayOrig, const Vec3& rayDir, AudioEngine& audio) {
     updateCursorHover(rayOrig, rayDir);
 
-    // 1) If RMB-dragging an item, LMB places it into backpack cell or onto 3D world grid
+    // 1) If RMB-dragging an item, LMB places it into backpack cell/rear strap slot or onto 3D world grid
     if (draggingItem) {
         if (placementPreview.active && placementPreview.valid) {
             if (placementPreview.inBackpack) {
-                backpack.placeAt(placementPreview.gx, placementPreview.gy, placementPreview.gz,
-                                 dragItemType, dragItemOrient);
+                if (placementPreview.inBackSlot) {
+                    backpack.placeInBackSlot(placementPreview.gx, placementPreview.gy, placementPreview.gz,
+                                             dragItemType, dragItemOrient, dragItemDurability);
+                } else {
+                    backpack.placeAt(placementPreview.gx, placementPreview.gy, placementPreview.gz,
+                                     dragItemType, dragItemOrient, dragItemDurability);
+                }
                 audio.play(SoundId::Pickup, 0.75f);
             } else {
                 int rx = WorldGrid::floorDiv(static_cast<int>(std::floor(placementPreview.worldPos.x)), cfg::REGION_SIZE);
                 int rz = WorldGrid::floorDiv(static_cast<int>(std::floor(placementPreview.worldPos.z)), cfg::REGION_SIZE);
-                worldItems.push_back({placementPreview.worldPos, dragItemType, false, rx, rz, dragItemOrient});
+                worldItems.push_back({placementPreview.worldPos, dragItemType, false, rx, rz, dragItemOrient, dragItemDurability});
                 audio.play3D(SoundId::Pickup, placementPreview.worldPos, 0.8f);
             }
             draggingItem = false;
+            dragItemDurability = 0;
             dragOriginBackpackId = -1;
             placementPreview = GhostPreviewState{};
             syncInventoryCounts();
@@ -2041,17 +2421,20 @@ bool GameWorld::handlePrimaryClick(const Vec3& rayOrig, const Vec3& rayDir, Audi
         if (backpack.removeById(hoveredBackpackItemId, &removed)) {
             if (hasHeldItem) {
                 // Auto-pack previously held item if possible, otherwise drop at feet
-                if (backpack.tryAutoAdd(heldItemType) < 0) {
-                    worldItems.push_back({player.position, heldItemType, false, map.currentRegX, map.currentRegZ, heldItemOrient});
+                if (backpack.tryAutoAdd(heldItemType, heldItemDurability) < 0) {
+                    worldItems.push_back({player.position, heldItemType, false, map.currentRegX, map.currentRegZ, heldItemOrient, heldItemDurability});
                 }
             }
             hasHeldItem = true;
             heldItemType = removed.type;
             heldItemOrient = removed.orient;
+            heldItemDurability = removed.durability;
             hoveredBackpackItemId = -1;
             // Automatically put backpack back on back when taking an item into hand!
             if (backpackMode == BackpackMode::InHands) {
                 backpackMode = BackpackMode::OnBack;
+                backpackViewYaw = 0.0f;
+                backpackViewPitch = 0.0f;
                 inventoryOpen = false;
             }
             syncInventoryCounts();
@@ -2060,11 +2443,18 @@ bool GameWorld::handlePrimaryClick(const Vec3& rayOrig, const Vec3& rayDir, Audi
         }
     }
 
-    // 3) If holding an item and clicking a valid slot inside the backpack -> pack it!
+    // 3) If holding an item and clicking a valid slot inside the backpack or rear strap slot -> pack it!
     if (hasHeldItem && placementPreview.active && placementPreview.valid && placementPreview.inBackpack) {
-        backpack.placeAt(placementPreview.gx, placementPreview.gy, placementPreview.gz,
-                         heldItemType, heldItemOrient);
+        if (placementPreview.inBackSlot) {
+            backpack.placeInBackSlot(placementPreview.gx, placementPreview.gy, placementPreview.gz,
+                                     heldItemType, heldItemOrient, heldItemDurability);
+        } else {
+            backpack.placeAt(placementPreview.gx, placementPreview.gy, placementPreview.gz,
+                             heldItemType, heldItemOrient, heldItemDurability);
+        }
         hasHeldItem = false;
+        heldPlaceMode = false;
+        heldItemDurability = 0;
         placementPreview = GhostPreviewState{};
         syncInventoryCounts();
         audio.play(SoundId::Pickup, 0.8f);
@@ -2073,16 +2463,28 @@ bool GameWorld::handlePrimaryClick(const Vec3& rayOrig, const Vec3& rayDir, Audi
 
     // 4) Normal world interaction when backpack is NOT in hands
     if (backpackMode != BackpackMode::InHands) {
+        // If RMB placement mode is active for the held item -> LMB confirms placement on the 3D grid!
+        if (hasHeldItem && heldPlaceMode) {
+            if (placementPreview.active && placementPreview.valid && !placementPreview.inBackpack) {
+                int rx = WorldGrid::floorDiv(static_cast<int>(std::floor(placementPreview.worldPos.x)), cfg::REGION_SIZE);
+                int rz = WorldGrid::floorDiv(static_cast<int>(std::floor(placementPreview.worldPos.z)), cfg::REGION_SIZE);
+                worldItems.push_back({placementPreview.worldPos, heldItemType, false, rx, rz, heldItemOrient, heldItemDurability});
+                hasHeldItem = false;
+                heldPlaceMode = false;
+                heldItemDurability = 0;
+                placementPreview = GhostPreviewState{};
+                syncInventoryCounts();
+                audio.play3D(SoundId::Pickup, worldItems.back().pos, 0.8f);
+                return true;
+            }
+            hudNoticeText = "INVALID PLACEMENT";
+            hudNoticeTimer = 1.0f;
+            return true;
+        }
         if (beginInteract(audio)) return true;
-        // If holding an item and clicking empty floor/surface with valid 3D grid preview -> place it!
-        if (hasHeldItem && placementPreview.active && placementPreview.valid && !placementPreview.inBackpack) {
-            int rx = WorldGrid::floorDiv(static_cast<int>(std::floor(placementPreview.worldPos.x)), cfg::REGION_SIZE);
-            int rz = WorldGrid::floorDiv(static_cast<int>(std::floor(placementPreview.worldPos.z)), cfg::REGION_SIZE);
-            worldItems.push_back({placementPreview.worldPos, heldItemType, false, rx, rz, heldItemOrient});
-            hasHeldItem = false;
-            placementPreview = GhostPreviewState{};
-            syncInventoryCounts();
-            audio.play3D(SoundId::Pickup, worldItems.back().pos, 0.8f);
+        // If holding a melee weapon (Broom/Mop/Stick/Knife/Spear), LMB swings it as a weapon!
+        if (hasHeldItem && isMeleeWeapon(heldItemType)) {
+            performMeleeAttack(audio);
             return true;
         }
     }
@@ -2098,12 +2500,14 @@ bool GameWorld::handleSecondaryClick(const Vec3& rayOrig, const Vec3& rayDir, Au
             return handlePrimaryClick(rayOrig, rayDir, audio);
         }
         // Cancel drag: restore item into backpack or hand
-        if (backpack.tryAutoAdd(dragItemType) < 0 && !hasHeldItem) {
+        if (backpack.tryAutoAdd(dragItemType, dragItemDurability) < 0 && !hasHeldItem) {
             hasHeldItem = true;
             heldItemType = dragItemType;
             heldItemOrient = dragItemOrient;
+            heldItemDurability = dragItemDurability;
         }
         draggingItem = false;
+        dragItemDurability = 0;
         dragOriginBackpackId = -1;
         placementPreview = GhostPreviewState{};
         syncInventoryCounts();
@@ -2123,6 +2527,7 @@ bool GameWorld::handleSecondaryClick(const Vec3& rayOrig, const Vec3& rayDir, Au
             draggingItem = true;
             dragItemType = removed.type;
             dragItemOrient = removed.orient;
+            dragItemDurability = removed.durability;
             dragOriginBackpackId = removed.id;
             hoveredBackpackItemId = -1;
             syncInventoryCounts();
@@ -2131,19 +2536,15 @@ bool GameWorld::handleSecondaryClick(const Vec3& rayOrig, const Vec3& rayDir, Au
         }
     }
 
-    // 3) If holding an item in hand -> RMB places on 3D world grid (or uses consumable if not aiming at floor)
+    // 3) If holding an item in hand -> RMB toggles 3D ground placement preview mode!
     if (hasHeldItem && backpackMode != BackpackMode::InHands) {
-        if (placementPreview.active && placementPreview.valid && !placementPreview.inBackpack) {
-            int rx = WorldGrid::floorDiv(static_cast<int>(std::floor(placementPreview.worldPos.x)), cfg::REGION_SIZE);
-            int rz = WorldGrid::floorDiv(static_cast<int>(std::floor(placementPreview.worldPos.z)), cfg::REGION_SIZE);
-            worldItems.push_back({placementPreview.worldPos, heldItemType, false, rx, rz, heldItemOrient});
-            hasHeldItem = false;
+        heldPlaceMode = !heldPlaceMode;
+        if (heldPlaceMode) {
+            updateCursorHover(rayOrig, rayDir);
+        } else {
             placementPreview = GhostPreviewState{};
-            syncInventoryCounts();
-            audio.play3D(SoundId::Pickup, worldItems.back().pos, 0.8f);
-            return true;
         }
-        return useHeldItem(audio);
+        return true;
     }
     return false;
 }
@@ -2179,14 +2580,16 @@ void GameWorld::updateHover() {
             hoveredDoorIdx = -1;
         }
     }
+
+    updateSurfaceCrafting();
 }
 
 bool GameWorld::beginInteract(AudioEngine& audio) {
     updateHover();
     if (hoveredItemIdx >= 0 && hoveredItemIdx < static_cast<int>(worldItems.size())) {
         auto& it = worldItems[hoveredItemIdx];
-        // Auto-place picked up item into the 6x8x4 3D backpack!
-        int placedId = backpack.tryAutoAdd(it.type);
+        // Auto-place picked up item into the 6x8x4 3D backpack or rear 2x30x6 strap slot!
+        int placedId = backpack.tryAutoAdd(it.type, it.durability);
         if (placedId >= 0) {
             it.pickedUp = true;
             if (it.type == ItemType::Flashlight && !inventory.hasFlashlight) {
@@ -2203,6 +2606,7 @@ bool GameWorld::beginInteract(AudioEngine& audio) {
             hasHeldItem = true;
             heldItemType = it.type;
             heldItemOrient = it.orient;
+            heldItemDurability = it.durability;
             if (it.type == ItemType::Flashlight && !inventory.hasFlashlight) {
                 inventory.flashlightBattery = settings.maxBattery;
             }
@@ -2311,7 +2715,7 @@ void GameWorld::gatherInteractables(std::vector<DoorRenderState>& outDoors,
     for (size_t i = 0; i < doors.size(); ++i) {
         const auto& d = doors[i];
         bool hl = (static_cast<int>(i) == hoveredDoorIdx || static_cast<int>(i) == grabbedDoorIdx);
-        outDoors.push_back({d.hingePos, d.width, d.height, d.thickness, d.currentYaw(), d.isCabinet, hl});
+        outDoors.push_back({d.hingePos, d.width, d.height, d.thickness, d.currentYaw(), d.isCabinet, d.isRareCabinet, hl});
     }
 
     outItems.clear();

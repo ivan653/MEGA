@@ -1,4 +1,5 @@
 #include "game/Inventory3D.hpp"
+#include "core/Rng.hpp"
 #include <algorithm>
 #include <cmath>
 
@@ -36,11 +37,17 @@ bool rayAABB(const Vec3& orig, const Vec3& dir, const AABB& b, float maxDist, fl
 
 Int3 itemBaseGridSize(ItemType type) {
     switch (type) {
-        case ItemType::Flashlight: return {2, 2, 4}; // Flashlight: 2 x 2 x 4
-        case ItemType::Food:       return {1, 1, 2}; // Energy bar: 1 x 1 x 2
-        case ItemType::Water:      return {2, 3, 2}; // Water bottle: 2 x 3 x 2
-        case ItemType::Battery:    return {1, 2, 1}; // Battery cell: 1 x 2 x 1
-        case ItemType::Lockpick:   return {1, 1, 3}; // Lockpick tool: 1 x 1 x 3
+        case ItemType::Flashlight: return {2, 2, 4};  // 2 x 2 x 4
+        case ItemType::Battery:    return {1, 2, 1};  // 1 x 2 x 1
+        case ItemType::Food:       return {1, 1, 2};  // 1 x 1 x 2
+        case ItemType::Water:      return {2, 3, 2};  // 2 x 3 x 2
+        case ItemType::Lockpick:   return {1, 1, 3};  // 1 x 1 x 3
+        case ItemType::Broom:      return {2, 30, 2}; // 2 x 30 x 2
+        case ItemType::Mop:        return {2, 30, 2}; // 2 x 30 x 2
+        case ItemType::Tape:       return {2, 1, 2};  // 2 x 1 x 2
+        case ItemType::Knife:      return {1, 6, 1};  // 1 x 6 x 1
+        case ItemType::Stick:      return {1, 26, 1}; // 1 x 26 x 1 (broken broom/mop handle)
+        case ItemType::Spear:      return {1, 30, 1}; // 1 x 30 x 1 (crafted spear, fits 2x30x6 back slot!)
     }
     return {1, 1, 1};
 }
@@ -52,8 +59,22 @@ const char* itemDisplayName(ItemType type) {
         case ItemType::Food:       return "FOOD BAR";
         case ItemType::Water:      return "WATER";
         case ItemType::Lockpick:   return "LOCKPICK";
+        case ItemType::Broom:      return "BROOM";
+        case ItemType::Mop:        return "MOP";
+        case ItemType::Tape:       return "TAPE";
+        case ItemType::Knife:      return "KNIFE";
+        case ItemType::Stick:      return "STICK";
+        case ItemType::Spear:      return "SPEAR";
     }
     return "ITEM";
+}
+
+int defaultItemDurability(ItemType type, uint64_t seed) {
+    if (type == ItemType::Broom || type == ItemType::Mop) {
+        Rng rng(seed ^ 0xB8004A1ULL);
+        return rng.rangeInt(1, 3); // Breaks after 1..3 hits -> turns into Stick
+    }
+    return 0;
 }
 
 Mat4 ItemOrientation::toMatrix() const {
@@ -64,7 +85,6 @@ Mat4 ItemOrientation::toMatrix() const {
 
 Int3 ItemOrientation::applyToSize(Int3 baseSize) const {
     Int3 s = baseSize;
-    // Apply Z, then X, then Y (matching toMatrix() multiplication order R_y * R_x * R_z)
     if ((rotZ & 1) != 0) std::swap(s.x, s.y);
     if ((rotX & 1) != 0) std::swap(s.y, s.z);
     if ((rotY & 1) != 0) std::swap(s.x, s.z);
@@ -83,9 +103,22 @@ bool Backpack3D::inBounds(int gx, int gy, int gz, Int3 sz) const {
            gz + sz.z <= DIM_Z;
 }
 
-bool Backpack3D::overlapsAny(int gx, int gy, int gz, Int3 sz, int ignoreId) const {
+bool Backpack3D::inBackBounds(int gx, int gy, int gz, Int3 sz) const {
+    return gx >= 0 && gy >= 0 && gz >= 0 &&
+           gx + sz.x <= BACK_DIM_X &&
+           gy + sz.y <= BACK_DIM_Y &&
+           gz + sz.z <= BACK_DIM_Z;
+}
+
+bool Backpack3D::isEligibleForBackSlot(ItemType type, const ItemOrientation& orient) {
+    Int3 sz = orient.applyToSize(itemBaseGridSize(type));
+    // Must occupy at least 20 vertical cells to be secured by the two back straps
+    return sz.y >= BACK_MIN_HEIGHT;
+}
+
+bool Backpack3D::overlapsAny(int gx, int gy, int gz, Int3 sz, bool inBackSlot, int ignoreId) const {
     for (const auto& it : items) {
-        if (it.id == ignoreId) continue;
+        if (it.id == ignoreId || it.inBackSlot != inBackSlot) continue;
         Int3 os = it.size();
         bool ox = (gx < it.gx + os.x) && (gx + sz.x > it.gx);
         bool oy = (gy < it.gy + os.y) && (gy + sz.y > it.gy);
@@ -97,9 +130,8 @@ bool Backpack3D::overlapsAny(int gx, int gy, int gz, Int3 sz, int ignoreId) cons
 
 bool Backpack3D::hasSupportBelow(int gx, int gy, int gz, Int3 sz, int ignoreId) const {
     if (gy == 0) return true;
-    // Supported if at least one occupied voxel directly underneath (y = gy - 1) supports its X/Z footprint
     for (const auto& it : items) {
-        if (it.id == ignoreId) continue;
+        if (it.id == ignoreId || it.inBackSlot) continue;
         Int3 os = it.size();
         if (it.gy + os.y != gy) continue;
         bool ox = (gx < it.gx + os.x) && (gx + sz.x > it.gx);
@@ -111,10 +143,9 @@ bool Backpack3D::hasSupportBelow(int gx, int gy, int gz, Int3 sz, int ignoreId) 
 
 int Backpack3D::findDropY(int gx, int gz, Int3 sz, int ignoreId) const {
     if (gx < 0 || gz < 0 || gx + sz.x > DIM_X || gz + sz.z > DIM_Z) return -1;
-    // Find highest occupied cell in the footprint column, drop directly on top of it
     int restY = 0;
     for (const auto& it : items) {
-        if (it.id == ignoreId) continue;
+        if (it.id == ignoreId || it.inBackSlot) continue;
         Int3 os = it.size();
         bool ox = (gx < it.gx + os.x) && (gx + sz.x > it.gx);
         bool oz = (gz < it.gz + os.z) && (gz + sz.z > it.gz);
@@ -123,7 +154,7 @@ int Backpack3D::findDropY(int gx, int gz, Int3 sz, int ignoreId) const {
         }
     }
     if (restY + sz.y > DIM_Y) return -1;
-    if (overlapsAny(gx, restY, gz, sz, ignoreId)) return -1;
+    if (overlapsAny(gx, restY, gz, sz, false, ignoreId)) return -1;
     return restY;
 }
 
@@ -131,29 +162,58 @@ bool Backpack3D::canPlaceAt(int gx, int gy, int gz, ItemType type, const ItemOri
                             int ignoreId) const {
     Int3 sz = orient.applyToSize(itemBaseGridSize(type));
     if (!inBounds(gx, gy, gz, sz)) return false;
-    if (overlapsAny(gx, gy, gz, sz, ignoreId)) return false;
+    if (overlapsAny(gx, gy, gz, sz, false, ignoreId)) return false;
     if (!hasSupportBelow(gx, gy, gz, sz, ignoreId)) return false;
     return true;
 }
 
-int Backpack3D::placeAt(int gx, int gy, int gz, ItemType type, const ItemOrientation& orient) {
+int Backpack3D::placeAt(int gx, int gy, int gz, ItemType type, const ItemOrientation& orient,
+                        int durability) {
     if (!canPlaceAt(gx, gy, gz, type, orient)) return -1;
     PackedItem pi;
     pi.id = nextId++;
     pi.type = type;
+    pi.inBackSlot = false;
     pi.gx = gx;
     pi.gy = gy;
     pi.gz = gz;
+    pi.durability = durability;
     pi.orient = orient;
     items.push_back(pi);
     return pi.id;
 }
 
-int Backpack3D::tryAutoAdd(ItemType type) {
-    // Try natural orientation first, then rotated 90-degree orientations to pack tightly from bottom up
+bool Backpack3D::canPlaceInBackSlot(int gx, int gy, int gz, ItemType type, const ItemOrientation& orient,
+                                    int ignoreId) const {
+    if (!isEligibleForBackSlot(type, orient)) return false;
+    Int3 sz = orient.applyToSize(itemBaseGridSize(type));
+    if (!inBackBounds(gx, gy, gz, sz)) return false;
+    if (overlapsAny(gx, gy, gz, sz, true, ignoreId)) return false;
+    return true;
+}
+
+int Backpack3D::placeInBackSlot(int gx, int gy, int gz, ItemType type, const ItemOrientation& orient,
+                                int durability) {
+    if (!canPlaceInBackSlot(gx, gy, gz, type, orient)) return -1;
+    PackedItem pi;
+    pi.id = nextId++;
+    pi.type = type;
+    pi.inBackSlot = true;
+    pi.gx = gx;
+    pi.gy = gy;
+    pi.gz = gz;
+    pi.durability = durability;
+    pi.orient = orient;
+    items.push_back(pi);
+    return pi.id;
+}
+
+int Backpack3D::tryAutoAdd(ItemType type, int durability) {
     static constexpr ItemOrientation CANDIDATES[6] = {
         {0, 0, 0}, {0, 1, 0}, {1, 0, 0}, {0, 0, 1}, {1, 1, 0}, {0, 1, 1}
     };
+
+    // 1) Try main 6x8x4 interior cavity first
     for (int gy = 0; gy < DIM_Y; ++gy) {
         for (const auto& ori : CANDIDATES) {
             Int3 sz = ori.applyToSize(itemBaseGridSize(type));
@@ -161,8 +221,22 @@ int Backpack3D::tryAutoAdd(ItemType type) {
             for (int gz = 0; gz <= DIM_Z - sz.z; ++gz) {
                 for (int gx = 0; gx <= DIM_X - sz.x; ++gx) {
                     if (canPlaceAt(gx, gy, gz, type, ori)) {
-                        return placeAt(gx, gy, gz, type, ori);
+                        return placeAt(gx, gy, gz, type, ori, durability);
                     }
+                }
+            }
+        }
+    }
+
+    // 2) For tall items (height >= 20 cells), try attaching to the rear 2x30x6 strap slot!
+    for (const auto& ori : CANDIDATES) {
+        if (!isEligibleForBackSlot(type, ori)) continue;
+        Int3 sz = ori.applyToSize(itemBaseGridSize(type));
+        for (int gx = 0; gx <= BACK_DIM_X - sz.x; ++gx) {
+            for (int gz = 0; gz <= BACK_DIM_Z - sz.z; ++gz) {
+                int gy = std::max(0, (BACK_DIM_Y - sz.y) / 2);
+                if (canPlaceInBackSlot(gx, gy, gz, type, ori)) {
+                    return placeInBackSlot(gx, gy, gz, type, ori, durability);
                 }
             }
         }
@@ -172,14 +246,13 @@ int Backpack3D::tryAutoAdd(ItemType type) {
 
 bool Backpack3D::isBlockedFromAbove(int itemId) const {
     const PackedItem* target = findById(itemId);
-    if (!target) return false;
+    if (!target || target->inBackSlot) return false; // Rear strapped items are directly accessible
     Int3 ts = target->size();
     int topY = target->gy + ts.y;
 
     for (const auto& other : items) {
-        if (other.id == itemId) continue;
+        if (other.id == itemId || other.inBackSlot) continue;
         Int3 os = other.size();
-        // Any item overlapping in X & Z that sits at or above our top face blocks pulling us out!
         if (other.gy >= topY) {
             bool ox = (target->gx < other.gx + os.x) && (target->gx + ts.x > other.gx);
             bool oz = (target->gz < other.gz + os.z) && (target->gz + ts.z > other.gz);
@@ -216,7 +289,6 @@ int Backpack3D::countType(ItemType type) const {
 }
 
 int Backpack3D::findFirstAccessible(ItemType type) const {
-    // Prefer topmost accessible item of this type
     int bestId = -1;
     int bestY = -1;
     for (const auto& it : items) {
@@ -230,7 +302,14 @@ int Backpack3D::findFirstAccessible(ItemType type) const {
     return bestId;
 }
 
-AABB Backpack3D::itemLocalBounds(int gx, int gy, int gz, Int3 sz) {
+AABB Backpack3D::itemLocalBounds(int gx, int gy, int gz, Int3 sz, bool inBackSlot) {
+    if (inBackSlot) {
+        return {
+            {gx * CELL_SIZE, BACK_OFFSET_Y + gy * CELL_SIZE, BACK_OFFSET_Z + gz * CELL_SIZE},
+            {(gx + sz.x) * CELL_SIZE, BACK_OFFSET_Y + (gy + sz.y) * CELL_SIZE,
+             BACK_OFFSET_Z + (gz + sz.z) * CELL_SIZE}
+        };
+    }
     return {
         {gx * CELL_SIZE, gy * CELL_SIZE, gz * CELL_SIZE},
         {(gx + sz.x) * CELL_SIZE, (gy + sz.y) * CELL_SIZE, (gz + sz.z) * CELL_SIZE}
@@ -238,7 +317,15 @@ AABB Backpack3D::itemLocalBounds(int gx, int gy, int gz, Int3 sz) {
 }
 
 AABB Backpack3D::itemLocalBounds(const PackedItem& it) {
-    return itemLocalBounds(it.gx, it.gy, it.gz, it.size());
+    return itemLocalBounds(it.gx, it.gy, it.gz, it.size(), it.inBackSlot);
+}
+
+AABB Backpack3D::backSlotOuterBounds() {
+    return {
+        {0.0f, BACK_OFFSET_Y, BACK_OFFSET_Z},
+        {BACK_DIM_X * CELL_SIZE, BACK_OFFSET_Y + BACK_DIM_Y * CELL_SIZE,
+         BACK_OFFSET_Z + BACK_DIM_Z * CELL_SIZE}
+    };
 }
 
 int Backpack3D::raycastItemsLocal(const Vec3& localOrigin, const Vec3& localDir, float maxDist,
@@ -258,22 +345,52 @@ int Backpack3D::raycastItemsLocal(const Vec3& localOrigin, const Vec3& localDir,
 
 bool Backpack3D::raycastPlacementLocal(const Vec3& localOrigin, const Vec3& localDir, float maxDist,
                                        ItemType type, const ItemOrientation& orient,
-                                       int& outGx, int& outGy, int& outGz) const {
+                                       int& outGx, int& outGy, int& outGz, bool& outInBackSlot) const {
     Int3 sz = orient.applyToSize(itemBaseGridSize(type));
+
+    // 1) Check rear 2x30x6 strap slot first if item is tall (>= 20 cells) and ray hits back slot
+    if (isEligibleForBackSlot(type, orient)) {
+        AABB backBox = backSlotOuterBounds();
+        float backT = 0.0f;
+        if (rayAABB(localOrigin, localDir, backBox, maxDist, backT)) {
+            Vec3 bp = localOrigin + localDir * backT;
+            int cx = static_cast<int>(std::floor(bp.x / CELL_SIZE - sz.x * 0.5f + 0.5f));
+            int cz = static_cast<int>(std::floor((bp.z - BACK_OFFSET_Z) / CELL_SIZE - sz.z * 0.5f + 0.5f));
+            cx = std::clamp(cx, 0, std::max(0, BACK_DIM_X - sz.x));
+            cz = std::clamp(cz, 0, std::max(0, BACK_DIM_Z - sz.z));
+            int cy = std::clamp(static_cast<int>(std::floor((bp.y - BACK_OFFSET_Y) / CELL_SIZE - sz.y * 0.5f + 0.5f)),
+                                0, std::max(0, BACK_DIM_Y - sz.y));
+
+            if (canPlaceInBackSlot(cx, cy, cz, type, orient)) {
+                outGx = cx; outGy = cy; outGz = cz; outInBackSlot = true;
+                return true;
+            }
+            for (int dx = -2; dx <= 2; ++dx) {
+                int nx = std::clamp(cx + dx, 0, std::max(0, BACK_DIM_X - sz.x));
+                for (int nz = 0; nz <= BACK_DIM_Z - sz.z; ++nz) {
+                    if (canPlaceInBackSlot(nx, cy, nz, type, orient)) {
+                        outGx = nx; outGy = cy; outGz = nz; outInBackSlot = true;
+                        return true;
+                    }
+                }
+            }
+        }
+    }
+
+    // 2) Check main 6x8x4 interior cavity
     AABB innerBox{
         {0.0f, 0.0f, 0.0f},
         {DIM_X * CELL_SIZE, DIM_Y * CELL_SIZE, DIM_Z * CELL_SIZE}
     };
-
     float boxT = 0.0f;
     if (!rayAABB(localOrigin, localDir, innerBox, maxDist, boxT)) return false;
 
-    // First check if ray hits an existing item inside the backpack -> stack on top of it or adjacent
     float bestT = maxDist;
     bool hitSurface = false;
     Vec3 hitPt{};
 
     for (const auto& it : items) {
+        if (it.inBackSlot) continue;
         float t = 0.0f;
         if (rayAABB(localOrigin, localDir, itemLocalBounds(it), bestT, t)) {
             bestT = t;
@@ -282,7 +399,6 @@ bool Backpack3D::raycastPlacementLocal(const Vec3& localOrigin, const Vec3& loca
         }
     }
 
-    // Also intersect the backpack floor plane (y = 0)
     if (std::abs(localDir.y) > 1e-5f) {
         float floorT = -localOrigin.y / localDir.y;
         if (floorT > 0.0f && floorT < bestT) {
@@ -307,22 +423,17 @@ bool Backpack3D::raycastPlacementLocal(const Vec3& localOrigin, const Vec3& loca
 
     int cy = findDropY(cx, cz, sz);
     if (cy >= 0 && canPlaceAt(cx, cy, cz, type, orient)) {
-        outGx = cx;
-        outGy = cy;
-        outGz = cz;
+        outGx = cx; outGy = cy; outGz = cz; outInBackSlot = false;
         return true;
     }
 
-    // Try tiny neighborhood shift (+-1 cell) around cursor for smooth snapping
     for (int dz = -1; dz <= 1; ++dz) {
         for (int dx = -1; dx <= 1; ++dx) {
             int nx = std::clamp(cx + dx, 0, std::max(0, DIM_X - sz.x));
             int nz = std::clamp(cz + dz, 0, std::max(0, DIM_Z - sz.z));
             int ny = findDropY(nx, nz, sz);
             if (ny >= 0 && canPlaceAt(nx, ny, nz, type, orient)) {
-                outGx = nx;
-                outGy = ny;
-                outGz = nz;
+                outGx = nx; outGy = ny; outGz = nz; outInBackSlot = false;
                 return true;
             }
         }
