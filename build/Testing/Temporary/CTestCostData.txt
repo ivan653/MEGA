@@ -1,8 +1,14 @@
-WorldGridTest.BoundsAndBlockPlacement 19 0.000135336
-PlayerPhysicsTest.GravityLandsOnFloorAndStepUpWorks 19 0.000139063
-MegaGeneratorTest.GeneratesConnectedMultiBiomeMegastructureQuickly 18 0.00520002
+WorldGridTest.BoundsAndBlockPlacement 38 6.74892e-05
+PlayerPhysicsTest.GravityLandsOnFloorAndStepUpWorks 38 6.45497e-05
+MegaGeneratorTest.GeneratesConnectedMultiBiomeMegastructureQuickly 37 0.00206746
 GameWorldTest.RaycastAndEnemySpawningWork 13 0.00120272
-RobotSimTest.ObservePatrolAndChaseFootKinematics 5 0.0038514
-GameWorldTest.RaycastAndStarterRoomSurvivalWork 3 0.0144517
-RobotSimTest.ObserveMapNavigationPatrolAndChase 4 0.00965003
+RobotSimTest.ObservePatrolAndChaseFootKinematics 21 0.000906753
+GameWorldTest.RaycastAndStarterRoomSurvivalWork 21 0.0018363
+RobotSimTest.ObserveMapNavigationPatrolAndChase 23 0.00165878
+LockpickTest.SlowPushOverforceBreakAndGentleTapPhysics 17 0.000167828
+Audio3DAcousticsTest.PanningObstacleThicknessAndConditionalEcho 8 0.000340086
+LockpickItemAndExitDoorTest.FivePercentBreakChanceAndSafeExitDoor 8 0.0018807
+ConfigHotReloadTest.ParsesPlayerLightingAndAudioSettings 8 0.00192442
+RobotNavigationTest.CenterlineBypassAndCooperativePassing 4 0.00596645
+GodModeTest.NoclipInvisibilityAndSpeedWork 4 0.00397776
 ---

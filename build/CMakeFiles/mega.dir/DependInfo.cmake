@@ -10,6 +10,7 @@ set(CMAKE_DEPENDS_LANGUAGES
 set(CMAKE_DEPENDS_DEPENDENCY_FILES
   "/home/ivan/ImportantFiles/My Games/MEGA/src/audio/AudioEngine.cpp" "CMakeFiles/mega.dir/src/audio/AudioEngine.cpp.o" "gcc" "CMakeFiles/mega.dir/src/audio/AudioEngine.cpp.o.d"
   "/home/ivan/ImportantFiles/My Games/MEGA/src/game/GameWorld.cpp" "CMakeFiles/mega.dir/src/game/GameWorld.cpp.o" "gcc" "CMakeFiles/mega.dir/src/game/GameWorld.cpp.o.d"
+  "/home/ivan/ImportantFiles/My Games/MEGA/src/game/LockpickMinigame.cpp" "CMakeFiles/mega.dir/src/game/LockpickMinigame.cpp.o" "gcc" "CMakeFiles/mega.dir/src/game/LockpickMinigame.cpp.o.d"
   "/home/ivan/ImportantFiles/My Games/MEGA/src/game/Player.cpp" "CMakeFiles/mega.dir/src/game/Player.cpp.o" "gcc" "CMakeFiles/mega.dir/src/game/Player.cpp.o.d"
   "/home/ivan/ImportantFiles/My Games/MEGA/src/main.cpp" "CMakeFiles/mega.dir/src/main.cpp.o" "gcc" "CMakeFiles/mega.dir/src/main.cpp.o.d"
   "/home/ivan/ImportantFiles/My Games/MEGA/src/render/BillboardRenderer.cpp" "CMakeFiles/mega.dir/src/render/BillboardRenderer.cpp.o" "gcc" "CMakeFiles/mega.dir/src/render/BillboardRenderer.cpp.o.d"

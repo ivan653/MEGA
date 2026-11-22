@@ -319,6 +319,7 @@ CMakeFiles/mega_tests.dir/tests/CoreTests.cpp.o: \
  /usr/include/SDL3/SDL_time.h /usr/include/SDL3/SDL_timer.h \
  /usr/include/SDL3/SDL_tray.h /usr/include/SDL3/SDL_version.h \
  /usr/include/SDL3/SDL_oldnames.h \
+ /home/ivan/ImportantFiles/My\ Games/MEGA/src/game/LockpickMinigame.hpp \
  /home/ivan/ImportantFiles/My\ Games/MEGA/src/render/BillboardRenderer.hpp \
  /usr/include/epoxy/gl.h /usr/include/epoxy/common.h \
  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdbool.h \

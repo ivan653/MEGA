@@ -171,7 +171,8 @@ void RobotRenderer::drawPart(const Mat4& model, const Vec3& partScale, float tex
 }
 
 void RobotRenderer::render(const Mat4& view, const Mat4& proj, const Vec3& camPos,
-                           const std::vector<RobotRenderState>& robots) {
+                           const std::vector<RobotRenderState>& robots,
+                           const GameSettings& settings) {
     if (robots.empty()) return;
 
     robotShader_.use();
@@ -179,15 +180,19 @@ void RobotRenderer::render(const Mat4& view, const Mat4& proj, const Vec3& camPo
     robotShader_.setMat4("uProj", proj);
     robotShader_.setVec3("uCamPos", camPos);
     robotShader_.setInt("uAtlas", 0);
-    robotShader_.setFloat("uFogDensity", 0.032f);
+    robotShader_.setFloat("uFogDensity", settings.fogDensity);
 
     glBindVertexArray(vao_);
 
     constexpr float LAYER_BLUE = 9.0f;
     constexpr float LAYER_SKEL = 10.0f;
 
+    float glowBoost = settings.robotLedGlowBoost * settings.objectEmissiveScale;
     for (const auto& r : robots) {
-        Vec3 ledColor = r.alerted ? Vec3{2.1f, 0.18f, 0.14f} : Vec3{0.25f, 1.35f, 2.0f};
+        Vec3 baseLed = r.alerted
+                           ? Vec3{settings.robotAlertLedColorR, settings.robotAlertLedColorG, settings.robotAlertLedColorB}
+                           : Vec3{settings.robotLedColorR, settings.robotLedColorG, settings.robotLedColorB};
+        Vec3 ledColor = baseLed * glowBoost;
         if (r.hurt) ledColor = {2.5f, 2.5f, 2.5f};
 
         // 2.50m tall skeleton (pelvis 0.80 + headTop 0.98 = 1.78 * 1.40 = 2.49m)
@@ -352,11 +357,19 @@ void RobotRenderer::renderInteractables(const Shader& worldShader, const Mat4& v
         } else if (it.itemKind == 2) {
             drawLitPart(base * Mat4::translate({0.0f, 0.07f, 0.0f}) * Mat4::scale({0.18f, 0.14f, 0.14f}),
                         {0.18f, 0.14f, 0.14f}, 3.0f, 0.0f, Vec3{0.95f, 0.65f, 0.45f} * tint.x);
-        } else {
+        } else if (it.itemKind == 3) {
             drawLitPart(base * Mat4::translate({0.0f, 0.12f, 0.0f}) * Mat4::scale({0.09f, 0.24f, 0.09f}),
                         {0.09f, 0.24f, 0.09f}, 9.0f, 0.0f, Vec3{0.55f, 0.95f, 1.35f} * tint.x);
             drawLitPart(base * Mat4::translate({0.0f, 0.25f, 0.0f}) * Mat4::scale({0.05f, 0.04f, 0.05f}),
                         {0.05f, 0.04f, 0.05f}, 1.0f, 0.0f, tint);
+        } else {
+            // ItemType::Lockpick: steel L-shaped lockpick + dark grip handle
+            drawLitPart(base * Mat4::translate({-0.05f, 0.015f, 0.0f}) * Mat4::scale({0.07f, 0.018f, 0.022f}),
+                        {0.07f, 0.018f, 0.022f}, 10.0f, 0.0f, Vec3{0.55f, 0.65f, 0.78f} * tint.x);
+            drawLitPart(base * Mat4::translate({0.04f, 0.015f, 0.0f}) * Mat4::scale({0.13f, 0.010f, 0.010f}),
+                        {0.13f, 0.010f, 0.010f}, 4.0f, 0.0f, Vec3{1.20f, 1.25f, 1.32f} * tint.x);
+            drawLitPart(base * Mat4::translate({0.10f, 0.015f, 0.022f}) * Mat4::scale({0.010f, 0.010f, 0.045f}),
+                        {0.010f, 0.010f, 0.045f}, 4.0f, 0.0f, Vec3{1.20f, 1.25f, 1.32f} * tint.x);
         }
     }
 

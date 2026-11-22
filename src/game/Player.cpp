@@ -69,9 +69,23 @@ bool Player::collides(const WorldGrid& world, const AABB& box,
 }
 
 void Player::update(const PlayerInput& input, const WorldGrid& world, float dt,
-                    const std::vector<AABB>& dynamicColliders) {
+                    const std::vector<AABB>& dynamicColliders,
+                    float moveSpeed, float sprintMult, float jumpSpeed) {
     yaw += input.yawDelta;
     pitch = clampf(pitch + input.pitchDelta, -radians(89.0f), radians(89.0f));
+
+    if (input.noclip) {
+        Vec3 wish = forwardDir() * input.moveForward + rightDir() * input.moveRight +
+                    Vec3{0.0f, input.moveUp, 0.0f};
+        if (lengthSq(wish) > 1e-5f) {
+            wish = normalize(wish);
+        }
+        float flySpeed = moveSpeed * (input.sprint ? sprintMult : 1.0f);
+        velocity = wish * flySpeed;
+        position += velocity * dt;
+        grounded = false;
+        return;
+    }
 
     Vec3 fwdXZ{std::sin(yaw), 0.0f, -std::cos(yaw)};
     Vec3 rightXZ{std::cos(yaw), 0.0f, std::sin(yaw)};
@@ -80,7 +94,7 @@ void Player::update(const PlayerInput& input, const WorldGrid& world, float dt,
         wish = normalize(wish);
     }
 
-    float maxSpeed = cfg::MOVE_SPEED * (input.sprint ? cfg::SPRINT_MULT : 1.0f);
+    float maxSpeed = moveSpeed * (input.sprint ? sprintMult : 1.0f);
 
     if (grounded) {
         Vec3 horiz{velocity.x, 0.0f, velocity.z};
@@ -99,7 +113,7 @@ void Player::update(const PlayerInput& input, const WorldGrid& world, float dt,
     velocity.z += (targetVel.z - velocity.z) * std::min(1.0f, accel * dt);
 
     if (grounded && input.jump) {
-        velocity.y = cfg::JUMP_SPEED;
+        velocity.y = jumpSpeed;
         grounded = false;
     }
     velocity.y -= cfg::GRAVITY * dt;

@@ -4,6 +4,8 @@ file(REMOVE_RECURSE
   "CMakeFiles/mega.dir/src/audio/AudioEngine.cpp.o.d"
   "CMakeFiles/mega.dir/src/game/GameWorld.cpp.o"
   "CMakeFiles/mega.dir/src/game/GameWorld.cpp.o.d"
+  "CMakeFiles/mega.dir/src/game/LockpickMinigame.cpp.o"
+  "CMakeFiles/mega.dir/src/game/LockpickMinigame.cpp.o.d"
   "CMakeFiles/mega.dir/src/game/Player.cpp.o"
   "CMakeFiles/mega.dir/src/game/Player.cpp.o.d"
   "CMakeFiles/mega.dir/src/main.cpp.o"

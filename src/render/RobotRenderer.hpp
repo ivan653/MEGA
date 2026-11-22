@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/Config.hpp"
 #include "core/Math3D.hpp"
 #include "render/Shader.hpp"
 #include <epoxy/gl.h>
@@ -41,7 +42,8 @@ public:
 
     bool init();
     void render(const Mat4& view, const Mat4& proj, const Vec3& camPos,
-                const std::vector<RobotRenderState>& robots);
+                const std::vector<RobotRenderState>& robots,
+                const GameSettings& settings = GameSettings{});
     void renderInteractables(const Shader& worldShader, const Mat4& view, const Mat4& proj,
                              const Vec3& camPos,
                              const std::vector<DoorRenderState>& doors,

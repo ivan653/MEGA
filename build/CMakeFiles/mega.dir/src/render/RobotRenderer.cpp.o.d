@@ -2,7 +2,7 @@ CMakeFiles/mega.dir/src/render/RobotRenderer.cpp.o: \
  /home/ivan/ImportantFiles/My\ Games/MEGA/src/render/RobotRenderer.cpp \
  /usr/include/stdc-predef.h \
  /home/ivan/ImportantFiles/My\ Games/MEGA/src/render/RobotRenderer.hpp \
- /home/ivan/ImportantFiles/My\ Games/MEGA/src/core/Math3D.hpp \
+ /home/ivan/ImportantFiles/My\ Games/MEGA/src/core/Config.hpp \
  /usr/include/c++/16/algorithm /usr/include/c++/16/bits/stl_algobase.h \
  /usr/include/c++/16/x86_64-pc-linux-gnu/bits/c++config.h \
  /usr/include/c++/16/x86_64-pc-linux-gnu/bits/os_defines.h \
@@ -69,90 +69,32 @@ CMakeFiles/mega.dir/src/render/RobotRenderer.cpp.o: \
  /usr/include/c++/16/limits /usr/include/c++/16/bits/invoke.h \
  /usr/include/c++/16/bits/ranges_util.h \
  /usr/include/c++/16/pstl/glue_algorithm_defs.h \
- /usr/include/c++/16/pstl/execution_defs.h /usr/include/c++/16/cmath \
- /usr/include/c++/16/bits/requires_hosted.h /usr/include/math.h \
- /usr/include/bits/math-vector.h /usr/include/bits/libm-simd-decl-stubs.h \
- /usr/include/bits/flt-eval-method.h /usr/include/bits/fp-logb.h \
- /usr/include/bits/fp-fast.h /usr/include/bits/mathcalls-macros.h \
- /usr/include/bits/mathcalls-helper-functions.h \
- /usr/include/bits/mathcalls.h /usr/include/bits/mathcalls-narrow.h \
- /usr/include/bits/iscanonical.h /usr/include/c++/16/bits/specfun.h \
- /usr/include/c++/16/bits/stdexcept_throw.h \
- /usr/include/c++/16/bits/stdexcept_throwfwd.h \
- /usr/include/c++/16/tr1/gamma.tcc \
- /usr/include/c++/16/tr1/special_function_util.h \
- /usr/include/c++/16/tr1/bessel_function.tcc \
- /usr/include/c++/16/tr1/beta_function.tcc \
- /usr/include/c++/16/tr1/ell_integral.tcc \
- /usr/include/c++/16/tr1/exp_integral.tcc \
- /usr/include/c++/16/tr1/hypergeometric.tcc \
- /usr/include/c++/16/tr1/legendre_function.tcc \
- /usr/include/c++/16/tr1/modified_bessel_func.tcc \
- /usr/include/c++/16/tr1/poly_hermite.tcc \
- /usr/include/c++/16/tr1/poly_laguerre.tcc \
- /usr/include/c++/16/tr1/riemann_zeta.tcc /usr/include/c++/16/cstdint \
- /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdint.h \
- /usr/include/stdint.h /usr/include/bits/wchar.h \
- /usr/include/bits/stdint-uintn.h /usr/include/bits/stdint-least.h \
- /home/ivan/ImportantFiles/My\ Games/MEGA/src/render/Shader.hpp \
- /usr/include/epoxy/gl.h /usr/include/epoxy/common.h \
- /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdbool.h \
- /usr/include/epoxy/gl_generated.h /usr/include/inttypes.h \
- /usr/include/c++/16/string /usr/include/c++/16/bits/stringfwd.h \
- /usr/include/c++/16/bits/memoryfwd.h \
- /usr/include/c++/16/bits/char_traits.h \
- /usr/include/c++/16/bits/postypes.h /usr/include/c++/16/cwchar \
- /usr/include/wchar.h \
+ /usr/include/c++/16/pstl/execution_defs.h /usr/include/c++/16/cstdio \
+ /usr/include/stdio.h \
  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdarg.h \
- /usr/include/bits/types/wint_t.h /usr/include/bits/types/mbstate_t.h \
- /usr/include/bits/types/__mbstate_t.h /usr/include/bits/types/__FILE.h \
- /usr/include/bits/types/FILE.h /usr/include/c++/16/bits/allocator.h \
- /usr/include/c++/16/x86_64-pc-linux-gnu/bits/c++allocator.h \
- /usr/include/c++/16/bits/new_allocator.h \
- /usr/include/c++/16/bits/new_throw.h \
+ /usr/include/bits/types/__fpos_t.h /usr/include/bits/types/__mbstate_t.h \
+ /usr/include/bits/types/__fpos64_t.h /usr/include/bits/types/__FILE.h \
+ /usr/include/bits/types/FILE.h /usr/include/bits/types/struct_FILE.h \
+ /usr/include/bits/types/cookie_io_functions_t.h \
+ /usr/include/bits/stdio_lim.h /usr/include/bits/stdio.h \
+ /usr/include/c++/16/fstream /usr/include/c++/16/bits/requires_hosted.h \
+ /usr/include/c++/16/istream /usr/include/c++/16/ios \
+ /usr/include/c++/16/iosfwd /usr/include/c++/16/bits/stringfwd.h \
+ /usr/include/c++/16/bits/memoryfwd.h /usr/include/c++/16/bits/postypes.h \
+ /usr/include/c++/16/cwchar /usr/include/wchar.h \
+ /usr/include/bits/wchar.h /usr/include/bits/types/wint_t.h \
+ /usr/include/bits/types/mbstate_t.h /usr/include/c++/16/exception \
+ /usr/include/c++/16/bits/exception_ptr.h \
+ /usr/include/c++/16/bits/cxxabi_init_exception.h \
+ /usr/include/c++/16/typeinfo /usr/include/c++/16/bits/hash_bytes.h \
+ /usr/include/c++/16/bits/nested_exception.h \
+ /usr/include/c++/16/bits/char_traits.h \
  /usr/include/c++/16/bits/localefwd.h \
  /usr/include/c++/16/x86_64-pc-linux-gnu/bits/c++locale.h \
  /usr/include/c++/16/clocale /usr/include/locale.h \
- /usr/include/bits/locale.h /usr/include/c++/16/iosfwd \
- /usr/include/c++/16/cctype /usr/include/ctype.h \
- /usr/include/c++/16/bits/ostream_insert.h \
- /usr/include/c++/16/bits/cxxabi_forced.h \
- /usr/include/c++/16/bits/range_access.h \
- /usr/include/c++/16/bits/erase_if.h \
- /usr/include/c++/16/bits/basic_string.h \
- /usr/include/c++/16/ext/alloc_traits.h \
- /usr/include/c++/16/bits/alloc_traits.h /usr/include/c++/16/string_view \
- /usr/include/c++/16/bits/functional_hash.h \
- /usr/include/c++/16/bits/hash_bytes.h \
- /usr/include/c++/16/bits/string_view.tcc \
- /usr/include/c++/16/ext/string_conversions.h /usr/include/c++/16/cstdio \
- /usr/include/stdio.h /usr/include/bits/types/__fpos_t.h \
- /usr/include/bits/types/__fpos64_t.h \
- /usr/include/bits/types/struct_FILE.h \
- /usr/include/bits/types/cookie_io_functions_t.h \
- /usr/include/bits/stdio_lim.h /usr/include/bits/stdio.h \
- /usr/include/c++/16/cerrno /usr/include/errno.h \
- /usr/include/bits/errno.h /usr/include/linux/errno.h \
- /usr/include/asm/errno.h /usr/include/asm-generic/errno.h \
- /usr/include/asm-generic/errno-base.h /usr/include/bits/types/error_t.h \
- /usr/include/c++/16/bits/charconv.h \
- /usr/include/c++/16/bits/basic_string.tcc \
- /usr/include/c++/16/bits/memory_resource.h /usr/include/c++/16/cstddef \
- /usr/include/c++/16/bits/uses_allocator.h \
- /usr/include/c++/16/bits/uses_allocator_args.h /usr/include/c++/16/tuple \
- /usr/include/c++/16/vector /usr/include/c++/16/bits/stl_uninitialized.h \
- /usr/include/c++/16/bits/stl_vector.h \
- /usr/include/c++/16/bits/stl_bvector.h \
- /usr/include/c++/16/bits/vector.tcc \
- /home/ivan/ImportantFiles/My\ Games/MEGA/src/render/WorldMesher.hpp \
- /home/ivan/ImportantFiles/My\ Games/MEGA/src/world/WorldGrid.hpp \
- /home/ivan/ImportantFiles/My\ Games/MEGA/src/core/Config.hpp \
- /usr/include/c++/16/fstream /usr/include/c++/16/istream \
- /usr/include/c++/16/ios /usr/include/c++/16/exception \
- /usr/include/c++/16/bits/exception_ptr.h \
- /usr/include/c++/16/bits/cxxabi_init_exception.h \
- /usr/include/c++/16/typeinfo /usr/include/c++/16/bits/nested_exception.h \
- /usr/include/c++/16/bits/ios_base.h /usr/include/c++/16/ext/atomicity.h \
+ /usr/include/bits/locale.h /usr/include/c++/16/cctype \
+ /usr/include/ctype.h /usr/include/c++/16/bits/ios_base.h \
+ /usr/include/c++/16/ext/atomicity.h \
  /usr/include/c++/16/x86_64-pc-linux-gnu/bits/gthr.h \
  /usr/include/c++/16/x86_64-pc-linux-gnu/bits/gthr-default.h \
  /usr/include/pthread.h /usr/include/sched.h /usr/include/bits/sched.h \
@@ -171,7 +113,31 @@ CMakeFiles/mega.dir/src/render/RobotRenderer.cpp.o: \
  /usr/include/c++/16/x86_64-pc-linux-gnu/bits/atomic_word.h \
  /usr/include/sys/single_threaded.h \
  /usr/include/c++/16/bits/locale_classes.h \
- /usr/include/c++/16/bits/functexcept.h \
+ /usr/include/c++/16/bits/functexcept.h /usr/include/c++/16/string \
+ /usr/include/c++/16/bits/allocator.h \
+ /usr/include/c++/16/x86_64-pc-linux-gnu/bits/c++allocator.h \
+ /usr/include/c++/16/bits/new_allocator.h \
+ /usr/include/c++/16/bits/new_throw.h \
+ /usr/include/c++/16/bits/ostream_insert.h \
+ /usr/include/c++/16/bits/cxxabi_forced.h \
+ /usr/include/c++/16/bits/stdexcept_throw.h \
+ /usr/include/c++/16/bits/stdexcept_throwfwd.h \
+ /usr/include/c++/16/bits/range_access.h \
+ /usr/include/c++/16/bits/erase_if.h \
+ /usr/include/c++/16/bits/basic_string.h \
+ /usr/include/c++/16/ext/alloc_traits.h \
+ /usr/include/c++/16/bits/alloc_traits.h /usr/include/c++/16/string_view \
+ /usr/include/c++/16/bits/functional_hash.h \
+ /usr/include/c++/16/bits/string_view.tcc \
+ /usr/include/c++/16/ext/string_conversions.h /usr/include/c++/16/cerrno \
+ /usr/include/errno.h /usr/include/bits/errno.h \
+ /usr/include/linux/errno.h /usr/include/asm/errno.h \
+ /usr/include/asm-generic/errno.h /usr/include/asm-generic/errno-base.h \
+ /usr/include/bits/types/error_t.h /usr/include/c++/16/bits/charconv.h \
+ /usr/include/c++/16/bits/basic_string.tcc \
+ /usr/include/c++/16/bits/memory_resource.h /usr/include/c++/16/cstddef \
+ /usr/include/c++/16/bits/uses_allocator.h \
+ /usr/include/c++/16/bits/uses_allocator_args.h /usr/include/c++/16/tuple \
  /usr/include/c++/16/bits/locale_classes.tcc \
  /usr/include/c++/16/system_error \
  /usr/include/c++/16/x86_64-pc-linux-gnu/bits/error_constants.h \
@@ -193,8 +159,41 @@ CMakeFiles/mega.dir/src/render/RobotRenderer.cpp.o: \
  /usr/include/c++/16/x86_64-pc-linux-gnu/bits/basic_file.h \
  /usr/include/c++/16/x86_64-pc-linux-gnu/bits/c++io.h \
  /usr/include/c++/16/bits/fstream.tcc /usr/include/c++/16/sstream \
- /usr/include/c++/16/bits/sstream.tcc /usr/include/c++/16/array \
- /usr/include/c++/16/unordered_map \
+ /usr/include/c++/16/bits/sstream.tcc \
+ /home/ivan/ImportantFiles/My\ Games/MEGA/src/core/Math3D.hpp \
+ /usr/include/c++/16/cmath /usr/include/math.h \
+ /usr/include/bits/math-vector.h /usr/include/bits/libm-simd-decl-stubs.h \
+ /usr/include/bits/flt-eval-method.h /usr/include/bits/fp-logb.h \
+ /usr/include/bits/fp-fast.h /usr/include/bits/mathcalls-macros.h \
+ /usr/include/bits/mathcalls-helper-functions.h \
+ /usr/include/bits/mathcalls.h /usr/include/bits/mathcalls-narrow.h \
+ /usr/include/bits/iscanonical.h /usr/include/c++/16/bits/specfun.h \
+ /usr/include/c++/16/tr1/gamma.tcc \
+ /usr/include/c++/16/tr1/special_function_util.h \
+ /usr/include/c++/16/tr1/bessel_function.tcc \
+ /usr/include/c++/16/tr1/beta_function.tcc \
+ /usr/include/c++/16/tr1/ell_integral.tcc \
+ /usr/include/c++/16/tr1/exp_integral.tcc \
+ /usr/include/c++/16/tr1/hypergeometric.tcc \
+ /usr/include/c++/16/tr1/legendre_function.tcc \
+ /usr/include/c++/16/tr1/modified_bessel_func.tcc \
+ /usr/include/c++/16/tr1/poly_hermite.tcc \
+ /usr/include/c++/16/tr1/poly_laguerre.tcc \
+ /usr/include/c++/16/tr1/riemann_zeta.tcc /usr/include/c++/16/cstdint \
+ /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdint.h \
+ /usr/include/stdint.h /usr/include/bits/stdint-uintn.h \
+ /usr/include/bits/stdint-least.h \
+ /home/ivan/ImportantFiles/My\ Games/MEGA/src/render/Shader.hpp \
+ /usr/include/epoxy/gl.h /usr/include/epoxy/common.h \
+ /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdbool.h \
+ /usr/include/epoxy/gl_generated.h /usr/include/inttypes.h \
+ /usr/include/c++/16/vector /usr/include/c++/16/bits/stl_uninitialized.h \
+ /usr/include/c++/16/bits/stl_vector.h \
+ /usr/include/c++/16/bits/stl_bvector.h \
+ /usr/include/c++/16/bits/vector.tcc \
+ /home/ivan/ImportantFiles/My\ Games/MEGA/src/render/WorldMesher.hpp \
+ /home/ivan/ImportantFiles/My\ Games/MEGA/src/world/WorldGrid.hpp \
+ /usr/include/c++/16/array /usr/include/c++/16/unordered_map \
  /usr/include/c++/16/bits/unordered_map.h \
  /usr/include/c++/16/bits/hashtable.h \
  /usr/include/c++/16/bits/hashtable_policy.h \

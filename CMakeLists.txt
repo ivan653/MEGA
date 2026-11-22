@@ -28,6 +28,7 @@ add_executable(mega
     src/world/gen/MegaGenerator.cpp
     src/game/Player.cpp
     src/game/GameWorld.cpp
+    src/game/LockpickMinigame.cpp
     src/audio/AudioEngine.cpp
 )
 
@@ -55,6 +56,7 @@ if(GTest_FOUND)
         src/world/gen/MegaGenerator.cpp
         src/game/Player.cpp
         src/game/GameWorld.cpp
+        src/game/LockpickMinigame.cpp
         src/audio/AudioEngine.cpp
     )
     target_include_directories(mega_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)

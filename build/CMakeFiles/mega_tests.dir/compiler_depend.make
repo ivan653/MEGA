@@ -3,6 +3,9 @@
 
 CMakeFiles/mega_tests.dir/src/audio/AudioEngine.cpp.o: /home/ivan/ImportantFiles/My\ Games/MEGA/src/audio/AudioEngine.cpp \
   /home/ivan/ImportantFiles/My\ Games/MEGA/src/audio/AudioEngine.hpp \
+  /home/ivan/ImportantFiles/My\ Games/MEGA/src/core/Config.hpp \
+  /home/ivan/ImportantFiles/My\ Games/MEGA/src/core/Math3D.hpp \
+  /home/ivan/ImportantFiles/My\ Games/MEGA/src/world/WorldGrid.hpp \
   /usr/include/SDL3/SDL.h \
   /usr/include/SDL3/SDL_assert.h \
   /usr/include/SDL3/SDL_asyncio.h \
@@ -64,10 +67,23 @@ CMakeFiles/mega_tests.dir/src/audio/AudioEngine.cpp.o: /home/ivan/ImportantFiles
   /usr/include/SDL3/SDL_version.h \
   /usr/include/SDL3/SDL_video.h \
   /usr/include/alloca.h \
+  /usr/include/asm-generic/bitsperlong.h \
+  /usr/include/asm-generic/errno-base.h \
+  /usr/include/asm-generic/errno.h \
+  /usr/include/asm-generic/int-ll64.h \
+  /usr/include/asm-generic/posix_types.h \
+  /usr/include/asm-generic/types.h \
+  /usr/include/asm/bitsperlong.h \
+  /usr/include/asm/errno.h \
+  /usr/include/asm/posix_types.h \
+  /usr/include/asm/posix_types_64.h \
+  /usr/include/asm/types.h \
   /usr/include/bits/atomic_wide_counter.h \
   /usr/include/bits/byteswap.h \
+  /usr/include/bits/cpu-set.h \
   /usr/include/bits/endian.h \
   /usr/include/bits/endianness.h \
+  /usr/include/bits/errno.h \
   /usr/include/bits/floatn-common.h \
   /usr/include/bits/floatn.h \
   /usr/include/bits/flt-eval-method.h \
@@ -76,38 +92,55 @@ CMakeFiles/mega_tests.dir/src/audio/AudioEngine.cpp.o: /home/ivan/ImportantFiles
   /usr/include/bits/iscanonical.h \
   /usr/include/bits/libc-header-start.h \
   /usr/include/bits/libm-simd-decl-stubs.h \
+  /usr/include/bits/locale.h \
   /usr/include/bits/long-double.h \
   /usr/include/bits/math-vector.h \
   /usr/include/bits/mathcalls-helper-functions.h \
   /usr/include/bits/mathcalls-macros.h \
   /usr/include/bits/mathcalls-narrow.h \
   /usr/include/bits/mathcalls.h \
+  /usr/include/bits/pthread_stack_min-dynamic.h \
   /usr/include/bits/pthreadtypes-arch.h \
   /usr/include/bits/pthreadtypes.h \
+  /usr/include/bits/sched.h \
   /usr/include/bits/select.h \
+  /usr/include/bits/setjmp.h \
   /usr/include/bits/stdint-intn.h \
   /usr/include/bits/stdint-least.h \
   /usr/include/bits/stdint-uintn.h \
+  /usr/include/bits/stdio.h \
+  /usr/include/bits/stdio_lim.h \
   /usr/include/bits/stdlib-bsearch.h \
   /usr/include/bits/stdlib-float.h \
   /usr/include/bits/struct_mutex.h \
   /usr/include/bits/struct_rwlock.h \
   /usr/include/bits/thread-shared-types.h \
+  /usr/include/bits/time.h \
   /usr/include/bits/time64.h \
   /usr/include/bits/timesize.h \
+  /usr/include/bits/timex.h \
   /usr/include/bits/types.h \
   /usr/include/bits/types/FILE.h \
   /usr/include/bits/types/__FILE.h \
+  /usr/include/bits/types/__fpos64_t.h \
+  /usr/include/bits/types/__fpos_t.h \
   /usr/include/bits/types/__locale_t.h \
   /usr/include/bits/types/__mbstate_t.h \
   /usr/include/bits/types/__sigset_t.h \
   /usr/include/bits/types/clock_t.h \
   /usr/include/bits/types/clockid_t.h \
+  /usr/include/bits/types/cookie_io_functions_t.h \
+  /usr/include/bits/types/error_t.h \
   /usr/include/bits/types/locale_t.h \
   /usr/include/bits/types/mbstate_t.h \
   /usr/include/bits/types/sigset_t.h \
+  /usr/include/bits/types/struct_FILE.h \
+  /usr/include/bits/types/struct___jmp_buf_tag.h \
+  /usr/include/bits/types/struct_itimerspec.h \
+  /usr/include/bits/types/struct_sched_param.h \
   /usr/include/bits/types/struct_timespec.h \
   /usr/include/bits/types/struct_timeval.h \
+  /usr/include/bits/types/struct_tm.h \
   /usr/include/bits/types/time_t.h \
   /usr/include/bits/types/timer_t.h \
   /usr/include/bits/types/wint_t.h \
@@ -116,29 +149,62 @@ CMakeFiles/mega_tests.dir/src/audio/AudioEngine.cpp.o: /home/ivan/ImportantFiles
   /usr/include/bits/waitflags.h \
   /usr/include/bits/waitstatus.h \
   /usr/include/bits/wchar.h \
+  /usr/include/bits/wctype-wchar.h \
   /usr/include/bits/wordsize.h \
   /usr/include/c++/16/algorithm \
+  /usr/include/c++/16/array \
   /usr/include/c++/16/backward/binders.h \
   /usr/include/c++/16/bit \
   /usr/include/c++/16/bits/algorithmfwd.h \
   /usr/include/c++/16/bits/alloc_traits.h \
   /usr/include/c++/16/bits/allocator.h \
+  /usr/include/c++/16/bits/basic_ios.h \
+  /usr/include/c++/16/bits/basic_ios.tcc \
+  /usr/include/c++/16/bits/basic_string.h \
+  /usr/include/c++/16/bits/basic_string.tcc \
+  /usr/include/c++/16/bits/char_traits.h \
+  /usr/include/c++/16/bits/charconv.h \
+  /usr/include/c++/16/bits/chrono.h \
+  /usr/include/c++/16/bits/codecvt.h \
   /usr/include/c++/16/bits/concept_check.h \
   /usr/include/c++/16/bits/cpp_type_traits.h \
+  /usr/include/c++/16/bits/cxxabi_forced.h \
+  /usr/include/c++/16/bits/cxxabi_init_exception.h \
+  /usr/include/c++/16/bits/enable_special_members.h \
   /usr/include/c++/16/bits/erase_if.h \
   /usr/include/c++/16/bits/exception.h \
   /usr/include/c++/16/bits/exception_defines.h \
+  /usr/include/c++/16/bits/exception_ptr.h \
+  /usr/include/c++/16/bits/fstream.tcc \
+  /usr/include/c++/16/bits/functexcept.h \
   /usr/include/c++/16/bits/functional_hash.h \
   /usr/include/c++/16/bits/hash_bytes.h \
+  /usr/include/c++/16/bits/hashtable.h \
+  /usr/include/c++/16/bits/hashtable_policy.h \
   /usr/include/c++/16/bits/invoke.h \
+  /usr/include/c++/16/bits/ios_base.h \
+  /usr/include/c++/16/bits/istream.tcc \
   /usr/include/c++/16/bits/iterator_concepts.h \
+  /usr/include/c++/16/bits/locale_classes.h \
+  /usr/include/c++/16/bits/locale_classes.tcc \
+  /usr/include/c++/16/bits/locale_facets.h \
+  /usr/include/c++/16/bits/locale_facets.tcc \
+  /usr/include/c++/16/bits/localefwd.h \
   /usr/include/c++/16/bits/max_size_type.h \
   /usr/include/c++/16/bits/memory_resource.h \
   /usr/include/c++/16/bits/memoryfwd.h \
   /usr/include/c++/16/bits/move.h \
+  /usr/include/c++/16/bits/nested_exception.h \
   /usr/include/c++/16/bits/new_allocator.h \
   /usr/include/c++/16/bits/new_except.h \
   /usr/include/c++/16/bits/new_throw.h \
+  /usr/include/c++/16/bits/node_handle.h \
+  /usr/include/c++/16/bits/ostream.h \
+  /usr/include/c++/16/bits/ostream.tcc \
+  /usr/include/c++/16/bits/ostream_insert.h \
+  /usr/include/c++/16/bits/ostream_print.h \
+  /usr/include/c++/16/bits/parse_numbers.h \
+  /usr/include/c++/16/bits/postypes.h \
   /usr/include/c++/16/bits/predefined_ops.h \
   /usr/include/c++/16/bits/ptr_traits.h \
   /usr/include/c++/16/bits/range_access.h \
@@ -149,7 +215,10 @@ CMakeFiles/mega_tests.dir/src/audio/AudioEngine.cpp.o: /home/ivan/ImportantFiles
   /usr/include/c++/16/bits/ranges_util.h \
   /usr/include/c++/16/bits/requires_hosted.h \
   /usr/include/c++/16/bits/specfun.h \
+  /usr/include/c++/16/bits/sstream.tcc \
   /usr/include/c++/16/bits/std_abs.h \
+  /usr/include/c++/16/bits/std_mutex.h \
+  /usr/include/c++/16/bits/stdexcept_except.h \
   /usr/include/c++/16/bits/stdexcept_throw.h \
   /usr/include/c++/16/bits/stdexcept_throwfwd.h \
   /usr/include/c++/16/bits/stl_algo.h \
@@ -165,30 +234,60 @@ CMakeFiles/mega_tests.dir/src/audio/AudioEngine.cpp.o: /home/ivan/ImportantFiles
   /usr/include/c++/16/bits/stl_tempbuf.h \
   /usr/include/c++/16/bits/stl_uninitialized.h \
   /usr/include/c++/16/bits/stl_vector.h \
+  /usr/include/c++/16/bits/streambuf.tcc \
+  /usr/include/c++/16/bits/streambuf_iterator.h \
+  /usr/include/c++/16/bits/string_view.tcc \
+  /usr/include/c++/16/bits/stringfwd.h \
   /usr/include/c++/16/bits/uniform_int_dist.h \
+  /usr/include/c++/16/bits/unique_lock.h \
+  /usr/include/c++/16/bits/unordered_map.h \
   /usr/include/c++/16/bits/uses_allocator.h \
   /usr/include/c++/16/bits/uses_allocator_args.h \
   /usr/include/c++/16/bits/utility.h \
   /usr/include/c++/16/bits/vector.tcc \
   /usr/include/c++/16/bits/version.h \
+  /usr/include/c++/16/cctype \
+  /usr/include/c++/16/cerrno \
+  /usr/include/c++/16/clocale \
   /usr/include/c++/16/cmath \
   /usr/include/c++/16/compare \
   /usr/include/c++/16/concepts \
   /usr/include/c++/16/cstddef \
   /usr/include/c++/16/cstdint \
+  /usr/include/c++/16/cstdio \
   /usr/include/c++/16/cstdlib \
+  /usr/include/c++/16/ctime \
+  /usr/include/c++/16/cwchar \
+  /usr/include/c++/16/cwctype \
   /usr/include/c++/16/debug/assertions.h \
   /usr/include/c++/16/debug/debug.h \
+  /usr/include/c++/16/exception \
+  /usr/include/c++/16/ext/aligned_buffer.h \
   /usr/include/c++/16/ext/alloc_traits.h \
+  /usr/include/c++/16/ext/atomicity.h \
   /usr/include/c++/16/ext/numeric_traits.h \
+  /usr/include/c++/16/ext/string_conversions.h \
   /usr/include/c++/16/ext/type_traits.h \
+  /usr/include/c++/16/fstream \
   /usr/include/c++/16/initializer_list \
+  /usr/include/c++/16/ios \
+  /usr/include/c++/16/iosfwd \
+  /usr/include/c++/16/istream \
   /usr/include/c++/16/limits \
+  /usr/include/c++/16/mutex \
   /usr/include/c++/16/new \
   /usr/include/c++/16/numbers \
+  /usr/include/c++/16/ostream \
   /usr/include/c++/16/pstl/execution_defs.h \
   /usr/include/c++/16/pstl/glue_algorithm_defs.h \
   /usr/include/c++/16/pstl/pstl_config.h \
+  /usr/include/c++/16/ratio \
+  /usr/include/c++/16/sstream \
+  /usr/include/c++/16/stdexcept \
+  /usr/include/c++/16/streambuf \
+  /usr/include/c++/16/string \
+  /usr/include/c++/16/string_view \
+  /usr/include/c++/16/system_error \
   /usr/include/c++/16/tr1/bessel_function.tcc \
   /usr/include/c++/16/tr1/beta_function.tcc \
   /usr/include/c++/16/tr1/ell_integral.tcc \
@@ -203,26 +302,51 @@ CMakeFiles/mega_tests.dir/src/audio/AudioEngine.cpp.o: /home/ivan/ImportantFiles
   /usr/include/c++/16/tr1/special_function_util.h \
   /usr/include/c++/16/tuple \
   /usr/include/c++/16/type_traits \
+  /usr/include/c++/16/typeinfo \
+  /usr/include/c++/16/unordered_map \
   /usr/include/c++/16/vector \
+  /usr/include/c++/16/x86_64-pc-linux-gnu/bits/atomic_word.h \
+  /usr/include/c++/16/x86_64-pc-linux-gnu/bits/basic_file.h \
   /usr/include/c++/16/x86_64-pc-linux-gnu/bits/c++allocator.h \
   /usr/include/c++/16/x86_64-pc-linux-gnu/bits/c++config.h \
+  /usr/include/c++/16/x86_64-pc-linux-gnu/bits/c++io.h \
+  /usr/include/c++/16/x86_64-pc-linux-gnu/bits/c++locale.h \
   /usr/include/c++/16/x86_64-pc-linux-gnu/bits/cpu_defines.h \
+  /usr/include/c++/16/x86_64-pc-linux-gnu/bits/ctype_base.h \
+  /usr/include/c++/16/x86_64-pc-linux-gnu/bits/ctype_inline.h \
+  /usr/include/c++/16/x86_64-pc-linux-gnu/bits/error_constants.h \
+  /usr/include/c++/16/x86_64-pc-linux-gnu/bits/gthr-default.h \
+  /usr/include/c++/16/x86_64-pc-linux-gnu/bits/gthr.h \
   /usr/include/c++/16/x86_64-pc-linux-gnu/bits/os_defines.h \
+  /usr/include/ctype.h \
   /usr/include/endian.h \
+  /usr/include/errno.h \
   /usr/include/features-time64.h \
   /usr/include/features.h \
   /usr/include/gnu/stubs-64.h \
   /usr/include/gnu/stubs.h \
+  /usr/include/linux/errno.h \
+  /usr/include/linux/posix_types.h \
+  /usr/include/linux/sched/types.h \
+  /usr/include/linux/stddef.h \
+  /usr/include/linux/types.h \
+  /usr/include/locale.h \
   /usr/include/math.h \
+  /usr/include/pthread.h \
+  /usr/include/sched.h \
   /usr/include/stdc-predef.h \
   /usr/include/stdint.h \
+  /usr/include/stdio.h \
   /usr/include/stdlib.h \
   /usr/include/string.h \
   /usr/include/strings.h \
   /usr/include/sys/cdefs.h \
   /usr/include/sys/select.h \
+  /usr/include/sys/single_threaded.h \
   /usr/include/sys/types.h \
+  /usr/include/time.h \
   /usr/include/wchar.h \
+  /usr/include/wctype.h \
   /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdarg.h \
   /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stddef.h \
   /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdint.h
@@ -233,6 +357,7 @@ CMakeFiles/mega_tests.dir/src/game/GameWorld.cpp.o: /home/ivan/ImportantFiles/My
   /home/ivan/ImportantFiles/My\ Games/MEGA/src/core/Math3D.hpp \
   /home/ivan/ImportantFiles/My\ Games/MEGA/src/core/Rng.hpp \
   /home/ivan/ImportantFiles/My\ Games/MEGA/src/game/GameWorld.hpp \
+  /home/ivan/ImportantFiles/My\ Games/MEGA/src/game/LockpickMinigame.hpp \
   /home/ivan/ImportantFiles/My\ Games/MEGA/src/game/Player.hpp \
   /home/ivan/ImportantFiles/My\ Games/MEGA/src/render/BillboardRenderer.hpp \
   /home/ivan/ImportantFiles/My\ Games/MEGA/src/render/RobotRenderer.hpp \
@@ -398,6 +523,7 @@ CMakeFiles/mega_tests.dir/src/game/GameWorld.cpp.o: /home/ivan/ImportantFiles/My
   /usr/include/c++/16/bits/basic_string.tcc \
   /usr/include/c++/16/bits/char_traits.h \
   /usr/include/c++/16/bits/charconv.h \
+  /usr/include/c++/16/bits/chrono.h \
   /usr/include/c++/16/bits/codecvt.h \
   /usr/include/c++/16/bits/concept_check.h \
   /usr/include/c++/16/bits/cpp_type_traits.h \
@@ -438,6 +564,7 @@ CMakeFiles/mega_tests.dir/src/game/GameWorld.cpp.o: /home/ivan/ImportantFiles/My
   /usr/include/c++/16/bits/ostream.tcc \
   /usr/include/c++/16/bits/ostream_insert.h \
   /usr/include/c++/16/bits/ostream_print.h \
+  /usr/include/c++/16/bits/parse_numbers.h \
   /usr/include/c++/16/bits/postypes.h \
   /usr/include/c++/16/bits/predefined_ops.h \
   /usr/include/c++/16/bits/ptr_traits.h \
@@ -451,6 +578,7 @@ CMakeFiles/mega_tests.dir/src/game/GameWorld.cpp.o: /home/ivan/ImportantFiles/My
   /usr/include/c++/16/bits/specfun.h \
   /usr/include/c++/16/bits/sstream.tcc \
   /usr/include/c++/16/bits/std_abs.h \
+  /usr/include/c++/16/bits/std_mutex.h \
   /usr/include/c++/16/bits/stdexcept_except.h \
   /usr/include/c++/16/bits/stdexcept_throw.h \
   /usr/include/c++/16/bits/stdexcept_throwfwd.h \
@@ -478,6 +606,7 @@ CMakeFiles/mega_tests.dir/src/game/GameWorld.cpp.o: /home/ivan/ImportantFiles/My
   /usr/include/c++/16/bits/string_view.tcc \
   /usr/include/c++/16/bits/stringfwd.h \
   /usr/include/c++/16/bits/uniform_int_dist.h \
+  /usr/include/c++/16/bits/unique_lock.h \
   /usr/include/c++/16/bits/unordered_map.h \
   /usr/include/c++/16/bits/uses_allocator.h \
   /usr/include/c++/16/bits/uses_allocator_args.h \
@@ -494,6 +623,7 @@ CMakeFiles/mega_tests.dir/src/game/GameWorld.cpp.o: /home/ivan/ImportantFiles/My
   /usr/include/c++/16/cstdint \
   /usr/include/c++/16/cstdio \
   /usr/include/c++/16/cstdlib \
+  /usr/include/c++/16/ctime \
   /usr/include/c++/16/cwchar \
   /usr/include/c++/16/cwctype \
   /usr/include/c++/16/debug/assertions.h \
@@ -512,6 +642,7 @@ CMakeFiles/mega_tests.dir/src/game/GameWorld.cpp.o: /home/ivan/ImportantFiles/My
   /usr/include/c++/16/iosfwd \
   /usr/include/c++/16/istream \
   /usr/include/c++/16/limits \
+  /usr/include/c++/16/mutex \
   /usr/include/c++/16/new \
   /usr/include/c++/16/numbers \
   /usr/include/c++/16/ostream \
@@ -519,6 +650,7 @@ CMakeFiles/mega_tests.dir/src/game/GameWorld.cpp.o: /home/ivan/ImportantFiles/My
   /usr/include/c++/16/pstl/glue_algorithm_defs.h \
   /usr/include/c++/16/pstl/pstl_config.h \
   /usr/include/c++/16/queue \
+  /usr/include/c++/16/ratio \
   /usr/include/c++/16/set \
   /usr/include/c++/16/sstream \
   /usr/include/c++/16/stdexcept \
@@ -592,6 +724,358 @@ CMakeFiles/mega_tests.dir/src/game/GameWorld.cpp.o: /home/ivan/ImportantFiles/My
   /usr/include/wctype.h \
   /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdarg.h \
   /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdbool.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stddef.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdint.h
+
+CMakeFiles/mega_tests.dir/src/game/LockpickMinigame.cpp.o: /home/ivan/ImportantFiles/My\ Games/MEGA/src/game/LockpickMinigame.cpp \
+  /home/ivan/ImportantFiles/My\ Games/MEGA/src/audio/AudioEngine.hpp \
+  /home/ivan/ImportantFiles/My\ Games/MEGA/src/core/Config.hpp \
+  /home/ivan/ImportantFiles/My\ Games/MEGA/src/core/Math3D.hpp \
+  /home/ivan/ImportantFiles/My\ Games/MEGA/src/core/Rng.hpp \
+  /home/ivan/ImportantFiles/My\ Games/MEGA/src/game/LockpickMinigame.hpp \
+  /home/ivan/ImportantFiles/My\ Games/MEGA/src/world/WorldGrid.hpp \
+  /usr/include/SDL3/SDL.h \
+  /usr/include/SDL3/SDL_assert.h \
+  /usr/include/SDL3/SDL_asyncio.h \
+  /usr/include/SDL3/SDL_atomic.h \
+  /usr/include/SDL3/SDL_audio.h \
+  /usr/include/SDL3/SDL_begin_code.h \
+  /usr/include/SDL3/SDL_bits.h \
+  /usr/include/SDL3/SDL_blendmode.h \
+  /usr/include/SDL3/SDL_camera.h \
+  /usr/include/SDL3/SDL_clipboard.h \
+  /usr/include/SDL3/SDL_close_code.h \
+  /usr/include/SDL3/SDL_cpuinfo.h \
+  /usr/include/SDL3/SDL_dialog.h \
+  /usr/include/SDL3/SDL_dlopennote.h \
+  /usr/include/SDL3/SDL_endian.h \
+  /usr/include/SDL3/SDL_error.h \
+  /usr/include/SDL3/SDL_events.h \
+  /usr/include/SDL3/SDL_filesystem.h \
+  /usr/include/SDL3/SDL_gamepad.h \
+  /usr/include/SDL3/SDL_gpu.h \
+  /usr/include/SDL3/SDL_guid.h \
+  /usr/include/SDL3/SDL_haptic.h \
+  /usr/include/SDL3/SDL_hidapi.h \
+  /usr/include/SDL3/SDL_hints.h \
+  /usr/include/SDL3/SDL_init.h \
+  /usr/include/SDL3/SDL_iostream.h \
+  /usr/include/SDL3/SDL_joystick.h \
+  /usr/include/SDL3/SDL_keyboard.h \
+  /usr/include/SDL3/SDL_keycode.h \
+  /usr/include/SDL3/SDL_loadso.h \
+  /usr/include/SDL3/SDL_locale.h \
+  /usr/include/SDL3/SDL_log.h \
+  /usr/include/SDL3/SDL_messagebox.h \
+  /usr/include/SDL3/SDL_metal.h \
+  /usr/include/SDL3/SDL_misc.h \
+  /usr/include/SDL3/SDL_mouse.h \
+  /usr/include/SDL3/SDL_mutex.h \
+  /usr/include/SDL3/SDL_oldnames.h \
+  /usr/include/SDL3/SDL_pen.h \
+  /usr/include/SDL3/SDL_pixels.h \
+  /usr/include/SDL3/SDL_platform.h \
+  /usr/include/SDL3/SDL_platform_defines.h \
+  /usr/include/SDL3/SDL_power.h \
+  /usr/include/SDL3/SDL_process.h \
+  /usr/include/SDL3/SDL_properties.h \
+  /usr/include/SDL3/SDL_rect.h \
+  /usr/include/SDL3/SDL_render.h \
+  /usr/include/SDL3/SDL_scancode.h \
+  /usr/include/SDL3/SDL_sensor.h \
+  /usr/include/SDL3/SDL_stdinc.h \
+  /usr/include/SDL3/SDL_storage.h \
+  /usr/include/SDL3/SDL_surface.h \
+  /usr/include/SDL3/SDL_system.h \
+  /usr/include/SDL3/SDL_thread.h \
+  /usr/include/SDL3/SDL_time.h \
+  /usr/include/SDL3/SDL_timer.h \
+  /usr/include/SDL3/SDL_touch.h \
+  /usr/include/SDL3/SDL_tray.h \
+  /usr/include/SDL3/SDL_version.h \
+  /usr/include/SDL3/SDL_video.h \
+  /usr/include/alloca.h \
+  /usr/include/asm-generic/bitsperlong.h \
+  /usr/include/asm-generic/errno-base.h \
+  /usr/include/asm-generic/errno.h \
+  /usr/include/asm-generic/int-ll64.h \
+  /usr/include/asm-generic/posix_types.h \
+  /usr/include/asm-generic/types.h \
+  /usr/include/asm/bitsperlong.h \
+  /usr/include/asm/errno.h \
+  /usr/include/asm/posix_types.h \
+  /usr/include/asm/posix_types_64.h \
+  /usr/include/asm/types.h \
+  /usr/include/bits/atomic_wide_counter.h \
+  /usr/include/bits/byteswap.h \
+  /usr/include/bits/cpu-set.h \
+  /usr/include/bits/endian.h \
+  /usr/include/bits/endianness.h \
+  /usr/include/bits/errno.h \
+  /usr/include/bits/floatn-common.h \
+  /usr/include/bits/floatn.h \
+  /usr/include/bits/flt-eval-method.h \
+  /usr/include/bits/fp-fast.h \
+  /usr/include/bits/fp-logb.h \
+  /usr/include/bits/iscanonical.h \
+  /usr/include/bits/libc-header-start.h \
+  /usr/include/bits/libm-simd-decl-stubs.h \
+  /usr/include/bits/locale.h \
+  /usr/include/bits/long-double.h \
+  /usr/include/bits/math-vector.h \
+  /usr/include/bits/mathcalls-helper-functions.h \
+  /usr/include/bits/mathcalls-macros.h \
+  /usr/include/bits/mathcalls-narrow.h \
+  /usr/include/bits/mathcalls.h \
+  /usr/include/bits/pthread_stack_min-dynamic.h \
+  /usr/include/bits/pthreadtypes-arch.h \
+  /usr/include/bits/pthreadtypes.h \
+  /usr/include/bits/sched.h \
+  /usr/include/bits/select.h \
+  /usr/include/bits/setjmp.h \
+  /usr/include/bits/stdint-intn.h \
+  /usr/include/bits/stdint-least.h \
+  /usr/include/bits/stdint-uintn.h \
+  /usr/include/bits/stdio.h \
+  /usr/include/bits/stdio_lim.h \
+  /usr/include/bits/stdlib-bsearch.h \
+  /usr/include/bits/stdlib-float.h \
+  /usr/include/bits/struct_mutex.h \
+  /usr/include/bits/struct_rwlock.h \
+  /usr/include/bits/thread-shared-types.h \
+  /usr/include/bits/time.h \
+  /usr/include/bits/time64.h \
+  /usr/include/bits/timesize.h \
+  /usr/include/bits/timex.h \
+  /usr/include/bits/types.h \
+  /usr/include/bits/types/FILE.h \
+  /usr/include/bits/types/__FILE.h \
+  /usr/include/bits/types/__fpos64_t.h \
+  /usr/include/bits/types/__fpos_t.h \
+  /usr/include/bits/types/__locale_t.h \
+  /usr/include/bits/types/__mbstate_t.h \
+  /usr/include/bits/types/__sigset_t.h \
+  /usr/include/bits/types/clock_t.h \
+  /usr/include/bits/types/clockid_t.h \
+  /usr/include/bits/types/cookie_io_functions_t.h \
+  /usr/include/bits/types/error_t.h \
+  /usr/include/bits/types/locale_t.h \
+  /usr/include/bits/types/mbstate_t.h \
+  /usr/include/bits/types/sigset_t.h \
+  /usr/include/bits/types/struct_FILE.h \
+  /usr/include/bits/types/struct___jmp_buf_tag.h \
+  /usr/include/bits/types/struct_itimerspec.h \
+  /usr/include/bits/types/struct_sched_param.h \
+  /usr/include/bits/types/struct_timespec.h \
+  /usr/include/bits/types/struct_timeval.h \
+  /usr/include/bits/types/struct_tm.h \
+  /usr/include/bits/types/time_t.h \
+  /usr/include/bits/types/timer_t.h \
+  /usr/include/bits/types/wint_t.h \
+  /usr/include/bits/typesizes.h \
+  /usr/include/bits/uintn-identity.h \
+  /usr/include/bits/waitflags.h \
+  /usr/include/bits/waitstatus.h \
+  /usr/include/bits/wchar.h \
+  /usr/include/bits/wctype-wchar.h \
+  /usr/include/bits/wordsize.h \
+  /usr/include/c++/16/algorithm \
+  /usr/include/c++/16/array \
+  /usr/include/c++/16/backward/binders.h \
+  /usr/include/c++/16/bit \
+  /usr/include/c++/16/bits/algorithmfwd.h \
+  /usr/include/c++/16/bits/alloc_traits.h \
+  /usr/include/c++/16/bits/allocator.h \
+  /usr/include/c++/16/bits/basic_ios.h \
+  /usr/include/c++/16/bits/basic_ios.tcc \
+  /usr/include/c++/16/bits/basic_string.h \
+  /usr/include/c++/16/bits/basic_string.tcc \
+  /usr/include/c++/16/bits/char_traits.h \
+  /usr/include/c++/16/bits/charconv.h \
+  /usr/include/c++/16/bits/chrono.h \
+  /usr/include/c++/16/bits/codecvt.h \
+  /usr/include/c++/16/bits/concept_check.h \
+  /usr/include/c++/16/bits/cpp_type_traits.h \
+  /usr/include/c++/16/bits/cxxabi_forced.h \
+  /usr/include/c++/16/bits/cxxabi_init_exception.h \
+  /usr/include/c++/16/bits/enable_special_members.h \
+  /usr/include/c++/16/bits/erase_if.h \
+  /usr/include/c++/16/bits/exception.h \
+  /usr/include/c++/16/bits/exception_defines.h \
+  /usr/include/c++/16/bits/exception_ptr.h \
+  /usr/include/c++/16/bits/fstream.tcc \
+  /usr/include/c++/16/bits/functexcept.h \
+  /usr/include/c++/16/bits/functional_hash.h \
+  /usr/include/c++/16/bits/hash_bytes.h \
+  /usr/include/c++/16/bits/hashtable.h \
+  /usr/include/c++/16/bits/hashtable_policy.h \
+  /usr/include/c++/16/bits/invoke.h \
+  /usr/include/c++/16/bits/ios_base.h \
+  /usr/include/c++/16/bits/istream.tcc \
+  /usr/include/c++/16/bits/iterator_concepts.h \
+  /usr/include/c++/16/bits/locale_classes.h \
+  /usr/include/c++/16/bits/locale_classes.tcc \
+  /usr/include/c++/16/bits/locale_facets.h \
+  /usr/include/c++/16/bits/locale_facets.tcc \
+  /usr/include/c++/16/bits/localefwd.h \
+  /usr/include/c++/16/bits/max_size_type.h \
+  /usr/include/c++/16/bits/memory_resource.h \
+  /usr/include/c++/16/bits/memoryfwd.h \
+  /usr/include/c++/16/bits/move.h \
+  /usr/include/c++/16/bits/nested_exception.h \
+  /usr/include/c++/16/bits/new_allocator.h \
+  /usr/include/c++/16/bits/new_except.h \
+  /usr/include/c++/16/bits/new_throw.h \
+  /usr/include/c++/16/bits/node_handle.h \
+  /usr/include/c++/16/bits/ostream.h \
+  /usr/include/c++/16/bits/ostream.tcc \
+  /usr/include/c++/16/bits/ostream_insert.h \
+  /usr/include/c++/16/bits/ostream_print.h \
+  /usr/include/c++/16/bits/parse_numbers.h \
+  /usr/include/c++/16/bits/postypes.h \
+  /usr/include/c++/16/bits/predefined_ops.h \
+  /usr/include/c++/16/bits/ptr_traits.h \
+  /usr/include/c++/16/bits/range_access.h \
+  /usr/include/c++/16/bits/ranges_algo.h \
+  /usr/include/c++/16/bits/ranges_algobase.h \
+  /usr/include/c++/16/bits/ranges_base.h \
+  /usr/include/c++/16/bits/ranges_cmp.h \
+  /usr/include/c++/16/bits/ranges_util.h \
+  /usr/include/c++/16/bits/requires_hosted.h \
+  /usr/include/c++/16/bits/specfun.h \
+  /usr/include/c++/16/bits/sstream.tcc \
+  /usr/include/c++/16/bits/std_abs.h \
+  /usr/include/c++/16/bits/std_mutex.h \
+  /usr/include/c++/16/bits/stdexcept_except.h \
+  /usr/include/c++/16/bits/stdexcept_throw.h \
+  /usr/include/c++/16/bits/stdexcept_throwfwd.h \
+  /usr/include/c++/16/bits/stl_algo.h \
+  /usr/include/c++/16/bits/stl_algobase.h \
+  /usr/include/c++/16/bits/stl_bvector.h \
+  /usr/include/c++/16/bits/stl_construct.h \
+  /usr/include/c++/16/bits/stl_function.h \
+  /usr/include/c++/16/bits/stl_heap.h \
+  /usr/include/c++/16/bits/stl_iterator.h \
+  /usr/include/c++/16/bits/stl_iterator_base_funcs.h \
+  /usr/include/c++/16/bits/stl_iterator_base_types.h \
+  /usr/include/c++/16/bits/stl_pair.h \
+  /usr/include/c++/16/bits/stl_tempbuf.h \
+  /usr/include/c++/16/bits/stl_uninitialized.h \
+  /usr/include/c++/16/bits/stl_vector.h \
+  /usr/include/c++/16/bits/streambuf.tcc \
+  /usr/include/c++/16/bits/streambuf_iterator.h \
+  /usr/include/c++/16/bits/string_view.tcc \
+  /usr/include/c++/16/bits/stringfwd.h \
+  /usr/include/c++/16/bits/uniform_int_dist.h \
+  /usr/include/c++/16/bits/unique_lock.h \
+  /usr/include/c++/16/bits/unordered_map.h \
+  /usr/include/c++/16/bits/uses_allocator.h \
+  /usr/include/c++/16/bits/uses_allocator_args.h \
+  /usr/include/c++/16/bits/utility.h \
+  /usr/include/c++/16/bits/vector.tcc \
+  /usr/include/c++/16/bits/version.h \
+  /usr/include/c++/16/cctype \
+  /usr/include/c++/16/cerrno \
+  /usr/include/c++/16/clocale \
+  /usr/include/c++/16/cmath \
+  /usr/include/c++/16/compare \
+  /usr/include/c++/16/concepts \
+  /usr/include/c++/16/cstddef \
+  /usr/include/c++/16/cstdint \
+  /usr/include/c++/16/cstdio \
+  /usr/include/c++/16/cstdlib \
+  /usr/include/c++/16/ctime \
+  /usr/include/c++/16/cwchar \
+  /usr/include/c++/16/cwctype \
+  /usr/include/c++/16/debug/assertions.h \
+  /usr/include/c++/16/debug/debug.h \
+  /usr/include/c++/16/exception \
+  /usr/include/c++/16/ext/aligned_buffer.h \
+  /usr/include/c++/16/ext/alloc_traits.h \
+  /usr/include/c++/16/ext/atomicity.h \
+  /usr/include/c++/16/ext/numeric_traits.h \
+  /usr/include/c++/16/ext/string_conversions.h \
+  /usr/include/c++/16/ext/type_traits.h \
+  /usr/include/c++/16/fstream \
+  /usr/include/c++/16/initializer_list \
+  /usr/include/c++/16/ios \
+  /usr/include/c++/16/iosfwd \
+  /usr/include/c++/16/istream \
+  /usr/include/c++/16/limits \
+  /usr/include/c++/16/mutex \
+  /usr/include/c++/16/new \
+  /usr/include/c++/16/numbers \
+  /usr/include/c++/16/ostream \
+  /usr/include/c++/16/pstl/execution_defs.h \
+  /usr/include/c++/16/pstl/glue_algorithm_defs.h \
+  /usr/include/c++/16/pstl/pstl_config.h \
+  /usr/include/c++/16/ratio \
+  /usr/include/c++/16/sstream \
+  /usr/include/c++/16/stdexcept \
+  /usr/include/c++/16/streambuf \
+  /usr/include/c++/16/string \
+  /usr/include/c++/16/string_view \
+  /usr/include/c++/16/system_error \
+  /usr/include/c++/16/tr1/bessel_function.tcc \
+  /usr/include/c++/16/tr1/beta_function.tcc \
+  /usr/include/c++/16/tr1/ell_integral.tcc \
+  /usr/include/c++/16/tr1/exp_integral.tcc \
+  /usr/include/c++/16/tr1/gamma.tcc \
+  /usr/include/c++/16/tr1/hypergeometric.tcc \
+  /usr/include/c++/16/tr1/legendre_function.tcc \
+  /usr/include/c++/16/tr1/modified_bessel_func.tcc \
+  /usr/include/c++/16/tr1/poly_hermite.tcc \
+  /usr/include/c++/16/tr1/poly_laguerre.tcc \
+  /usr/include/c++/16/tr1/riemann_zeta.tcc \
+  /usr/include/c++/16/tr1/special_function_util.h \
+  /usr/include/c++/16/tuple \
+  /usr/include/c++/16/type_traits \
+  /usr/include/c++/16/typeinfo \
+  /usr/include/c++/16/unordered_map \
+  /usr/include/c++/16/vector \
+  /usr/include/c++/16/x86_64-pc-linux-gnu/bits/atomic_word.h \
+  /usr/include/c++/16/x86_64-pc-linux-gnu/bits/basic_file.h \
+  /usr/include/c++/16/x86_64-pc-linux-gnu/bits/c++allocator.h \
+  /usr/include/c++/16/x86_64-pc-linux-gnu/bits/c++config.h \
+  /usr/include/c++/16/x86_64-pc-linux-gnu/bits/c++io.h \
+  /usr/include/c++/16/x86_64-pc-linux-gnu/bits/c++locale.h \
+  /usr/include/c++/16/x86_64-pc-linux-gnu/bits/cpu_defines.h \
+  /usr/include/c++/16/x86_64-pc-linux-gnu/bits/ctype_base.h \
+  /usr/include/c++/16/x86_64-pc-linux-gnu/bits/ctype_inline.h \
+  /usr/include/c++/16/x86_64-pc-linux-gnu/bits/error_constants.h \
+  /usr/include/c++/16/x86_64-pc-linux-gnu/bits/gthr-default.h \
+  /usr/include/c++/16/x86_64-pc-linux-gnu/bits/gthr.h \
+  /usr/include/c++/16/x86_64-pc-linux-gnu/bits/os_defines.h \
+  /usr/include/ctype.h \
+  /usr/include/endian.h \
+  /usr/include/errno.h \
+  /usr/include/features-time64.h \
+  /usr/include/features.h \
+  /usr/include/gnu/stubs-64.h \
+  /usr/include/gnu/stubs.h \
+  /usr/include/linux/errno.h \
+  /usr/include/linux/posix_types.h \
+  /usr/include/linux/sched/types.h \
+  /usr/include/linux/stddef.h \
+  /usr/include/linux/types.h \
+  /usr/include/locale.h \
+  /usr/include/math.h \
+  /usr/include/pthread.h \
+  /usr/include/sched.h \
+  /usr/include/stdc-predef.h \
+  /usr/include/stdint.h \
+  /usr/include/stdio.h \
+  /usr/include/stdlib.h \
+  /usr/include/string.h \
+  /usr/include/strings.h \
+  /usr/include/sys/cdefs.h \
+  /usr/include/sys/select.h \
+  /usr/include/sys/single_threaded.h \
+  /usr/include/sys/types.h \
+  /usr/include/time.h \
+  /usr/include/wchar.h \
+  /usr/include/wctype.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdarg.h \
   /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stddef.h \
   /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdint.h
 
@@ -1765,6 +2249,7 @@ CMakeFiles/mega_tests.dir/tests/CoreTests.cpp.o: /home/ivan/ImportantFiles/My\ G
   /home/ivan/ImportantFiles/My\ Games/MEGA/src/core/Config.hpp \
   /home/ivan/ImportantFiles/My\ Games/MEGA/src/core/Math3D.hpp \
   /home/ivan/ImportantFiles/My\ Games/MEGA/src/game/GameWorld.hpp \
+  /home/ivan/ImportantFiles/My\ Games/MEGA/src/game/LockpickMinigame.hpp \
   /home/ivan/ImportantFiles/My\ Games/MEGA/src/game/Player.hpp \
   /home/ivan/ImportantFiles/My\ Games/MEGA/src/render/BillboardRenderer.hpp \
   /home/ivan/ImportantFiles/My\ Games/MEGA/src/render/RobotRenderer.hpp \
@@ -2272,6 +2757,7 @@ mega_tests: /usr/lib/Scrt1.o \
   /usr/lib/libmvec.so.1 \
   CMakeFiles/mega_tests.dir/src/audio/AudioEngine.cpp.o \
   CMakeFiles/mega_tests.dir/src/game/GameWorld.cpp.o \
+  CMakeFiles/mega_tests.dir/src/game/LockpickMinigame.cpp.o \
   CMakeFiles/mega_tests.dir/src/game/Player.cpp.o \
   CMakeFiles/mega_tests.dir/src/world/LightBaker.cpp.o \
   CMakeFiles/mega_tests.dir/src/world/WorldGrid.cpp.o \
@@ -2279,7 +2765,7 @@ mega_tests: /usr/lib/Scrt1.o \
   CMakeFiles/mega_tests.dir/tests/CoreTests.cpp.o
 
 
-CMakeFiles/mega_tests.dir/src/game/GameWorld.cpp.o:
+CMakeFiles/mega_tests.dir/src/game/LockpickMinigame.cpp.o:
 
 CMakeFiles/mega_tests.dir/src/audio/AudioEngine.cpp.o:
 
@@ -2347,15 +2833,11 @@ CMakeFiles/mega_tests.dir/src/audio/AudioEngine.cpp.o:
 
 /usr/include/c++/16/pstl/glue_memory_defs.h:
 
-/usr/include/c++/16/mutex:
-
 /usr/include/c++/16/functional:
 
 /usr/include/gtest/gtest-printers.h:
 
 /usr/include/c++/16/cassert:
-
-/usr/include/c++/16/bits/unique_lock.h:
 
 /usr/include/c++/16/bits/stream_iterator.h:
 
@@ -2370,10 +2852,6 @@ CMakeFiles/mega_tests.dir/src/audio/AudioEngine.cpp.o:
 /usr/include/c++/16/bits/binders.h:
 
 /usr/include/c++/16/bits/atomic_timed_wait.h:
-
-/usr/include/c++/16/bits/std_mutex.h:
-
-/usr/include/c++/16/bits/atomic_base.h:
 
 /usr/include/c++/16/backward/auto_ptr.h:
 
@@ -2417,17 +2895,9 @@ CMakeFiles/mega_tests.dir/src/audio/AudioEngine.cpp.o:
 
 /usr/include/c++/16/span:
 
-/usr/include/bits/sigthread.h:
-
-/usr/include/c++/16/ratio:
-
 /usr/include/c++/16/locale:
 
 /usr/include/c++/16/ext/concurrence.h:
-
-/usr/include/c++/16/bits/std_thread.h:
-
-/usr/include/c++/16/ctime:
 
 /usr/include/c++/16/chrono:
 
@@ -2439,8 +2909,6 @@ CMakeFiles/mega_tests.dir/src/audio/AudioEngine.cpp.o:
 
 /usr/include/c++/16/bits/unicode.h:
 
-/usr/include/c++/16/bits/parse_numbers.h:
-
 /usr/include/c++/16/bits/monostate.h:
 
 /usr/include/c++/16/bits/formatfwd.h:
@@ -2449,21 +2917,9 @@ CMakeFiles/mega_tests.dir/src/audio/AudioEngine.cpp.o:
 
 /home/ivan/ImportantFiles/My\ Games/MEGA/src/world/LightBaker.hpp:
 
+/home/ivan/ImportantFiles/My\ Games/MEGA/src/game/LockpickMinigame.cpp:
+
 /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdbool.h:
-
-/usr/include/time.h:
-
-/usr/include/c++/16/atomic:
-
-/usr/include/sys/single_threaded.h:
-
-/usr/include/locale.h:
-
-/usr/include/linux/types.h:
-
-/usr/include/c++/16/bits/chrono.h:
-
-/usr/include/inttypes.h:
 
 /usr/include/epoxy/gl.h:
 
@@ -2471,51 +2927,9 @@ CMakeFiles/mega_tests.dir/src/audio/AudioEngine.cpp.o:
 
 /usr/include/epoxy/common.h:
 
-/usr/include/c++/16/x86_64-pc-linux-gnu/bits/gthr.h:
-
-/usr/include/c++/16/bits/locale_facets_nonio.tcc:
-
-/usr/include/c++/16/x86_64-pc-linux-gnu/bits/gthr-default.h:
-
-/usr/include/bits/statx.h:
-
-/usr/include/c++/16/x86_64-pc-linux-gnu/bits/ctype_inline.h:
-
-CMakeFiles/mega_tests.dir/tests/CoreTests.cpp.o:
-
-/usr/lib/gcc/x86_64-pc-linux-gnu/16/libatomic_asneeded.so:
-
-/usr/include/linux/errno.h:
-
-/usr/include/c++/16/x86_64-pc-linux-gnu/bits/c++io.h:
-
-/usr/include/c++/16/typeinfo:
-
-/usr/include/c++/16/string:
-
-/usr/include/c++/16/streambuf:
-
 /usr/include/c++/16/set:
 
-/usr/include/c++/16/istream:
-
-/usr/include/c++/16/ios:
-
-/usr/include/c++/16/exception:
-
 /usr/include/c++/16/deque:
-
-/usr/include/c++/16/cerrno:
-
-/usr/include/c++/16/cctype:
-
-/usr/include/c++/16/bits/shared_ptr.h:
-
-/usr/include/c++/16/bits/stringfwd.h:
-
-/usr/include/c++/16/bits/streambuf_iterator.h:
-
-/usr/include/c++/16/bits/streambuf.tcc:
 
 /usr/include/c++/16/bits/stl_tree.h:
 
@@ -2529,135 +2943,99 @@ CMakeFiles/mega_tests.dir/tests/CoreTests.cpp.o:
 
 /usr/include/c++/16/bits/stl_multiset.h:
 
-/usr/include/c++/16/bits/stdexcept_except.h:
-
-/usr/include/c++/16/bits/sstream.tcc:
-
-/usr/include/c++/16/bits/postypes.h:
-
-/usr/lib/libgtest_main.so.1.18.0:
-
-/usr/lib/gcc/x86_64-pc-linux-gnu/16/crtbeginS.o:
-
-/usr/include/bits/siginfo-arch.h:
-
-/usr/include/c++/16/bits/ostream.tcc:
-
-/usr/include/c++/16/bits/ostream.h:
-
-/usr/include/c++/16/bits/nested_exception.h:
-
-CMakeFiles/mega_tests.dir/src/world/gen/MegaGenerator.cpp.o:
-
-/usr/include/c++/16/unordered_map:
-
-/usr/include/c++/16/bits/localefwd.h:
-
-/usr/include/c++/16/bits/locale_facets.tcc:
-
-/usr/include/c++/16/bits/istream.tcc:
-
-/usr/include/c++/16/bits/ios_base.h:
-
 /usr/include/c++/16/bits/intcmp.h:
-
-/usr/include/c++/16/bits/ostream_print.h:
-
-/usr/include/c++/16/bits/hashtable_policy.h:
-
-/usr/include/c++/16/bits/hashtable.h:
-
-/usr/include/c++/16/bits/functexcept.h:
-
-/usr/include/c++/16/bits/fstream.tcc:
-
-/usr/include/c++/16/bits/chrono_io.h:
-
-/usr/include/c++/16/bits/exception_ptr.h:
 
 /usr/include/c++/16/bits/deque.tcc:
 
-CMakeFiles/mega_tests.dir/src/game/Player.cpp.o:
-
-/usr/include/c++/16/bits/cxxabi_init_exception.h:
-
-CMakeFiles/mega_tests.dir/src/world/WorldGrid.cpp.o:
-
-/usr/include/c++/16/bits/basic_string.tcc:
-
-/usr/include/c++/16/bits/basic_string.h:
-
-/usr/include/c++/16/bits/basic_ios.h:
-
-/usr/include/c++/16/x86_64-pc-linux-gnu/bits/atomic_word.h:
-
-/usr/include/c++/16/queue:
-
-/usr/include/c++/16/array:
-
-/usr/include/bits/wctype-wchar.h:
-
-/usr/include/c++/16/iterator:
-
-/usr/include/c++/16/cxxabi.h:
-
-/usr/include/bits/types/struct_tm.h:
-
-/usr/include/bits/types/struct_sched_param.h:
-
-/usr/include/bits/environments.h:
-
-/usr/include/bits/types/struct_FILE.h:
-
-/usr/include/bits/types/cookie_io_functions_t.h:
-
-/usr/include/bits/types/sig_atomic_t.h:
-
-/usr/include/c++/16/bits/char_traits.h:
-
-/usr/include/bits/types/__fpos_t.h:
-
-/usr/include/c++/16/string_view:
-
-/usr/include/bits/types/__fpos64_t.h:
-
-/usr/include/bits/timex.h:
-
-/usr/include/c++/16/bits/hash_bytes.h:
-
-/usr/include/c++/16/bits/utility.h:
-
-/usr/include/c++/16/bits/cpp_type_traits.h:
-
-/usr/include/regex.h:
-
-/usr/include/epoxy/gl_generated.h:
-
-/usr/include/c++/16/bits/concept_check.h:
-
-/usr/include/bits/time64.h:
-
-/usr/include/c++/16/bit:
-
-/usr/include/c++/16/bits/alloc_traits.h:
-
-/usr/include/c++/16/backward/binders.h:
-
-/usr/include/stdio.h:
-
-/usr/include/c++/16/stdexcept:
-
-/usr/include/bits/wordsize.h:
-
-/usr/include/bits/types/struct_timespec.h:
+/home/ivan/ImportantFiles/My\ Games/MEGA/src/world/gen/MegaGenerator.hpp:
 
 /usr/include/gtest/internal/gtest-type-util.h:
 
 /home/ivan/ImportantFiles/My\ Games/MEGA/src/render/RobotRenderer.hpp:
 
-/usr/include/bits/signal_ext.h:
+/home/ivan/ImportantFiles/My\ Games/MEGA/src/render/BillboardRenderer.hpp:
 
-/usr/include/bits/types/mbstate_t.h:
+/usr/include/bits/sigstack.h:
+
+/home/ivan/ImportantFiles/My\ Games/MEGA/src/game/Player.hpp:
+
+CMakeFiles/mega_tests.dir/src/game/GameWorld.cpp.o:
+
+/home/ivan/ImportantFiles/My\ Games/MEGA/src/game/LockpickMinigame.hpp:
+
+/usr/include/time.h:
+
+/usr/include/c++/16/atomic:
+
+/usr/include/sys/single_threaded.h:
+
+/usr/include/sys/cdefs.h:
+
+/usr/include/string.h:
+
+/usr/include/math.h:
+
+/usr/include/locale.h:
+
+/usr/include/linux/types.h:
+
+/usr/include/bits/types/__sigval_t.h:
+
+/usr/include/gnu/stubs-64.h:
+
+/usr/include/c++/16/bits/stl_set.h:
+
+/usr/include/features-time64.h:
+
+/usr/include/sys/ucontext.h:
+
+/usr/include/stdc-predef.h:
+
+/usr/include/c++/16/x86_64-pc-linux-gnu/bits/os_defines.h:
+
+/usr/include/c++/16/x86_64-pc-linux-gnu/bits/gthr.h:
+
+/usr/include/c++/16/bits/locale_facets_nonio.tcc:
+
+/usr/include/c++/16/x86_64-pc-linux-gnu/bits/gthr-default.h:
+
+/home/ivan/ImportantFiles/My\ Games/MEGA/src/game/GameWorld.cpp:
+
+/usr/include/c++/16/x86_64-pc-linux-gnu/bits/error_constants.h:
+
+/usr/include/bits/statx.h:
+
+/usr/include/c++/16/x86_64-pc-linux-gnu/bits/ctype_inline.h:
+
+/usr/include/c++/16/x86_64-pc-linux-gnu/bits/cpu_defines.h:
+
+/usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdarg.h:
+
+/usr/include/c++/16/x86_64-pc-linux-gnu/bits/c++locale.h:
+
+CMakeFiles/mega_tests.dir/tests/CoreTests.cpp.o:
+
+/usr/lib/gcc/x86_64-pc-linux-gnu/16/libatomic_asneeded.so:
+
+/usr/include/linux/errno.h:
+
+/usr/include/c++/16/x86_64-pc-linux-gnu/bits/c++io.h:
+
+/usr/include/c++/16/x86_64-pc-linux-gnu/bits/c++allocator.h:
+
+/usr/include/c++/16/vector:
+
+/usr/include/c++/16/typeinfo:
+
+/usr/include/c++/16/type_traits:
+
+/usr/lib/libc.so.6:
+
+/usr/include/c++/16/tuple:
+
+/usr/include/c++/16/tr1/special_function_util.h:
+
+/usr/include/c++/16/tr1/poly_laguerre.tcc:
 
 /usr/lib/gcc/x86_64-pc-linux-gnu/16/libgcc_s.so:
 
@@ -2665,23 +3043,65 @@ CMakeFiles/mega_tests.dir/src/world/WorldGrid.cpp.o:
 
 /usr/include/c++/16/tr1/modified_bessel_func.tcc:
 
-/usr/include/bits/types/locale_t.h:
+/usr/lib/crtn.o:
 
-/usr/include/ctype.h:
+/usr/include/c++/16/tr1/legendre_function.tcc:
 
-/usr/include/c++/16/bits/stl_tempbuf.h:
+/usr/include/c++/16/x86_64-pc-linux-gnu/bits/ctype_base.h:
 
-/usr/include/c++/16/sstream:
+/usr/include/c++/16/tr1/ell_integral.tcc:
+
+/usr/include/c++/16/tr1/beta_function.tcc:
+
+/usr/include/signal.h:
+
+/usr/include/strings.h:
+
+/usr/include/c++/16/system_error:
+
+/usr/include/c++/16/string:
+
+/usr/include/c++/16/streambuf:
 
 /home/ivan/ImportantFiles/My\ Games/MEGA/src/world/Biome.hpp:
 
+/usr/include/c++/16/sstream:
+
+/usr/include/bits/sigthread.h:
+
+/usr/include/c++/16/ratio:
+
+/usr/include/c++/16/numbers:
+
+/usr/include/c++/16/mutex:
+
+/usr/include/c++/16/limits:
+
+/usr/include/c++/16/istream:
+
+/usr/include/c++/16/ios:
+
+/usr/include/bits/types/struct_sigstack.h:
+
+/usr/include/c++/16/tr1/riemann_zeta.tcc:
+
+/usr/include/c++/16/initializer_list:
+
+/usr/include/sys/select.h:
+
+/usr/include/c++/16/ext/aligned_buffer.h:
+
+/usr/include/c++/16/exception:
+
+/usr/include/c++/16/pstl/glue_algorithm_defs.h:
+
+/usr/include/c++/16/debug/assertions.h:
+
 /usr/include/bits/mathcalls.h:
 
-/usr/include/c++/16/x86_64-pc-linux-gnu/bits/cpu_defines.h:
+/usr/include/c++/16/string_view:
 
-/usr/include/c++/16/iosfwd:
-
-/usr/include/bits/types/__sigset_t.h:
+/usr/include/bits/types/__fpos64_t.h:
 
 /usr/include/linux/posix_types.h:
 
@@ -2693,9 +3113,31 @@ CMakeFiles/mega_tests.dir/src/world/WorldGrid.cpp.o:
 
 /usr/include/bits/types.h:
 
-/usr/include/c++/16/bits/locale_facets.h:
+/usr/include/bits/timex.h:
 
-/usr/include/bits/struct_mutex.h:
+/usr/include/bits/time64.h:
+
+/home/ivan/ImportantFiles/My\ Games/MEGA/src/render/Shader.hpp:
+
+/usr/include/bits/stdlib-float.h:
+
+/usr/include/c++/16/pstl/execution_defs.h:
+
+/usr/include/c++/16/bits/allocator.h:
+
+/usr/include/c++/16/bits/istream.tcc:
+
+/usr/include/c++/16/cerrno:
+
+/usr/lib/gcc/x86_64-pc-linux-gnu/16/crtendS.o:
+
+/usr/include/bits/stdio_lim.h:
+
+/usr/include/bits/types/__mbstate_t.h:
+
+/usr/include/bits/siginfo-consts-arch.h:
+
+/usr/include/SDL3/SDL_guid.h:
 
 /usr/include/SDL3/SDL_loadso.h:
 
@@ -2711,25 +3153,23 @@ CMakeFiles/mega_tests.dir/src/world/WorldGrid.cpp.o:
 
 /usr/include/bits/pthreadtypes-arch.h:
 
-/usr/include/bits/types/timer_t.h:
+/usr/include/c++/16/bits/std_function.h:
 
-/usr/include/bits/signum-generic.h:
+/usr/include/stdint.h:
 
-/usr/include/SDL3/SDL_metal.h:
+/usr/include/endian.h:
+
+/usr/include/c++/16/bits/exception.h:
+
+/usr/include/bits/pthread_stack_min-dynamic.h:
 
 /usr/include/c++/16/bits/refwrap.h:
 
 /usr/include/bits/mathcalls-narrow.h:
 
-/usr/include/bits/types/time_t.h:
-
-/usr/include/SDL3/SDL_clipboard.h:
-
 /usr/include/bits/struct_rwlock.h:
 
 /usr/include/c++/16/bits/ptr_traits.h:
-
-/usr/include/string.h:
 
 /usr/include/bits/long-double.h:
 
@@ -2737,41 +3177,61 @@ CMakeFiles/mega_tests.dir/src/world/WorldGrid.cpp.o:
 
 /usr/include/bits/fp-logb.h:
 
+/usr/include/wctype.h:
+
+/usr/include/sched.h:
+
+/usr/include/c++/16/tr1/hypergeometric.tcc:
+
+/usr/include/bits/fp-fast.h:
+
+CMakeFiles/mega_tests.dir/src/world/WorldGrid.cpp.o:
+
+/usr/include/c++/16/bits/basic_string.tcc:
+
 /usr/include/c++/16/bits/vector.tcc:
 
 /usr/include/bits/floatn.h:
 
 /usr/include/SDL3/SDL_tray.h:
 
-/usr/include/bits/stdint-intn.h:
+/usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdint.h:
 
-/usr/include/bits/types/clockid_t.h:
+/usr/include/SDL3/SDL_close_code.h:
 
-/usr/include/c++/16/cwctype:
+/usr/include/asm/types.h:
 
-/usr/include/c++/16/bits/cxxabi_forced.h:
+/usr/include/c++/16/iosfwd:
 
-/usr/include/SDL3/SDL_stdinc.h:
+/usr/include/bits/types/__sigset_t.h:
 
-/usr/include/c++/16/ext/string_conversions.h:
+/usr/include/c++/16/version:
 
-/usr/include/c++/16/bits/charconv.h:
+/usr/include/asm-generic/int-ll64.h:
 
-/usr/include/bits/atomic_wide_counter.h:
+/usr/lib/gcc/x86_64-pc-linux-gnu/16/libatomic.so:
+
+/usr/include/bits/mathcalls-macros.h:
+
+/home/ivan/ImportantFiles/My\ Games/MEGA/src/game/Player.cpp:
+
+/home/ivan/ImportantFiles/My\ Games/MEGA/src/world/WorldGrid.hpp:
+
+/usr/include/SDL3/SDL_process.h:
 
 /usr/include/alloca.h:
 
-/usr/include/c++/16/bits/ostream_insert.h:
+/usr/include/c++/16/bits/hashtable.h:
 
-/usr/include/SDL3/SDL_video.h:
+/usr/include/c++/16/bits/allocated_ptr.h:
 
-/usr/include/c++/16/bits/exception_defines.h:
+/usr/include/SDL3/SDL_touch.h:
 
-/usr/include/SDL3/SDL_joystick.h:
+/usr/include/c++/16/bits/fstream.tcc:
 
-/usr/include/SDL3/SDL_surface.h:
+/usr/include/SDL3/SDL_time.h:
 
-/usr/include/SDL3/SDL_system.h:
+/usr/include/c++/16/bits/basic_string.h:
 
 /usr/include/c++/16/any:
 
@@ -2779,51 +3239,91 @@ CMakeFiles/mega_tests.dir/src/world/WorldGrid.cpp.o:
 
 /usr/include/SDL3/SDL_hints.h:
 
-/usr/include/SDL3/SDL_close_code.h:
-
-/usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdint.h:
-
-/usr/include/libintl.h:
-
-/usr/include/bits/endianness.h:
+/usr/include/SDL3/SDL_system.h:
 
 /usr/include/c++/16/bits/stl_deque.h:
 
 /usr/include/bits/waitflags.h:
 
-/usr/include/bits/uintn-identity.h:
+/usr/include/libintl.h:
 
-/usr/include/c++/16/cstdio:
+/usr/include/bits/endianness.h:
 
-/usr/include/SDL3/SDL_sensor.h:
+/usr/include/SDL3/SDL_hidapi.h:
 
-/usr/include/bits/typesizes.h:
+/usr/include/SDL3/SDL_gamepad.h:
+
+/usr/include/c++/16/x86_64-pc-linux-gnu/bits/cxxabi_tweaks.h:
+
+/usr/include/bits/errno.h:
+
+/usr/include/c++/16/cstdlib:
 
 /usr/include/c++/16/bits/locale_conv.h:
 
 /usr/include/SDL3/SDL_cpuinfo.h:
 
+/usr/include/bits/cpu-set.h:
+
+/usr/include/SDL3/SDL_bits.h:
+
+/home/ivan/ImportantFiles/My\ Games/MEGA/tests/CoreTests.cpp:
+
+/usr/include/asm/posix_types_64.h:
+
+/usr/include/c++/16/bits/chrono_io.h:
+
+/usr/include/c++/16/bits/exception_ptr.h:
+
+/usr/include/bits/time.h:
+
+/usr/include/asm/posix_types.h:
+
+/usr/include/SDL3/SDL_clipboard.h:
+
+/usr/include/wchar.h:
+
+/usr/include/SDL3/SDL_keycode.h:
+
+/usr/include/bits/types/time_t.h:
+
+CMakeFiles/mega_tests.dir/src/world/gen/MegaGenerator.cpp.o:
+
+/usr/include/c++/16/unordered_map:
+
+/usr/include/c++/16/bits/localefwd.h:
+
+/usr/lib/libgtest_main.so.1.18.0:
+
+/usr/lib/gcc/x86_64-pc-linux-gnu/16/crtbeginS.o:
+
+/usr/include/bits/siginfo-arch.h:
+
+/usr/include/c++/16/bits/ostream.tcc:
+
+/usr/include/SDL3/SDL_properties.h:
+
+/usr/include/bits/types/cookie_io_functions_t.h:
+
+/usr/include/SDL3/SDL_gpu.h:
+
 /usr/include/bits/stdlib-bsearch.h:
 
-/usr/include/bits/iscanonical.h:
+/usr/include/SDL3/SDL_surface.h:
 
-/usr/include/SDL3/SDL_events.h:
+/usr/include/asm-generic/errno-base.h:
 
-/usr/include/SDL3/SDL_dialog.h:
+/usr/include/c++/16/clocale:
 
-/usr/include/c++/16/bits/stl_multimap.h:
+/usr/include/features.h:
 
-/usr/include/SDL3/SDL_error.h:
+/usr/include/bits/types/__FILE.h:
 
-/usr/include/bits/siginfo-consts-arch.h:
+/usr/include/bits/sched.h:
 
-/usr/include/SDL3/SDL_guid.h:
+/usr/include/c++/16/bits/memoryfwd.h:
 
-/usr/include/bits/types/__mbstate_t.h:
-
-/usr/lib/gcc/x86_64-pc-linux-gnu/16/crtendS.o:
-
-/usr/include/bits/stdio_lim.h:
+/usr/include/c++/16/bits/stl_construct.h:
 
 /home/ivan/ImportantFiles/My\ Games/MEGA/src/audio/AudioEngine.cpp:
 
@@ -2833,45 +3333,29 @@ CMakeFiles/mega_tests.dir/src/world/WorldGrid.cpp.o:
 
 /usr/include/SDL3/SDL_audio.h:
 
-/usr/include/linux/sched/types.h:
-
-/usr/include/c++/16/cwchar:
-
-/usr/include/SDL3/SDL_dlopennote.h:
-
 /usr/include/c++/16/bits/stl_function.h:
-
-/usr/include/SDL3/SDL_keyboard.h:
-
-/home/ivan/ImportantFiles/My\ Games/MEGA/src/audio/AudioEngine.hpp:
-
-/usr/include/c++/16/bits/node_handle.h:
-
-/usr/include/SDL3/SDL_oldnames.h:
 
 /usr/include/c++/16/bits/range_access.h:
 
-/usr/include/SDL3/SDL_pixels.h:
+/usr/include/bits/iscanonical.h:
 
-/usr/include/bits/types/wint_t.h:
+/usr/include/SDL3/SDL_events.h:
 
-/usr/include/c++/16/new:
+/usr/include/c++/16/bits/ios_base.h:
 
-/usr/include/SDL3/SDL_filesystem.h:
+/home/ivan/ImportantFiles/My\ Games/MEGA/src/audio/AudioEngine.hpp:
 
-/usr/include/bits/siginfo-consts.h:
+/usr/include/SDL3/SDL_keyboard.h:
 
-/usr/include/SDL3/SDL_assert.h:
+/usr/include/SDL3/SDL_dialog.h:
 
-/usr/lib/gcc/x86_64-pc-linux-gnu/16/libatomic.so:
+/usr/include/c++/16/bits/stl_multimap.h:
 
-/usr/include/bits/mathcalls-macros.h:
-
-/usr/include/c++/16/version:
-
-/usr/include/asm-generic/int-ll64.h:
+/usr/include/SDL3/SDL_error.h:
 
 /usr/include/c++/16/bits/max_size_type.h:
+
+/usr/include/c++/16/bits/ostream.h:
 
 /usr/include/c++/16/bits/predefined_ops.h:
 
@@ -2881,11 +3365,47 @@ CMakeFiles/mega_tests.dir/src/world/WorldGrid.cpp.o:
 
 /usr/include/bits/endian.h:
 
+/usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stddef.h:
+
+/usr/include/bits/stdint-uintn.h:
+
+/usr/include/asm/errno.h:
+
 /usr/include/SDL3/SDL_haptic.h:
 
-/usr/include/SDL3/SDL_gpu.h:
+/usr/include/bits/types/clock_t.h:
 
-/usr/include/SDL3/SDL_properties.h:
+/usr/include/SDL3/SDL_iostream.h:
+
+/usr/include/SDL3/SDL_begin_code.h:
+
+/home/ivan/ImportantFiles/My\ Games/MEGA/src/core/Rng.hpp:
+
+/usr/include/SDL3/SDL_pen.h:
+
+/usr/include/bits/stdio.h:
+
+/usr/include/c++/16/ext/type_traits.h:
+
+/usr/include/bits/thread-shared-types.h:
+
+/usr/include/bits/siginfo-consts.h:
+
+/usr/include/SDL3/SDL_assert.h:
+
+/usr/include/bits/types/sig_atomic_t.h:
+
+/usr/include/bits/types/__fpos_t.h:
+
+/usr/include/c++/16/bits/char_traits.h:
+
+/usr/include/SDL3/SDL_pixels.h:
+
+/usr/include/regex.h:
+
+/usr/include/epoxy/gl_generated.h:
+
+/usr/include/c++/16/bits/concept_check.h:
 
 /usr/include/c++/16/bits/shared_ptr_base.h:
 
@@ -2893,47 +3413,41 @@ CMakeFiles/mega_tests.dir/src/world/WorldGrid.cpp.o:
 
 /usr/include/SDL3/SDL_mouse.h:
 
-/usr/include/c++/16/bits/locale_classes.tcc:
+/usr/include/bits/struct_mutex.h:
 
-/usr/include/SDL3/SDL_atomic.h:
-
-/usr/include/SDL3/SDL_gamepad.h:
-
-/usr/include/SDL3/SDL_hidapi.h:
-
-/usr/include/bits/pthread_stack_min-dynamic.h:
+/usr/include/c++/16/bits/locale_facets.h:
 
 /usr/include/SDL3/SDL_locale.h:
 
 /usr/include/c++/16/bits/ranges_cmp.h:
 
-/usr/include/c++/16/x86_64-pc-linux-gnu/bits/c++locale.h:
+/usr/include/stdlib.h:
 
-/usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdarg.h:
+/usr/include/SDL3/SDL_log.h:
 
-/usr/include/bits/ss_flags.h:
+/usr/include/bits/environments.h:
 
-/usr/include/c++/16/bits/stl_iterator_base_funcs.h:
+/usr/include/bits/types/struct_FILE.h:
 
-/usr/include/c++/16/bits/stl_algobase.h:
+/usr/include/c++/16/bits/stdexcept_except.h:
 
-/usr/include/SDL3/SDL_blendmode.h:
+/usr/include/bits/stdint-intn.h:
 
-/usr/include/c++/16/bits/string_view.tcc:
+/usr/include/bits/types/clockid_t.h:
 
-/usr/include/SDL3/SDL_messagebox.h:
+/usr/include/c++/16/ext/alloc_traits.h:
 
-/usr/include/bits/types/struct___jmp_buf_tag.h:
+/usr/include/c++/16/bits/unordered_map.h:
 
-/usr/include/bits/waitstatus.h:
+/usr/include/bits/signum-generic.h:
 
-/usr/include/bits/wchar.h:
+/usr/include/SDL3/SDL_metal.h:
 
-/usr/include/SDL3/SDL_process.h:
+/usr/include/bits/types/timer_t.h:
 
-/home/ivan/ImportantFiles/My\ Games/MEGA/src/game/Player.cpp:
+/usr/include/SDL3/SDL_video.h:
 
-/home/ivan/ImportantFiles/My\ Games/MEGA/src/world/WorldGrid.hpp:
+/usr/include/c++/16/bits/ostream_insert.h:
 
 /usr/include/c++/16/stdlib.h:
 
@@ -2949,19 +3463,23 @@ CMakeFiles/mega_tests.dir/src/world/WorldGrid.cpp.o:
 
 /usr/include/SDL3/SDL_storage.h:
 
+/usr/include/c++/16/iterator:
+
+/usr/include/c++/16/cxxabi.h:
+
+/usr/include/bits/types/struct_tm.h:
+
 /usr/include/c++/16/memory:
 
 /usr/include/SDL3/SDL_platform.h:
 
-/usr/include/bits/types/clock_t.h:
+/usr/include/c++/16/semaphore:
 
-/usr/include/SDL3/SDL_begin_code.h:
+/usr/include/asm/bitsperlong.h:
 
-/usr/include/SDL3/SDL_iostream.h:
+/usr/lib/ld-linux-x86-64.so.2:
 
-/usr/include/bits/time.h:
-
-/usr/include/asm/posix_types.h:
+/home/ivan/ImportantFiles/My\ Games/MEGA/src/core/Config.hpp:
 
 /usr/include/SDL3/SDL_misc.h:
 
@@ -2971,6 +3489,62 @@ CMakeFiles/mega_tests.dir/src/world/WorldGrid.cpp.o:
 
 /usr/include/SDL3/SDL_platform_defines.h:
 
+/usr/include/SDL3/SDL_power.h:
+
+/usr/include/c++/16/bits/streambuf.tcc:
+
+/usr/include/SDL3/SDL_rect.h:
+
+/usr/include/c++/16/tr1/exp_integral.tcc:
+
+/usr/include/c++/16/bits/enable_special_members.h:
+
+/usr/include/bits/floatn-common.h:
+
+/home/ivan/ImportantFiles/My\ Games/MEGA/src/core/Math3D.hpp:
+
+/usr/include/c++/16/bits/locale_facets_nonio.h:
+
+/usr/include/SDL3/SDL_render.h:
+
+/usr/include/c++/16/x86_64-pc-linux-gnu/bits/c++config.h:
+
+/usr/include/bits/setjmp.h:
+
+/usr/lib/libgtest.so.1.18.0:
+
+/usr/include/bits/types/struct_itimerspec.h:
+
+/usr/include/SDL3/SDL_scancode.h:
+
+/home/ivan/ImportantFiles/My\ Games/MEGA/src/world/gen/MegaGenerator.cpp:
+
+/usr/include/SDL3/SDL_version.h:
+
+/usr/include/c++/16/algorithm:
+
+/usr/include/bits/uintn-identity.h:
+
+/usr/include/gtest/gtest-death-test.h:
+
+/home/ivan/ImportantFiles/My\ Games/MEGA/src/world/LightBaker.cpp:
+
+/usr/include/SDL3/SDL_thread.h:
+
+/usr/include/c++/16/tr1/poly_hermite.tcc:
+
+/usr/include/bits/types/error_t.h:
+
+/usr/include/bits/types/locale_t.h:
+
+/usr/include/ctype.h:
+
+/usr/include/c++/16/bits/stl_tempbuf.h:
+
+/usr/include/bits/signal_ext.h:
+
+/usr/include/bits/types/mbstate_t.h:
+
 /usr/include/bits/types/sigset_t.h:
 
 /usr/include/bits/confname.h:
@@ -2979,63 +3553,145 @@ CMakeFiles/mega_tests.dir/src/world/WorldGrid.cpp.o:
 
 /usr/include/c++/16/bits/memory_resource.h:
 
-/usr/include/SDL3/SDL_power.h:
+/usr/include/bits/wchar.h:
 
-/usr/include/SDL3/SDL_rect.h:
+/usr/include/bits/waitstatus.h:
 
-/home/ivan/ImportantFiles/My\ Games/MEGA/src/world/gen/MegaGenerator.cpp:
+/usr/include/bits/types/struct___jmp_buf_tag.h:
 
-/usr/include/SDL3/SDL_version.h:
+/usr/include/bits/types/struct_sched_param.h:
 
-/usr/include/c++/16/algorithm:
+/usr/include/c++/16/cwctype:
 
-/usr/lib/libgtest.so.1.18.0:
+/usr/include/SDL3/SDL_stdinc.h:
 
-/usr/include/bits/types/struct_itimerspec.h:
+/usr/include/c++/16/bits/cxxabi_forced.h:
 
-/usr/include/SDL3/SDL_scancode.h:
+/usr/include/bits/types/struct_timespec.h:
 
-/usr/include/c++/16/bits/locale_facets_nonio.h:
+/usr/include/c++/16/pstl/pstl_config.h:
 
-/usr/include/SDL3/SDL_render.h:
+/usr/include/c++/16/ostream:
 
-/usr/include/gtest/gtest-death-test.h:
+/usr/include/bits/types/struct_timeval.h:
 
-/home/ivan/ImportantFiles/My\ Games/MEGA/src/world/LightBaker.cpp:
+/usr/include/SDL3/SDL_atomic.h:
 
-/usr/include/SDL3/SDL_thread.h:
+/usr/include/c++/16/bits/locale_classes.tcc:
 
-/usr/include/SDL3/SDL_time.h:
+/usr/include/c++/16/new:
 
-/usr/include/c++/16/bits/allocated_ptr.h:
+/usr/include/SDL3/SDL_filesystem.h:
 
-/usr/include/SDL3/SDL_touch.h:
+/usr/include/bits/types/wint_t.h:
+
+/usr/include/c++/16/backward/binders.h:
+
+/usr/include/bits/typesizes.h:
+
+/usr/include/bits/wctype-wchar.h:
+
+/usr/include/c++/16/bits/unique_lock.h:
+
+/usr/include/stdio.h:
+
+/usr/include/c++/16/stdexcept:
+
+/usr/include/bits/wordsize.h:
+
+/usr/include/c++/16/queue:
+
+/usr/include/c++/16/x86_64-pc-linux-gnu/bits/atomic_word.h:
+
+/usr/include/c++/16/array:
+
+/usr/include/c++/16/bit:
+
+/usr/include/c++/16/stop_token:
+
+/usr/include/c++/16/tr1/bessel_function.tcc:
+
+/usr/include/bits/libm-simd-decl-stubs.h:
+
+/usr/include/c++/16/bits/algorithmfwd.h:
+
+/usr/include/bits/ss_flags.h:
+
+/usr/include/c++/16/bits/stl_algobase.h:
+
+/usr/include/SDL3/SDL_blendmode.h:
+
+/usr/include/c++/16/bits/stl_iterator_base_funcs.h:
+
+/usr/include/c++/16/bits/alloc_traits.h:
+
+/usr/include/c++/16/bits/basic_ios.h:
+
+/usr/include/c++/16/ext/string_conversions.h:
+
+/usr/include/bits/atomic_wide_counter.h:
+
+/usr/include/c++/16/bits/charconv.h:
+
+/usr/include/gnu/stubs.h:
+
+/usr/include/c++/16/bits/std_abs.h:
+
+/usr/include/inttypes.h:
+
+/usr/include/c++/16/bits/chrono.h:
+
+/usr/include/c++/16/bits/cpp_type_traits.h:
+
+CMakeFiles/mega_tests.dir/src/game/Player.cpp.o:
+
+/usr/include/c++/16/bits/cxxabi_init_exception.h:
+
+/usr/include/gtest/gtest-typed-test.h:
+
+/usr/include/bits/sigevent-consts.h:
+
+/usr/include/c++/16/tr1/gamma.tcc:
+
+/usr/include/SDL3/SDL_init.h:
+
+/usr/include/c++/16/bits/erase_if.h:
+
+/usr/include/c++/16/bits/hash_bytes.h:
+
+/usr/include/c++/16/bits/utility.h:
+
+/usr/include/SDL3/SDL_joystick.h:
+
+/usr/include/c++/16/bits/exception_defines.h:
+
+/usr/include/c++/16/bits/functexcept.h:
 
 CMakeFiles/mega_tests.dir/src/world/LightBaker.cpp.o:
 
 /usr/include/c++/16/bits/functional_hash.h:
 
+/usr/include/c++/16/bits/shared_ptr.h:
+
+/usr/include/c++/16/bits/stringfwd.h:
+
 /usr/include/c++/16/bits/stdexcept_throwfwd.h:
 
 /usr/include/c++/16/bits/invoke.h:
 
-/usr/include/SDL3/SDL_keycode.h:
-
-/usr/include/wchar.h:
+/usr/include/c++/16/cctype:
 
 /usr/include/c++/16/bits/iterator_concepts.h:
 
-/usr/include/c++/16/bits/memoryfwd.h:
+/usr/include/c++/16/ext/atomicity.h:
 
-/usr/include/c++/16/bits/stl_construct.h:
+/usr/include/c++/16/bits/new_throw.h:
 
-/usr/include/bits/types/__FILE.h:
-
-/usr/include/features.h:
-
-/usr/include/bits/sched.h:
+/usr/include/c++/16/bits/locale_facets.tcc:
 
 /usr/include/c++/16/bits/move.h:
+
+/usr/include/c++/16/bits/nested_exception.h:
 
 /usr/include/c++/16/map:
 
@@ -3045,9 +3701,17 @@ CMakeFiles/mega_tests.dir/src/world/LightBaker.cpp.o:
 
 /usr/include/c++/16/bits/new_except.h:
 
-/usr/include/c++/16/ext/atomicity.h:
+/usr/include/SDL3/SDL_oldnames.h:
 
-/usr/include/c++/16/bits/new_throw.h:
+/usr/include/c++/16/bits/node_handle.h:
+
+/usr/include/c++/16/bits/hashtable_policy.h:
+
+/usr/include/c++/16/bits/ostream_print.h:
+
+/usr/include/c++/16/bits/parse_numbers.h:
+
+/usr/include/c++/16/bits/postypes.h:
 
 /usr/include/c++/16/bits/ranges_algo.h:
 
@@ -3055,53 +3719,75 @@ CMakeFiles/mega_tests.dir/src/world/LightBaker.cpp.o:
 
 /usr/include/c++/16/bits/ranges_base.h:
 
-/usr/include/SDL3/SDL_log.h:
+/home/ivan/ImportantFiles/My\ Games/MEGA/src/game/GameWorld.hpp:
 
-/usr/include/stdlib.h:
+/usr/include/c++/16/bits/uses_allocator_args.h:
+
+/usr/include/sys/types.h:
+
+/usr/include/c++/16/bits/ranges_algobase.h:
 
 /usr/include/bits/mathcalls-helper-functions.h:
 
 /usr/include/c++/16/bits/specfun.h:
 
-/usr/include/gnu/stubs.h:
+/usr/include/c++/16/bits/sstream.tcc:
 
-/usr/include/c++/16/bits/std_abs.h:
+/usr/include/c++/16/bits/atomic_base.h:
+
+/usr/include/c++/16/bits/std_mutex.h:
 
 /usr/include/c++/16/bits/stdexcept_throw.h:
-
-/usr/include/c++/16/bits/std_function.h:
-
-/usr/include/c++/16/bits/exception.h:
-
-/usr/include/endian.h:
-
-/usr/include/stdint.h:
 
 /usr/include/c++/16/optional:
 
 /usr/include/c++/16/bits/stl_algo.h:
 
+/usr/include/c++/16/debug/debug.h:
+
+/usr/include/asm-generic/types.h:
+
+/usr/include/asm-generic/bitsperlong.h:
+
+/usr/include/c++/16/bits/stl_bvector.h:
+
+/usr/include/asm-generic/posix_types.h:
+
+/usr/include/c++/16/bits/uses_allocator.h:
+
 /usr/include/c++/16/bits/codecvt.h:
 
 /usr/include/c++/16/bits/stl_heap.h:
 
-/usr/include/bits/stdlib-float.h:
+/usr/include/c++/16/ext/numeric_traits.h:
 
-/home/ivan/ImportantFiles/My\ Games/MEGA/src/render/Shader.hpp:
+/usr/include/c++/16/bits/stl_iterator.h:
 
 /usr/include/c++/16/x86_64-pc-linux-gnu/bits/basic_file.h:
 
 /usr/include/c++/16/bits/stl_iterator_base_types.h:
 
+/usr/include/bits/locale.h:
+
+/usr/include/SDL3/SDL.h:
+
+/usr/include/c++/16/bits/stl_pair.h:
+
 /usr/include/SDL3/SDL_timer.h:
 
 /usr/include/c++/16/bits/stl_uninitialized.h:
+
+/usr/include/SDL3/SDL_messagebox.h:
+
+/usr/include/c++/16/bits/string_view.tcc:
 
 /usr/include/c++/16/bits/semaphore_base.h:
 
 /usr/include/asm-generic/errno.h:
 
 /usr/include/c++/16/bits/stl_vector.h:
+
+/usr/include/c++/16/bits/streambuf_iterator.h:
 
 /usr/include/c++/16/bits/uniform_int_dist.h:
 
@@ -3113,15 +3799,9 @@ CMakeFiles/mega_tests.dir/src/world/LightBaker.cpp.o:
 
 /usr/include/c++/16/cmath:
 
-/usr/include/c++/16/limits:
-
 /usr/include/pthread.h:
 
 /usr/include/c++/16/compare:
-
-/usr/lib/libc.so.6:
-
-/usr/include/c++/16/tuple:
 
 /usr/include/c++/16/utility:
 
@@ -3139,204 +3819,16 @@ CMakeFiles/mega_tests.dir/src/world/LightBaker.cpp.o:
 
 /usr/include/c++/16/cstdint:
 
-/usr/include/SDL3/SDL_bits.h:
+/usr/include/SDL3/SDL_sensor.h:
 
-/usr/include/bits/cpu-set.h:
+/usr/include/c++/16/cstdio:
 
-/usr/include/c++/16/pstl/glue_algorithm_defs.h:
+/usr/include/c++/16/bits/std_thread.h:
 
-/usr/include/c++/16/debug/assertions.h:
+/usr/include/c++/16/ctime:
 
-/usr/include/c++/16/bits/unordered_map.h:
+/usr/include/linux/sched/types.h:
 
-/usr/include/c++/16/ext/alloc_traits.h:
+/usr/include/SDL3/SDL_dlopennote.h:
 
-/usr/include/c++/16/bits/stl_iterator.h:
-
-/usr/include/c++/16/ext/numeric_traits.h:
-
-/usr/include/bits/thread-shared-types.h:
-
-/usr/include/c++/16/ext/type_traits.h:
-
-/usr/include/bits/types/struct_sigstack.h:
-
-/usr/include/c++/16/tr1/riemann_zeta.tcc:
-
-/usr/include/c++/16/initializer_list:
-
-/usr/include/c++/16/numbers:
-
-/usr/include/c++/16/x86_64-pc-linux-gnu/bits/cxxabi_tweaks.h:
-
-/usr/include/c++/16/cstdlib:
-
-/usr/include/bits/errno.h:
-
-/usr/include/c++/16/bits/allocator.h:
-
-/usr/include/c++/16/pstl/execution_defs.h:
-
-/usr/include/c++/16/ostream:
-
-/usr/include/bits/types/struct_timeval.h:
-
-/usr/include/c++/16/pstl/pstl_config.h:
-
-/usr/include/c++/16/stop_token:
-
-/usr/include/c++/16/bits/algorithmfwd.h:
-
-/usr/include/bits/libm-simd-decl-stubs.h:
-
-/usr/include/c++/16/tr1/bessel_function.tcc:
-
-/usr/include/c++/16/tr1/beta_function.tcc:
-
-/usr/include/c++/16/x86_64-pc-linux-gnu/bits/ctype_base.h:
-
-/usr/include/c++/16/tr1/ell_integral.tcc:
-
-/usr/include/gtest/gtest-typed-test.h:
-
-/usr/include/bits/sigevent-consts.h:
-
-/usr/include/c++/16/bits/erase_if.h:
-
-/usr/include/SDL3/SDL_init.h:
-
-/usr/include/c++/16/tr1/gamma.tcc:
-
-/usr/include/wctype.h:
-
-/usr/include/sched.h:
-
-/usr/include/bits/fp-fast.h:
-
-/usr/include/c++/16/tr1/hypergeometric.tcc:
-
-/usr/include/c++/16/type_traits:
-
-/usr/lib/crtn.o:
-
-/usr/include/c++/16/tr1/legendre_function.tcc:
-
-/usr/include/bits/types/error_t.h:
-
-/usr/include/c++/16/tr1/poly_hermite.tcc:
-
-/usr/include/c++/16/tr1/poly_laguerre.tcc:
-
-/usr/include/c++/16/tr1/special_function_util.h:
-
-/usr/include/c++/16/vector:
-
-/usr/include/c++/16/x86_64-pc-linux-gnu/bits/c++allocator.h:
-
-/usr/include/c++/16/bits/stl_set.h:
-
-/usr/include/features-time64.h:
-
-/usr/include/bits/types/__sigval_t.h:
-
-/usr/include/gnu/stubs-64.h:
-
-/usr/include/math.h:
-
-/usr/include/sys/ucontext.h:
-
-/usr/include/c++/16/x86_64-pc-linux-gnu/bits/os_defines.h:
-
-/usr/include/stdc-predef.h:
-
-/usr/include/c++/16/bits/uses_allocator.h:
-
-/usr/include/asm-generic/posix_types.h:
-
-/usr/include/signal.h:
-
-/usr/include/c++/16/system_error:
-
-/usr/include/strings.h:
-
-/usr/include/sys/cdefs.h:
-
-/usr/include/c++/16/ext/aligned_buffer.h:
-
-/usr/include/sys/select.h:
-
-/usr/include/c++/16/bits/ranges_algobase.h:
-
-/usr/include/sys/types.h:
-
-/usr/include/c++/16/x86_64-pc-linux-gnu/bits/error_constants.h:
-
-/home/ivan/ImportantFiles/My\ Games/MEGA/src/game/GameWorld.cpp:
-
-/usr/lib/ld-linux-x86-64.so.2:
-
-/home/ivan/ImportantFiles/My\ Games/MEGA/src/core/Config.hpp:
-
-/usr/include/c++/16/bits/enable_special_members.h:
-
-/usr/include/bits/floatn-common.h:
-
-/usr/include/c++/16/tr1/exp_integral.tcc:
-
-/home/ivan/ImportantFiles/My\ Games/MEGA/src/core/Math3D.hpp:
-
-/usr/include/SDL3/SDL_pen.h:
-
-/home/ivan/ImportantFiles/My\ Games/MEGA/src/core/Rng.hpp:
-
-/usr/include/c++/16/bits/uses_allocator_args.h:
-
-/home/ivan/ImportantFiles/My\ Games/MEGA/src/game/GameWorld.hpp:
-
-/usr/include/SDL3/SDL.h:
-
-/usr/include/c++/16/bits/stl_pair.h:
-
-/usr/include/bits/locale.h:
-
-/usr/include/bits/sigstack.h:
-
-/home/ivan/ImportantFiles/My\ Games/MEGA/src/game/Player.hpp:
-
-/home/ivan/ImportantFiles/My\ Games/MEGA/src/render/BillboardRenderer.hpp:
-
-/home/ivan/ImportantFiles/My\ Games/MEGA/src/world/gen/MegaGenerator.hpp:
-
-/usr/include/c++/16/clocale:
-
-/usr/include/asm-generic/errno-base.h:
-
-/usr/include/asm-generic/bitsperlong.h:
-
-/usr/include/c++/16/bits/stl_bvector.h:
-
-/usr/include/c++/16/debug/debug.h:
-
-/usr/include/asm-generic/types.h:
-
-/usr/include/c++/16/semaphore:
-
-/usr/include/asm/bitsperlong.h:
-
-/usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stddef.h:
-
-/usr/include/bits/stdint-uintn.h:
-
-/usr/include/asm/errno.h:
-
-/home/ivan/ImportantFiles/My\ Games/MEGA/tests/CoreTests.cpp:
-
-/usr/include/asm/posix_types_64.h:
-
-/usr/include/asm/types.h:
-
-/usr/include/c++/16/x86_64-pc-linux-gnu/bits/c++config.h:
-
-/usr/include/bits/setjmp.h:
-
-/usr/include/bits/stdio.h:
+/usr/include/c++/16/cwchar:

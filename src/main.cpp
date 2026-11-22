@@ -13,6 +13,7 @@
 #include <SDL3/SDL.h>
 #include <epoxy/gl.h>
 #include <algorithm>
+#include <cstring>
 #include <iostream>
 #include <vector>
 
@@ -81,6 +82,8 @@ uniform vec3 uTint;
 uniform float uAmbientBrightness;
 uniform float uFlashlightIntensity;
 uniform float uFlashlightRadius;
+uniform vec3 uFlashlightColor;
+uniform float uObjectEmissiveScale;
 uniform float uFogDensity;
 uniform float uLightTexelSnap;
 uniform float uLightSteps;
@@ -109,7 +112,7 @@ void main() {
     if (tex.a < 0.5) discard;
 
     if (vEmissive > 0.5) {
-        vec3 lampCol = tex.rgb * vec3(1.55, 1.75, 2.05);
+        vec3 lampCol = tex.rgb * vec3(1.55, 1.75, 2.05) * uObjectEmissiveScale;
         float fog = 1.0 - exp(-max(0.0, vViewDist - 6.0) * uFogDensity);
         FragColor = vec4(mix(lampCol, vec3(0.015, 0.02, 0.028), clamp(fog * 0.65, 0.0, 1.0)), 1.0);
         return;
@@ -192,7 +195,7 @@ void main() {
             if (cone > 0.0) {
                 float fAtten = cone * clamp(1.0 - fDist / uFlashlightRadius, 0.0, 1.0)
                                / (1.0 + 0.08 * fDist + 0.015 * fDist * fDist);
-                vec3 fCol = vec3(0.88, 0.93, 1.0) * uFlashlightIntensity;
+                vec3 fCol = uFlashlightColor * uFlashlightIntensity;
                 float ndotl = max(dot(N, L), 0.0);
                 totalDiffuse += fCol * ndotl * fAtten;
 
@@ -225,7 +228,11 @@ void main() {
 }
 )";
 
-int main(int, char**) {
+int main(int argc, char** argv) {
+    bool visualTest = false;
+    for (int i = 1; i < argc; ++i) {
+        if (std::strcmp(argv[i], "--visual-test") == 0) visualTest = true;
+    }
     if (!SDL_Init(SDL_INIT_VIDEO)) {
         std::cerr << "SDL_Init failed: " << SDL_GetError() << "\n";
         return 1;
@@ -256,13 +263,14 @@ int main(int, char**) {
         return 1;
     }
     SDL_GL_SetSwapInterval(1);
-    SDL_SetWindowRelativeMouseMode(window, true);
+    SDL_SetWindowRelativeMouseMode(window, !visualTest);
 
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
     glFrontFace(GL_CCW);
 
+    {
     Framebuffer fbo;
     if (!fbo.init(cfg::RETRO_WIDTH, cfg::RETRO_HEIGHT)) return 1;
 
@@ -286,6 +294,7 @@ int main(int, char**) {
 
     GameWorld gw;
     gw.settings = GameSettings::loadOrCreate("mega.cfg");
+    audio.applySettings(gw.settings);
     uint64_t worldSeed = 0x4D4547410001ULL;
     gw.startNewRun(worldSeed);
     std::cout << "Loaded mega.cfg | Generated Infinite Utility Complex seed=" << worldSeed
@@ -300,8 +309,31 @@ int main(int, char**) {
     gw.worldStreamChanged = false;
 
     bool running = true;
-    bool mouseCaptured = true;
+    bool mouseCaptured = !visualTest;
     bool keyDown[SDL_SCANCODE_COUNT] = {false};
+
+    // Visual test state machine (--visual-test)
+    struct VisualTestState {
+        int phase = 0;
+        int frame = 0;
+        int curPin = 0;
+        float flickDy = 0.0f;
+        bool initialized = false;
+    } vt;
+    if (visualTest && !gw.doors.empty()) {
+        gw.inventory.lockpicks = 3;
+        gw.doors[0].locked = true;
+        gw.doors[0].angle = 0.0f;
+        Vec3 toDoor = gw.doors[0].hingePos - gw.player.eyePosition();
+        gw.player.yaw = std::atan2(toDoor.x, -toDoor.z);
+        gw.player.pitch = -0.05f;
+        gw.lockpick.open(0, 777ULL, 0.0f, &gw.doors[0].hingePos);
+        vt.initialized = true;
+        std::cout << "[VISUAL TEST] Opened lockpick minigame on door 0 | targets: "
+                  << gw.lockpick.pins[0].target << ", "
+                  << gw.lockpick.pins[1].target << ", "
+                  << gw.lockpick.pins[2].target << "\n";
+    }
     uint64_t prevTicks = SDL_GetTicks();
     float accumulator = 0.0f;
     float totalTime = 0.0f;
@@ -315,14 +347,15 @@ int main(int, char**) {
 
     auto reloadConfig = [&]() {
         gw.settings = GameSettings::loadOrCreate("mega.cfg");
+        audio.applySettings(gw.settings);
         for (auto& l : gw.map.pointLights) {
             l.color = {gw.settings.lampColorR, gw.settings.lampColorG, gw.settings.lampColorB};
             l.intensity = gw.settings.lampIntensity;
             l.radius = gw.settings.lampRadius;
         }
         std::cout << "Reloaded mega.cfg (ambient=" << gw.settings.ambientBrightness
-                  << " lampIntensity=" << gw.settings.lampIntensity
-                  << " lampRadius=" << gw.settings.lampRadius << ")\n";
+                  << " masterVol=" << gw.settings.masterVolume
+                  << " echo=" << gw.settings.echoStrength << ")\n";
     };
 
     while (running) {
@@ -330,8 +363,8 @@ int main(int, char**) {
         float frameDt = static_cast<float>(nowTicks - prevTicks) / 1000.0f;
         prevTicks = nowTicks;
         if (frameDt > 0.1f) frameDt = 0.1f;
-        accumulator += frameDt;
-        totalTime += frameDt;
+        accumulator += frameDt * gw.godTimeScale;
+        totalTime += frameDt * gw.godTimeScale;
 
         float yawDelta = 0.0f;
         float pitchDelta = 0.0f;
@@ -363,7 +396,9 @@ int main(int, char**) {
                     keyDown[ev.key.scancode] = true;
                 }
                 if (ev.key.key == SDLK_ESCAPE) {
-                    if (gw.inventoryOpen) {
+                    if (gw.lockpick.active) {
+                        gw.lockpick.close();
+                    } else if (gw.inventoryOpen) {
                         gw.inventoryOpen = false;
                         mouseCaptured = true;
                         SDL_SetWindowRelativeMouseMode(window, true);
@@ -372,13 +407,19 @@ int main(int, char**) {
                         SDL_SetWindowRelativeMouseMode(window, mouseCaptured);
                     }
                 } else if (ev.key.key == SDLK_TAB || ev.key.key == SDLK_I) {
+                    gw.lockpick.close();
                     gw.inventoryOpen = !gw.inventoryOpen;
                     gw.endInteract();
                     mouseCaptured = !gw.inventoryOpen;
                     SDL_SetWindowRelativeMouseMode(window, mouseCaptured);
                 } else if (ev.key.key == SDLK_F) {
-                    if (gw.inventory.hasFlashlight && gw.inventory.flashlightBattery > 0.0f) {
-                        gw.flashlightOn = !gw.flashlightOn;
+                    if (gw.inventory.hasFlashlight) {
+                        if (gw.inventory.flashlightBattery > 0.0f) {
+                            gw.flashlightOn = !gw.flashlightOn;
+                            audio.play(SoundId::FlashlightClick, 0.95f);
+                        } else {
+                            audio.play(SoundId::FlashlightClick, 0.45f);
+                        }
                     }
                 } else if (ev.key.key == SDLK_E && !gw.inventoryOpen) {
                     gw.beginInteract(audio);
@@ -391,6 +432,37 @@ int main(int, char**) {
                     gw.useInventoryItem(ItemType::Water, audio);
                 } else if (ev.key.key == SDLK_M) {
                     gw.showMinimap = !gw.showMinimap;
+                } else if (ev.key.key == SDLK_G) {
+                    gw.godMode = !gw.godMode;
+                    if (!gw.godMode) {
+                        gw.godNoclip = false;
+                        gw.godInvisible = false;
+                        gw.godSpeedMult = 1.0f;
+                        gw.godTimeScale = 1.0f;
+                    }
+                    std::cout << "[GOD MODE] " << (gw.godMode ? "ENABLED" : "DISABLED") << "\n";
+                } else if (ev.key.key == SDLK_N) {
+                    gw.godNoclip = !gw.godNoclip;
+                    if (gw.godNoclip) gw.godMode = true;
+                    std::cout << "[GOD MODE] Noclip: " << (gw.godNoclip ? "ON" : "OFF") << "\n";
+                } else if (ev.key.key == SDLK_V) {
+                    gw.godInvisible = !gw.godInvisible;
+                    if (gw.godInvisible) gw.godMode = true;
+                    std::cout << "[GOD MODE] Invisible: " << (gw.godInvisible ? "ON" : "OFF") << "\n";
+                } else if (ev.key.key == SDLK_RIGHTBRACKET) {
+                    gw.godMode = true;
+                    gw.godSpeedMult = std::min(8.0f, gw.godSpeedMult * 2.0f);
+                    std::cout << "[GOD MODE] Player Speed: x" << gw.godSpeedMult << "\n";
+                } else if (ev.key.key == SDLK_LEFTBRACKET) {
+                    gw.godSpeedMult = std::max(1.0f, gw.godSpeedMult * 0.5f);
+                    std::cout << "[GOD MODE] Player Speed: x" << gw.godSpeedMult << "\n";
+                } else if (ev.key.key == SDLK_PERIOD) {
+                    gw.godMode = true;
+                    gw.godTimeScale = std::min(8.0f, gw.godTimeScale * 2.0f);
+                    std::cout << "[GOD MODE] Game Speed: x" << gw.godTimeScale << "\n";
+                } else if (ev.key.key == SDLK_COMMA) {
+                    gw.godTimeScale = std::max(1.0f, gw.godTimeScale * 0.5f);
+                    std::cout << "[GOD MODE] Game Speed: x" << gw.godTimeScale << "\n";
                 } else if (ev.key.key == SDLK_F5) {
                     reloadConfig();
                 } else if (ev.key.key == SDLK_R) {
@@ -403,7 +475,9 @@ int main(int, char**) {
                     running = false;
                 }
             } else if (ev.type == SDL_EVENT_MOUSE_MOTION && mouseCaptured) {
-                if (gw.grabbedDoorIdx >= 0) {
+                if (gw.lockpick.active) {
+                    gw.lockpick.handleMouseMove(ev.motion.xrel, ev.motion.yrel);
+                } else if (gw.grabbedDoorIdx >= 0) {
                     gw.dragGrabbedDoor(ev.motion.xrel, ev.motion.yrel);
                 } else {
                     yawDelta += ev.motion.xrel * cfg::MOUSE_SENS;
@@ -419,7 +493,7 @@ int main(int, char**) {
                     float mx = ev.button.x * (static_cast<float>(cfg::RETRO_WIDTH) / std::max(1, winW));
                     float my = ev.button.y * (static_cast<float>(cfg::RETRO_HEIGHT) / std::max(1, winH));
                     int ix = cfg::RETRO_WIDTH / 2 - 180;
-                    int iy = cfg::RETRO_HEIGHT / 2 - 125;
+                    int iy = cfg::RETRO_HEIGHT / 2 - 145;
                     if (mx >= ix + 18 && mx <= ix + 342) {
                         if (my >= iy + 86 && my <= iy + 122) gw.useInventoryItem(ItemType::Battery, audio);
                         else if (my >= iy + 132 && my <= iy + 168) gw.useInventoryItem(ItemType::Food, audio);
@@ -446,12 +520,74 @@ int main(int, char**) {
         if (isHeld(SDL_SCANCODE_S)) input.moveForward -= 1.0f;
         if (isHeld(SDL_SCANCODE_D)) input.moveRight += 1.0f;
         if (isHeld(SDL_SCANCODE_A)) input.moveRight -= 1.0f;
+        if (isHeld(SDL_SCANCODE_SPACE)) input.moveUp += 1.0f;
+        if (isHeld(SDL_SCANCODE_LCTRL) || isHeld(SDL_SCANCODE_C)) input.moveUp -= 1.0f;
         input.jump = isHeld(SDL_SCANCODE_SPACE);
         input.sprint = isHeld(SDL_SCANCODE_LSHIFT);
+        input.noclip = gw.godNoclip;
         input.yawDelta = yawDelta;
         input.pitchDelta = pitchDelta;
 
-        while (accumulator >= cfg::FIXED_DT) {
+        int simSteps = 0;
+        while (accumulator >= cfg::FIXED_DT && simSteps < 16) {
+            simSteps++;
+            if (visualTest && vt.initialized) {
+                auto& lp = gw.lockpick;
+                vt.frame++;
+                if (vt.phase == 0) {
+                    // Pause 0.8s so viewer sees initial state
+                    if (vt.frame >= 48) { vt.phase = 1; vt.frame = 0; std::cout << "[VISUAL TEST] Phase 1: Slow push (should fail)\n"; }
+                } else if (vt.phase == 1) {
+                    // Slow push upward over 35 frames (~90 px/s)
+                    if (vt.frame <= 35) lp.handleMouseMove(0.0f, -1.5f);
+                    else if (vt.frame == 36) lp.handleMouseMove(0.0f, 35.0f); // drop pick
+                    if (vt.frame >= 85) { vt.phase = 2; vt.frame = 0; std::cout << "[VISUAL TEST] Phase 2: Weak flick (-7 px/frame, should fall short)\n"; }
+                } else if (vt.phase == 2) {
+                    if (vt.frame == 1) lp.handleMouseMove(0.0f, -7.0f);
+                    else if (vt.frame == 3) lp.handleMouseMove(0.0f, 20.0f);
+                    if (vt.frame >= 65) { vt.phase = 3; vt.frame = 0; std::cout << "[VISUAL TEST] Phase 3: Overforce flick (-32 px/frame, ceiling break!)\n"; }
+                } else if (vt.phase == 3) {
+                    if (vt.frame == 1) lp.handleMouseMove(0.0f, -32.0f);
+                    else if (vt.frame == 3) lp.handleMouseMove(0.0f, 35.0f);
+                    if (vt.frame >= 100) { vt.phase = 4; vt.frame = 0; vt.curPin = 0; std::cout << "[VISUAL TEST] Phase 4: Calibrated flicks on all 3 pins...\n"; }
+                } else if (vt.phase == 4) {
+                    if (!lp.active) {
+                        vt.phase = 5;
+                        vt.frame = 0;
+                        std::cout << "[VISUAL TEST] Door UNLOCKED! Showing 3D door opening...\n";
+                    } else {
+                        float targetX = static_cast<float>(vt.curPin) + 0.5f;
+                        if (vt.frame == 1) {
+                            // Drop pick below keyway, slide to chamber center, compute calibrated flick
+                            lp.handleMouseMove(0.0f, 40.0f);
+                            float dxNeeded = (targetX - lp.pickX) / 0.0050f;
+                            lp.handleMouseMove(dxNeeded, 0.0f);
+                            vt.flickDy = -(lp.pins[vt.curPin].target * 24.5f + 1.5f);
+                        } else if (vt.frame == 5) {
+                            // Position pick right under pin (y ~ 0.00) before flicking
+                            lp.handleMouseMove(0.0f, -15.0f);
+                        } else if (vt.frame == 8) {
+                            lp.handleMouseMove(0.0f, vt.flickDy);
+                            std::cout << "[VISUAL TEST] Flicking Pin " << (vt.curPin + 1)
+                                      << " (target=" << lp.pins[vt.curPin].target
+                                      << ", dy=" << vt.flickDy << ")\n";
+                        } else if (vt.frame == 10) {
+                            lp.handleMouseMove(0.0f, 35.0f);
+                        } else if (vt.frame >= 65) {
+                            if (lp.pins[vt.curPin].pinned) {
+                                vt.curPin++;
+                            }
+                            vt.frame = 0;
+                        }
+                    }
+                } else if (vt.phase == 5) {
+                    if (vt.frame >= 90) {
+                        std::cout << "[VISUAL TEST] COMPLETE - ALL CHECKS PASSED!\n";
+                        running = false;
+                    }
+                }
+            }
+
             gw.update(input, fireClicked, cfg::FIXED_DT, audio);
             fireClicked = false;
             input.yawDelta = 0.0f;
@@ -492,6 +628,8 @@ int main(int, char**) {
         worldShader.setFloat("uAmbientBrightness", gw.settings.ambientBrightness);
         worldShader.setFloat("uFlashlightIntensity", gw.settings.flashlightIntensity);
         worldShader.setFloat("uFlashlightRadius", gw.settings.flashlightRadius);
+        worldShader.setVec3("uFlashlightColor", {gw.settings.flashlightColorR, gw.settings.flashlightColorG, gw.settings.flashlightColorB});
+        worldShader.setFloat("uObjectEmissiveScale", gw.settings.objectEmissiveScale);
         worldShader.setFloat("uFogDensity", gw.settings.fogDensity);
         worldShader.setFloat("uLightTexelSnap", gw.settings.lightTexelSnap);
         worldShader.setFloat("uLightSteps", gw.settings.lightSteps);
@@ -528,7 +666,7 @@ int main(int, char**) {
         mesher.render();
 
         gw.gatherRobots(robotQueue);
-        robotRenderer.render(view, proj, camPos, robotQueue);
+        robotRenderer.render(view, proj, camPos, robotQueue, gw.settings);
 
         gw.gatherInteractables(doorQueue, itemQueue);
         robotRenderer.renderInteractables(worldShader, view, proj, camPos, doorQueue, itemQueue);
@@ -540,6 +678,7 @@ int main(int, char**) {
 
         fbo.present(winW, winH);
         SDL_GL_SwapWindow(window);
+    }
     }
 
     SDL_GL_DestroyContext(glCtx);

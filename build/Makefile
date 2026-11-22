@@ -222,6 +222,33 @@ src/game/GameWorld.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/mega_tests.dir/build.make CMakeFiles/mega_tests.dir/src/game/GameWorld.cpp.s
 .PHONY : src/game/GameWorld.cpp.s
 
+src/game/LockpickMinigame.o: src/game/LockpickMinigame.cpp.o
+.PHONY : src/game/LockpickMinigame.o
+
+# target to build an object file
+src/game/LockpickMinigame.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/mega.dir/build.make CMakeFiles/mega.dir/src/game/LockpickMinigame.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/mega_tests.dir/build.make CMakeFiles/mega_tests.dir/src/game/LockpickMinigame.cpp.o
+.PHONY : src/game/LockpickMinigame.cpp.o
+
+src/game/LockpickMinigame.i: src/game/LockpickMinigame.cpp.i
+.PHONY : src/game/LockpickMinigame.i
+
+# target to preprocess a source file
+src/game/LockpickMinigame.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/mega.dir/build.make CMakeFiles/mega.dir/src/game/LockpickMinigame.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/mega_tests.dir/build.make CMakeFiles/mega_tests.dir/src/game/LockpickMinigame.cpp.i
+.PHONY : src/game/LockpickMinigame.cpp.i
+
+src/game/LockpickMinigame.s: src/game/LockpickMinigame.cpp.s
+.PHONY : src/game/LockpickMinigame.s
+
+# target to generate assembly for a file
+src/game/LockpickMinigame.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/mega.dir/build.make CMakeFiles/mega.dir/src/game/LockpickMinigame.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/mega_tests.dir/build.make CMakeFiles/mega_tests.dir/src/game/LockpickMinigame.cpp.s
+.PHONY : src/game/LockpickMinigame.cpp.s
+
 src/game/Player.o: src/game/Player.cpp.o
 .PHONY : src/game/Player.o
 
@@ -563,6 +590,9 @@ help:
 	@echo "... src/game/GameWorld.o"
 	@echo "... src/game/GameWorld.i"
 	@echo "... src/game/GameWorld.s"
+	@echo "... src/game/LockpickMinigame.o"
+	@echo "... src/game/LockpickMinigame.i"
+	@echo "... src/game/LockpickMinigame.s"
 	@echo "... src/game/Player.o"
 	@echo "... src/game/Player.i"
 	@echo "... src/game/Player.s"

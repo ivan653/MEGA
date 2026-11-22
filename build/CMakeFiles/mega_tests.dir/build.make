@@ -159,10 +159,24 @@ CMakeFiles/mega_tests.dir/src/game/GameWorld.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/mega_tests.dir/src/game/GameWorld.cpp.s"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S "/home/ivan/ImportantFiles/My Games/MEGA/src/game/GameWorld.cpp" -o CMakeFiles/mega_tests.dir/src/game/GameWorld.cpp.s
 
+CMakeFiles/mega_tests.dir/src/game/LockpickMinigame.cpp.o: CMakeFiles/mega_tests.dir/flags.make
+CMakeFiles/mega_tests.dir/src/game/LockpickMinigame.cpp.o: /home/ivan/ImportantFiles/My\ Games/MEGA/src/game/LockpickMinigame.cpp
+CMakeFiles/mega_tests.dir/src/game/LockpickMinigame.cpp.o: CMakeFiles/mega_tests.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir="/home/ivan/ImportantFiles/My Games/MEGA/build/CMakeFiles" --progress-num=$(CMAKE_PROGRESS_7) "Building CXX object CMakeFiles/mega_tests.dir/src/game/LockpickMinigame.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/mega_tests.dir/src/game/LockpickMinigame.cpp.o -MF CMakeFiles/mega_tests.dir/src/game/LockpickMinigame.cpp.o.d -o CMakeFiles/mega_tests.dir/src/game/LockpickMinigame.cpp.o -c "/home/ivan/ImportantFiles/My Games/MEGA/src/game/LockpickMinigame.cpp"
+
+CMakeFiles/mega_tests.dir/src/game/LockpickMinigame.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/mega_tests.dir/src/game/LockpickMinigame.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E "/home/ivan/ImportantFiles/My Games/MEGA/src/game/LockpickMinigame.cpp" > CMakeFiles/mega_tests.dir/src/game/LockpickMinigame.cpp.i
+
+CMakeFiles/mega_tests.dir/src/game/LockpickMinigame.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/mega_tests.dir/src/game/LockpickMinigame.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S "/home/ivan/ImportantFiles/My Games/MEGA/src/game/LockpickMinigame.cpp" -o CMakeFiles/mega_tests.dir/src/game/LockpickMinigame.cpp.s
+
 CMakeFiles/mega_tests.dir/src/audio/AudioEngine.cpp.o: CMakeFiles/mega_tests.dir/flags.make
 CMakeFiles/mega_tests.dir/src/audio/AudioEngine.cpp.o: /home/ivan/ImportantFiles/My\ Games/MEGA/src/audio/AudioEngine.cpp
 CMakeFiles/mega_tests.dir/src/audio/AudioEngine.cpp.o: CMakeFiles/mega_tests.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir="/home/ivan/ImportantFiles/My Games/MEGA/build/CMakeFiles" --progress-num=$(CMAKE_PROGRESS_7) "Building CXX object CMakeFiles/mega_tests.dir/src/audio/AudioEngine.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir="/home/ivan/ImportantFiles/My Games/MEGA/build/CMakeFiles" --progress-num=$(CMAKE_PROGRESS_8) "Building CXX object CMakeFiles/mega_tests.dir/src/audio/AudioEngine.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/mega_tests.dir/src/audio/AudioEngine.cpp.o -MF CMakeFiles/mega_tests.dir/src/audio/AudioEngine.cpp.o.d -o CMakeFiles/mega_tests.dir/src/audio/AudioEngine.cpp.o -c "/home/ivan/ImportantFiles/My Games/MEGA/src/audio/AudioEngine.cpp"
 
 CMakeFiles/mega_tests.dir/src/audio/AudioEngine.cpp.i: cmake_force
@@ -181,6 +195,7 @@ mega_tests_OBJECTS = \
 "CMakeFiles/mega_tests.dir/src/world/gen/MegaGenerator.cpp.o" \
 "CMakeFiles/mega_tests.dir/src/game/Player.cpp.o" \
 "CMakeFiles/mega_tests.dir/src/game/GameWorld.cpp.o" \
+"CMakeFiles/mega_tests.dir/src/game/LockpickMinigame.cpp.o" \
 "CMakeFiles/mega_tests.dir/src/audio/AudioEngine.cpp.o"
 
 # External object files for target mega_tests
@@ -192,6 +207,7 @@ mega_tests: CMakeFiles/mega_tests.dir/src/world/LightBaker.cpp.o
 mega_tests: CMakeFiles/mega_tests.dir/src/world/gen/MegaGenerator.cpp.o
 mega_tests: CMakeFiles/mega_tests.dir/src/game/Player.cpp.o
 mega_tests: CMakeFiles/mega_tests.dir/src/game/GameWorld.cpp.o
+mega_tests: CMakeFiles/mega_tests.dir/src/game/LockpickMinigame.cpp.o
 mega_tests: CMakeFiles/mega_tests.dir/src/audio/AudioEngine.cpp.o
 mega_tests: CMakeFiles/mega_tests.dir/build.make
 mega_tests: CMakeFiles/mega_tests.dir/compiler_depend.ts
@@ -199,7 +215,7 @@ mega_tests: /usr/lib/libgtest_main.so.1.18.0
 mega_tests: /usr/lib/libSDL3.so.0.4.20
 mega_tests: /usr/lib/libgtest.so.1.18.0
 mega_tests: CMakeFiles/mega_tests.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir="/home/ivan/ImportantFiles/My Games/MEGA/build/CMakeFiles" --progress-num=$(CMAKE_PROGRESS_8) "Linking CXX executable mega_tests"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir="/home/ivan/ImportantFiles/My Games/MEGA/build/CMakeFiles" --progress-num=$(CMAKE_PROGRESS_9) "Linking CXX executable mega_tests"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/mega_tests.dir/link.txt --verbose=$(VERBOSE)
 	/usr/bin/cmake -P /home/ivan/ImportantFiles/My\ Games/MEGA/build/mega_tests_e3b0c442_discovery.cmake -- 
 

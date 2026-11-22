@@ -91,12 +91,12 @@ clean: CMakeFiles/mega_tests.dir/clean
 CMakeFiles/mega.dir/all:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/mega.dir/build.make CMakeFiles/mega.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/mega.dir/build.make CMakeFiles/mega.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir="/home/ivan/ImportantFiles/My Games/MEGA/build/CMakeFiles" --progress-num=1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 "Built target mega"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir="/home/ivan/ImportantFiles/My Games/MEGA/build/CMakeFiles" --progress-num=1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16 "Built target mega"
 .PHONY : CMakeFiles/mega.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/mega.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start "/home/ivan/ImportantFiles/My Games/MEGA/build/CMakeFiles" 15
+	$(CMAKE_COMMAND) -E cmake_progress_start "/home/ivan/ImportantFiles/My Games/MEGA/build/CMakeFiles" 16
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/mega.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start "/home/ivan/ImportantFiles/My Games/MEGA/build/CMakeFiles" 0
 .PHONY : CMakeFiles/mega.dir/rule
@@ -108,7 +108,7 @@ mega: CMakeFiles/mega.dir/rule
 # codegen rule for target.
 CMakeFiles/mega.dir/codegen:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/mega.dir/build.make CMakeFiles/mega.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir="/home/ivan/ImportantFiles/My Games/MEGA/build/CMakeFiles" --progress-num=1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 "Finished codegen for target mega"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir="/home/ivan/ImportantFiles/My Games/MEGA/build/CMakeFiles" --progress-num=1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16 "Finished codegen for target mega"
 .PHONY : CMakeFiles/mega.dir/codegen
 
 # clean rule for target.
@@ -123,12 +123,12 @@ CMakeFiles/mega.dir/clean:
 CMakeFiles/mega_tests.dir/all:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/mega_tests.dir/build.make CMakeFiles/mega_tests.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/mega_tests.dir/build.make CMakeFiles/mega_tests.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir="/home/ivan/ImportantFiles/My Games/MEGA/build/CMakeFiles" --progress-num=16,17,18,19,20,21,22,23 "Built target mega_tests"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir="/home/ivan/ImportantFiles/My Games/MEGA/build/CMakeFiles" --progress-num=17,18,19,20,21,22,23,24,25 "Built target mega_tests"
 .PHONY : CMakeFiles/mega_tests.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/mega_tests.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start "/home/ivan/ImportantFiles/My Games/MEGA/build/CMakeFiles" 8
+	$(CMAKE_COMMAND) -E cmake_progress_start "/home/ivan/ImportantFiles/My Games/MEGA/build/CMakeFiles" 9
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/mega_tests.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start "/home/ivan/ImportantFiles/My Games/MEGA/build/CMakeFiles" 0
 .PHONY : CMakeFiles/mega_tests.dir/rule
@@ -140,7 +140,7 @@ mega_tests: CMakeFiles/mega_tests.dir/rule
 # codegen rule for target.
 CMakeFiles/mega_tests.dir/codegen:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/mega_tests.dir/build.make CMakeFiles/mega_tests.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir="/home/ivan/ImportantFiles/My Games/MEGA/build/CMakeFiles" --progress-num=16,17,18,19,20,21,22,23 "Finished codegen for target mega_tests"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir="/home/ivan/ImportantFiles/My Games/MEGA/build/CMakeFiles" --progress-num=17,18,19,20,21,22,23,24,25 "Finished codegen for target mega_tests"
 .PHONY : CMakeFiles/mega_tests.dir/codegen
 
 # clean rule for target.

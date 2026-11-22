@@ -1,5 +1,5 @@
 {
-  "tests": 6,
+  "tests": 12,
   "name": "AllTests",
   "testsuites": [
     {
@@ -9,7 +9,7 @@
         {
           "name": "BoundsAndBlockPlacement",
           "file": "\/home\/ivan\/ImportantFiles\/My Games\/MEGA\/tests\/CoreTests.cpp",
-          "line": 11
+          "line": 12
         }
       ]
     },
@@ -20,7 +20,7 @@
         {
           "name": "GravityLandsOnFloorAndStepUpWorks",
           "file": "\/home\/ivan\/ImportantFiles\/My Games\/MEGA\/tests\/CoreTests.cpp",
-          "line": 27
+          "line": 28
         }
       ]
     },
@@ -31,7 +31,7 @@
         {
           "name": "GeneratesConnectedMultiBiomeMegastructureQuickly",
           "file": "\/home\/ivan\/ImportantFiles\/My Games\/MEGA\/tests\/CoreTests.cpp",
-          "line": 49
+          "line": 50
         }
       ]
     },
@@ -42,7 +42,18 @@
         {
           "name": "RaycastAndStarterRoomSurvivalWork",
           "file": "\/home\/ivan\/ImportantFiles\/My Games\/MEGA\/tests\/CoreTests.cpp",
-          "line": 75
+          "line": 76
+        }
+      ]
+    },
+    {
+      "name": "LockpickTest",
+      "tests": 1,
+      "testsuite": [
+        {
+          "name": "SlowPushOverforceBreakAndGentleTapPhysics",
+          "file": "\/home\/ivan\/ImportantFiles\/My Games\/MEGA\/tests\/CoreTests.cpp",
+          "line": 158
         }
       ]
     },
@@ -53,12 +64,67 @@
         {
           "name": "ObservePatrolAndChaseFootKinematics",
           "file": "\/home\/ivan\/ImportantFiles\/My Games\/MEGA\/tests\/CoreTests.cpp",
-          "line": 157
+          "line": 244
         },
         {
           "name": "ObserveMapNavigationPatrolAndChase",
           "file": "\/home\/ivan\/ImportantFiles\/My Games\/MEGA\/tests\/CoreTests.cpp",
-          "line": 231
+          "line": 318
+        }
+      ]
+    },
+    {
+      "name": "Audio3DAcousticsTest",
+      "tests": 1,
+      "testsuite": [
+        {
+          "name": "PanningObstacleThicknessAndConditionalEcho",
+          "file": "\/home\/ivan\/ImportantFiles\/My Games\/MEGA\/tests\/CoreTests.cpp",
+          "line": 427
+        }
+      ]
+    },
+    {
+      "name": "LockpickItemAndExitDoorTest",
+      "tests": 1,
+      "testsuite": [
+        {
+          "name": "FivePercentBreakChanceAndSafeExitDoor",
+          "file": "\/home\/ivan\/ImportantFiles\/My Games\/MEGA\/tests\/CoreTests.cpp",
+          "line": 522
+        }
+      ]
+    },
+    {
+      "name": "ConfigHotReloadTest",
+      "tests": 1,
+      "testsuite": [
+        {
+          "name": "ParsesPlayerLightingAndAudioSettings",
+          "file": "\/home\/ivan\/ImportantFiles\/My Games\/MEGA\/tests\/CoreTests.cpp",
+          "line": 586
+        }
+      ]
+    },
+    {
+      "name": "RobotNavigationTest",
+      "tests": 1,
+      "testsuite": [
+        {
+          "name": "CenterlineBypassAndCooperativePassing",
+          "file": "\/home\/ivan\/ImportantFiles\/My Games\/MEGA\/tests\/CoreTests.cpp",
+          "line": 615
+        }
+      ]
+    },
+    {
+      "name": "GodModeTest",
+      "tests": 1,
+      "testsuite": [
+        {
+          "name": "NoclipInvisibilityAndSpeedWork",
+          "file": "\/home\/ivan\/ImportantFiles\/My Games\/MEGA\/tests\/CoreTests.cpp",
+          "line": 701
         }
       ]
     }

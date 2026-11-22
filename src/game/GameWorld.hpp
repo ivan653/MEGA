@@ -3,11 +3,13 @@
 #include "audio/AudioEngine.hpp"
 #include "core/Config.hpp"
 #include "core/Math3D.hpp"
+#include "game/LockpickMinigame.hpp"
 #include "game/Player.hpp"
 #include "render/BillboardRenderer.hpp"
 #include "render/RobotRenderer.hpp"
 #include "world/gen/MegaGenerator.hpp"
 #include <cstdint>
+#include <string>
 #include <vector>
 
 namespace mega {
@@ -68,6 +70,12 @@ struct Enemy {
     int regX = 0;
     int regZ = 0;
     int sawPlayerEnterLockerIdx = -1;
+    // Cooperative robot-vs-robot passing & obstacle bypass state
+    int yieldPartnerIdx = -1;
+    float yieldLateralDirX = 0.0f;
+    float yieldLateralDirZ = 0.0f;
+    float yieldTimer = 0.0f;
+    float lateralOffset = 0.0f;
     bool alerted = false;
     bool alive = true;
 };
@@ -97,7 +105,8 @@ enum class ItemType : int {
     Flashlight = 0,
     Battery    = 1,
     Food       = 2,
-    Water      = 3
+    Water      = 3,
+    Lockpick   = 4
 };
 
 struct WorldItem {
@@ -118,8 +127,12 @@ struct HingeDoor {
     float maxAngle = 1.85f;  // ~106 degrees
     float angularVel = 0.0f;
     float openSign = 1.0f;
+    float creakAccum = 0.0f; // Physical friction travel accumulator for creak synthesis
     bool isCabinet = false;
     bool isLocker = false;
+    bool isExitDoor = false; // Starter 2m heavy steel exit door (0% lockpick break chance)
+    bool locked = false;
+    uint64_t lockSeed = 0;
     AABB lockerInterior{};
     int regX = 0;
     int regZ = 0;
@@ -134,6 +147,7 @@ struct Inventory {
     int batteries = 0;
     int food = 0;
     int water = 0;
+    int lockpicks = 0;
 };
 
 class GameWorld {
@@ -142,6 +156,7 @@ public:
     MegaResult map;
     Player player;
     Inventory inventory;
+    LockpickMinigame lockpick;
     std::vector<Enemy> enemies;
     std::vector<HingeDoor> doors;
     std::vector<WorldItem> worldItems;
@@ -167,10 +182,24 @@ public:
     bool gameOver = false;
     bool worldStreamChanged = false;
 
+    // God Mode debug/testing controls
+    bool godMode = false;
+    bool godNoclip = false;
+    bool godInvisible = false;
+    float godSpeedMult = 1.0f;
+    float godTimeScale = 1.0f;
+
     // Amnesia-style interaction state
     int hoveredDoorIdx = -1;
     int hoveredItemIdx = -1;
     int grabbedDoorIdx = -1;
+
+    // Player footstep & HUD feedback state
+    float playerStepDist = 0.0f;
+    bool playerWasGrounded = true;
+    float prevPlayerVelY = 0.0f;
+    float hudNoticeTimer = 0.0f;
+    std::string hudNoticeText;
 
     void startNewRun(uint64_t seed);
     void generateLevel(uint64_t seed);
