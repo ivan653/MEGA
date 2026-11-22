@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/Config.hpp"
+#include "core/LootTable.hpp"
 #include "core/Math3D.hpp"
 #include "world/Biome.hpp"
 #include "world/WorldGrid.hpp"
@@ -41,6 +42,28 @@ struct LockerPlacement {
     int regZ = 0;
 };
 
+// Metal corridor cabinet with interior shelves, double doors (2 handles) & 1 shared lock
+struct DoubleCabinetPlacement {
+    Vec3 leftHingePos;
+    float leftClosedYaw = 0.0f;
+    float leftOpenSign = 1.0f;
+    Vec3 rightHingePos;
+    float rightClosedYaw = 0.0f;
+    float rightOpenSign = -1.0f;
+    float leafWidth = 0.56f;
+    float height = 1.96f;
+    int regX = 0;
+    int regZ = 0;
+};
+
+// Flat surface where loot items can spawn (crates, metal cabinet shelves, shelving racks, lockers)
+struct LootSurface {
+    LootSource source = LootSource::Crate;
+    AABB surfaceBox; // min.y == max.y == surface Y height
+    int regX = 0;
+    int regZ = 0;
+};
+
 struct MegaResult {
     WorldGrid world;
     uint64_t seed = 0x4D4547410001ULL;
@@ -49,6 +72,8 @@ struct MegaResult {
     std::vector<CorridorSegment> corridors;
     std::vector<PointLight3D> pointLights;
     std::vector<LockerPlacement> lockers;
+    std::vector<DoubleCabinetPlacement> cabinets;
+    std::vector<LootSurface> lootSurfaces;
     std::set<std::pair<int, int>> loadedRegions;
     int currentRegX = 0;
     int currentRegZ = 0;

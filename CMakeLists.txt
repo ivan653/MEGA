@@ -28,6 +28,7 @@ add_executable(mega
     src/world/gen/MegaGenerator.cpp
     src/game/Player.cpp
     src/game/GameWorld.cpp
+    src/game/Inventory3D.cpp
     src/game/LockpickMinigame.cpp
     src/audio/AudioEngine.cpp
 )
@@ -56,6 +57,7 @@ if(GTest_FOUND)
         src/world/gen/MegaGenerator.cpp
         src/game/Player.cpp
         src/game/GameWorld.cpp
+        src/game/Inventory3D.cpp
         src/game/LockpickMinigame.cpp
         src/audio/AudioEngine.cpp
     )

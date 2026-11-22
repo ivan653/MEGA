@@ -259,11 +259,38 @@ void HudRenderer::render(const GameWorld& gw) {
         fillRect(width_ - 8, 0, 8, height_, red);
     }
 
-    // Center crosshair / Amnesia-style interaction reticle & prompt
+    // Center crosshair / Amnesia-style interaction reticle & diegetic 3D backpack prompts
     int cx = width_ / 2;
     int cy = height_ / 2;
     if (gw.lockpick.active) {
         drawLockpickMinigame(gw);
+    } else if (gw.draggingItem) {
+        Int3 sz = gw.dragItemOrient.applyToSize(itemBaseGridSize(gw.dragItemType));
+        char dbuf[96];
+        std::snprintf(dbuf, sizeof(dbuf), "DRAG %s %dX%dX%d  [LMB] PLACE  [R/T/Y] ROTATE  [RMB] CANCEL",
+                      itemDisplayName(gw.dragItemType), sz.x, sz.y, sz.z);
+        int dw = static_cast<int>(std::strlen(dbuf)) * 8;
+        fillRect(cx - dw / 2 - 10, 44, dw + 20, 24, rgba(12, 20, 28, 220));
+        drawText(cx - dw / 2, 51, dbuf, rgba(140, 235, 255, 245), 2);
+    } else if (gw.hoveredBackpackItemId >= 0) {
+        const PackedItem* pi = gw.backpack.findById(gw.hoveredBackpackItemId);
+        if (pi) {
+            Int3 sz = pi->size();
+            char bbuf[96];
+            if (gw.hoveredBackpackBlocked) {
+                std::snprintf(bbuf, sizeof(bbuf), "%s %dX%dX%d - BLOCKED ABOVE",
+                              itemDisplayName(pi->type), sz.x, sz.y, sz.z);
+                int bw = static_cast<int>(std::strlen(bbuf)) * 8;
+                fillRect(cx - bw / 2 - 8, cy + 16, bw + 16, 22, rgba(35, 12, 12, 225));
+                drawText(cx - bw / 2, cy + 22, bbuf, rgba(255, 105, 95, 245), 2);
+            } else {
+                std::snprintf(bbuf, sizeof(bbuf), "%s %dX%dX%d  [LMB] HAND  [RMB] DRAG",
+                              itemDisplayName(pi->type), sz.x, sz.y, sz.z);
+                int bw = static_cast<int>(std::strlen(bbuf)) * 8;
+                fillRect(cx - bw / 2 - 8, cy + 16, bw + 16, 22, rgba(12, 20, 28, 220));
+                drawText(cx - bw / 2, cy + 22, bbuf, rgba(185, 235, 255, 245), 2);
+            }
+        }
     } else if (gw.grabbedDoorIdx >= 0) {
         fillRect(cx - 5, cy - 5, 10, 10, rgba(130, 215, 255, 190));
         drawText(cx - 56, cy + 16, "DRAG MOUSE", rgba(160, 225, 255, 230), 2);
@@ -286,11 +313,45 @@ void HudRenderer::render(const GameWorld& gw) {
         }
     } else if (gw.hoveredItemIdx >= 0) {
         fillRect(cx - 4, cy - 4, 8, 8, rgba(255, 230, 120, 190));
-        const char* names[] = {"[LMB] FLASHLIGHT", "[LMB] BATTERY", "[LMB] FOOD", "[LMB] WATER", "[LMB] LOCKPICK"};
-        int k = std::clamp(static_cast<int>(gw.worldItems[gw.hoveredItemIdx].type), 0, 4);
-        drawText(cx - 64, cy + 16, names[k], rgba(255, 235, 150, 235), 2);
-    } else if (!gw.inventoryOpen) {
+        ItemType itT = gw.worldItems[gw.hoveredItemIdx].type;
+        Int3 bsz = itemBaseGridSize(itT);
+        char ibuf[64];
+        std::snprintf(ibuf, sizeof(ibuf), "[LMB] %s %dX%dX%d", itemDisplayName(itT), bsz.x, bsz.y, bsz.z);
+        drawText(cx - 72, cy + 16, ibuf, rgba(255, 235, 150, 235), 2);
+    } else if (gw.hoveredGroundedBackpack) {
+        fillRect(cx - 4, cy - 4, 8, 8, rgba(145, 225, 175, 210));
+        drawText(cx - 104, cy + 16, "[B] PICK UP BACKPACK  [LMB] PACK", rgba(165, 235, 190, 240), 2);
+    } else if (!gw.isCameraPausedForInventory()) {
         fillRect(cx - 1, cy - 1, 3, 3, rgba(200, 220, 240, 140));
+    }
+
+    // Diegetic 3D Backpack controls header when held in hands
+    if (gw.backpackMode == BackpackMode::InHands && !gw.draggingItem) {
+        const char* bpHint = "3D BACKPACK 6X8X4  [LMB] TAKE  [RMB] DRAG  [B] DROP PACK  [TAB] CLOSE";
+        int bw = static_cast<int>(std::strlen(bpHint)) * 8;
+        fillRect(cx - bw / 2 - 10, 44, bw + 20, 24, rgba(12, 18, 26, 215));
+        drawText(cx - bw / 2, 51, bpHint, rgba(180, 225, 250, 240), 2);
+    }
+
+    // Bottom-right hand item indicator & backpack count summary
+    {
+        char hbuf[96];
+        if (gw.hasHeldItem) {
+            Int3 sz = gw.heldItemOrient.applyToSize(itemBaseGridSize(gw.heldItemType));
+            std::snprintf(hbuf, sizeof(hbuf), "HAND: %s %dX%dX%d  [E] USE  [RMB] PLACE  [R/T/Y] ROT",
+                          itemDisplayName(gw.heldItemType), sz.x, sz.y, sz.z);
+            int hw = static_cast<int>(std::strlen(hbuf)) * 8;
+            fillRect(width_ - hw - 26, height_ - 36, hw + 18, 24, rgba(12, 18, 24, 210));
+            drawText(width_ - hw - 18, height_ - 29, hbuf, rgba(255, 225, 140, 240), 2);
+        } else {
+            const char* modeStr = (gw.backpackMode == BackpackMode::OnGround) ? "GROUND" :
+                                  (gw.backpackMode == BackpackMode::InHands) ? "HANDS" : "BACK";
+            std::snprintf(hbuf, sizeof(hbuf), "PACK:%s  ITEMS:%d  PICKS:%d  [TAB] OPEN  [B] DROP",
+                          modeStr, static_cast<int>(gw.backpack.items.size()), gw.inventory.lockpicks);
+            int hw = static_cast<int>(std::strlen(hbuf)) * 8;
+            fillRect(width_ - hw - 26, height_ - 36, hw + 18, 24, rgba(12, 16, 22, 185));
+            drawText(width_ - hw - 18, height_ - 29, hbuf, rgba(175, 210, 230, 230), 2);
+        }
     }
 
     if (gw.hudNoticeTimer > 0.0f && !gw.hudNoticeText.empty()) {
@@ -326,47 +387,8 @@ void HudRenderer::render(const GameWorld& gw) {
         drawText(bx, by + 76, "NO FLASHLIGHT", rgba(140, 150, 165, 200), 2);
     }
 
-    // Real-Time Inventory Overlay (Tab / I — game continues running!)
-    if (gw.inventoryOpen) {
-        int iw = 360, ih = 290;
-        int ix = cx - iw / 2;
-        int iy = cy - ih / 2;
-        fillRect(ix, iy, iw, ih, rgba(12, 16, 22, 228));
-        fillRect(ix, iy, iw, 2, rgba(95, 130, 160, 240));
-        fillRect(ix, iy + ih - 2, iw, 2, rgba(95, 130, 160, 240));
-
-        drawText(ix + 18, iy + 16, "INVENTORY  [TAB CLOSE]", rgba(170, 215, 245, 240), 2);
-
-        char line[64];
-        if (gw.inventory.hasFlashlight) {
-            int pct = static_cast<int>(100.0f * gw.inventory.flashlightBattery / std::max(1.0f, gw.settings.maxBattery));
-            std::snprintf(line, sizeof(line), "FLASHLIGHT  %d PCT", pct);
-            drawText(ix + 20, iy + 52, line, rgba(200, 235, 255, 240), 2);
-        } else {
-            drawText(ix + 20, iy + 52, "FLASHLIGHT  NONE", rgba(130, 140, 150, 210), 2);
-        }
-
-        // Clickable / hotkeyed slots: [1] Battery, [2] Food, [3] Water, plus Lockpicks count
-        fillRect(ix + 18, iy + 86, iw - 36, 36, rgba(24, 32, 42, 220));
-        std::snprintf(line, sizeof(line), "[1] BATTERY   X%d  [USE]", gw.inventory.batteries);
-        drawText(ix + 28, iy + 98, line,
-                 gw.inventory.batteries > 0 ? rgba(255, 225, 100, 245) : rgba(110, 115, 125, 200), 2);
-
-        fillRect(ix + 18, iy + 132, iw - 36, 36, rgba(24, 32, 42, 220));
-        std::snprintf(line, sizeof(line), "[2] FOOD      X%d  [EAT]", gw.inventory.food);
-        drawText(ix + 28, iy + 144, line,
-                 gw.inventory.food > 0 ? rgba(235, 175, 95, 245) : rgba(110, 115, 125, 200), 2);
-
-        fillRect(ix + 18, iy + 178, iw - 36, 36, rgba(24, 32, 42, 220));
-        std::snprintf(line, sizeof(line), "[3] WATER     X%d  [DRINK]", gw.inventory.water);
-        drawText(ix + 28, iy + 190, line,
-                 gw.inventory.water > 0 ? rgba(110, 205, 255, 245) : rgba(110, 115, 125, 200), 2);
-
-        fillRect(ix + 18, iy + 224, iw - 36, 36, rgba(24, 32, 42, 220));
-        std::snprintf(line, sizeof(line), "LOCKPICKS     X%d", gw.inventory.lockpicks);
-        drawText(ix + 28, iy + 236, line,
-                 gw.inventory.lockpicks > 0 ? rgba(205, 225, 245, 245) : rgba(110, 115, 125, 200), 2);
-    }
+    // (Flat 2D inventory replaced by Diegetic 3D Backpack rendered directly in 3D space!)
+    (void)0;
 
     if (gw.showMinimap) {
         drawMinimap(gw);

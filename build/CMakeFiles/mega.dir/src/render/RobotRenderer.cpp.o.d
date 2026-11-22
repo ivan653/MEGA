@@ -183,17 +183,21 @@ CMakeFiles/mega.dir/src/render/RobotRenderer.cpp.o: \
  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdint.h \
  /usr/include/stdint.h /usr/include/bits/stdint-uintn.h \
  /usr/include/bits/stdint-least.h \
+ /home/ivan/ImportantFiles/My\ Games/MEGA/src/game/Inventory3D.hpp \
+ /home/ivan/ImportantFiles/My\ Games/MEGA/src/core/LootTable.hpp \
+ /home/ivan/ImportantFiles/My\ Games/MEGA/src/core/Rng.hpp \
+ /usr/include/c++/16/array /usr/include/c++/16/vector \
+ /usr/include/c++/16/bits/stl_uninitialized.h \
+ /usr/include/c++/16/bits/stl_vector.h \
+ /usr/include/c++/16/bits/stl_bvector.h \
+ /usr/include/c++/16/bits/vector.tcc \
  /home/ivan/ImportantFiles/My\ Games/MEGA/src/render/Shader.hpp \
  /usr/include/epoxy/gl.h /usr/include/epoxy/common.h \
  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdbool.h \
  /usr/include/epoxy/gl_generated.h /usr/include/inttypes.h \
- /usr/include/c++/16/vector /usr/include/c++/16/bits/stl_uninitialized.h \
- /usr/include/c++/16/bits/stl_vector.h \
- /usr/include/c++/16/bits/stl_bvector.h \
- /usr/include/c++/16/bits/vector.tcc \
  /home/ivan/ImportantFiles/My\ Games/MEGA/src/render/WorldMesher.hpp \
  /home/ivan/ImportantFiles/My\ Games/MEGA/src/world/WorldGrid.hpp \
- /usr/include/c++/16/array /usr/include/c++/16/unordered_map \
+ /usr/include/c++/16/unordered_map \
  /usr/include/c++/16/bits/unordered_map.h \
  /usr/include/c++/16/bits/hashtable.h \
  /usr/include/c++/16/bits/hashtable_policy.h \

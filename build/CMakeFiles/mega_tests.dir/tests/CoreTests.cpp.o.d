@@ -284,6 +284,8 @@ CMakeFiles/mega_tests.dir/tests/CoreTests.cpp.o: \
  /usr/include/c++/16/tr1/poly_laguerre.tcc \
  /usr/include/c++/16/tr1/riemann_zeta.tcc \
  /home/ivan/ImportantFiles/My\ Games/MEGA/src/world/gen/MegaGenerator.hpp \
+ /home/ivan/ImportantFiles/My\ Games/MEGA/src/core/LootTable.hpp \
+ /home/ivan/ImportantFiles/My\ Games/MEGA/src/core/Rng.hpp \
  /home/ivan/ImportantFiles/My\ Games/MEGA/src/world/Biome.hpp \
  /home/ivan/ImportantFiles/My\ Games/MEGA/src/game/Player.hpp \
  /home/ivan/ImportantFiles/My\ Games/MEGA/src/game/GameWorld.hpp \
@@ -319,6 +321,7 @@ CMakeFiles/mega_tests.dir/tests/CoreTests.cpp.o: \
  /usr/include/SDL3/SDL_time.h /usr/include/SDL3/SDL_timer.h \
  /usr/include/SDL3/SDL_tray.h /usr/include/SDL3/SDL_version.h \
  /usr/include/SDL3/SDL_oldnames.h \
+ /home/ivan/ImportantFiles/My\ Games/MEGA/src/game/Inventory3D.hpp \
  /home/ivan/ImportantFiles/My\ Games/MEGA/src/game/LockpickMinigame.hpp \
  /home/ivan/ImportantFiles/My\ Games/MEGA/src/render/BillboardRenderer.hpp \
  /usr/include/epoxy/gl.h /usr/include/epoxy/common.h \

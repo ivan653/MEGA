@@ -118,4 +118,24 @@ set_tests_properties([=[GodModeTest.NoclipInvisibilityAndSpeedWork]=]
     SKIP_REGULAR_EXPRESSION [==[\[  SKIPPED \]]==]
     
 )
-set(mega_tests_TESTS [==[WorldGridTest.BoundsAndBlockPlacement]==] [==[PlayerPhysicsTest.GravityLandsOnFloorAndStepUpWorks]==] [==[MegaGeneratorTest.GeneratesConnectedMultiBiomeMegastructureQuickly]==] [==[GameWorldTest.RaycastAndStarterRoomSurvivalWork]==] [==[LockpickTest.SlowPushOverforceBreakAndGentleTapPhysics]==] [==[RobotSimTest.ObservePatrolAndChaseFootKinematics]==] [==[RobotSimTest.ObserveMapNavigationPatrolAndChase]==] [==[Audio3DAcousticsTest.PanningObstacleThicknessAndConditionalEcho]==] [==[LockpickItemAndExitDoorTest.FivePercentBreakChanceAndSafeExitDoor]==] [==[ConfigHotReloadTest.ParsesPlayerLightingAndAudioSettings]==] [==[RobotNavigationTest.CenterlineBypassAndCooperativePassing]==] [==[GodModeTest.NoclipInvisibilityAndSpeedWork]==])
+add_test([=[Inventory3DTest.VolumeRotationTopBlockingAndWorldGridPlacement]=]  [==[/home/ivan/ImportantFiles/My Games/MEGA/build/mega_tests]==] [==[--gtest_filter=Inventory3DTest.VolumeRotationTopBlockingAndWorldGridPlacement]==] --gtest_also_run_disabled_tests)
+set_tests_properties([=[Inventory3DTest.VolumeRotationTopBlockingAndWorldGridPlacement]=]
+  PROPERTIES
+    
+    _CMAKE_TEST_BUILD_DEPENDS [==[/home/ivan/ImportantFiles/My Games/MEGA/build/mega_tests]==]
+    DEF_SOURCE_LINE [==[/home/ivan/ImportantFiles/My Games/MEGA/tests/CoreTests.cpp:773]==]
+    WORKING_DIRECTORY [==[/home/ivan/ImportantFiles/My Games/MEGA/build]==]
+    SKIP_REGULAR_EXPRESSION [==[\[  SKIPPED \]]==]
+    
+)
+add_test([=[DoubleDoorAndLootTableTest.Lockers90PercentOpenMetalCabinetsAlwaysLockedAndLootTablesWork]=]  [==[/home/ivan/ImportantFiles/My Games/MEGA/build/mega_tests]==] [==[--gtest_filter=DoubleDoorAndLootTableTest.Lockers90PercentOpenMetalCabinetsAlwaysLockedAndLootTablesWork]==] --gtest_also_run_disabled_tests)
+set_tests_properties([=[DoubleDoorAndLootTableTest.Lockers90PercentOpenMetalCabinetsAlwaysLockedAndLootTablesWork]=]
+  PROPERTIES
+    
+    _CMAKE_TEST_BUILD_DEPENDS [==[/home/ivan/ImportantFiles/My Games/MEGA/build/mega_tests]==]
+    DEF_SOURCE_LINE [==[/home/ivan/ImportantFiles/My Games/MEGA/tests/CoreTests.cpp:847]==]
+    WORKING_DIRECTORY [==[/home/ivan/ImportantFiles/My Games/MEGA/build]==]
+    SKIP_REGULAR_EXPRESSION [==[\[  SKIPPED \]]==]
+    
+)
+set(mega_tests_TESTS [==[WorldGridTest.BoundsAndBlockPlacement]==] [==[PlayerPhysicsTest.GravityLandsOnFloorAndStepUpWorks]==] [==[MegaGeneratorTest.GeneratesConnectedMultiBiomeMegastructureQuickly]==] [==[GameWorldTest.RaycastAndStarterRoomSurvivalWork]==] [==[LockpickTest.SlowPushOverforceBreakAndGentleTapPhysics]==] [==[RobotSimTest.ObservePatrolAndChaseFootKinematics]==] [==[RobotSimTest.ObserveMapNavigationPatrolAndChase]==] [==[Audio3DAcousticsTest.PanningObstacleThicknessAndConditionalEcho]==] [==[LockpickItemAndExitDoorTest.FivePercentBreakChanceAndSafeExitDoor]==] [==[ConfigHotReloadTest.ParsesPlayerLightingAndAudioSettings]==] [==[RobotNavigationTest.CenterlineBypassAndCooperativePassing]==] [==[GodModeTest.NoclipInvisibilityAndSpeedWork]==] [==[Inventory3DTest.VolumeRotationTopBlockingAndWorldGridPlacement]==] [==[DoubleDoorAndLootTableTest.Lockers90PercentOpenMetalCabinetsAlwaysLockedAndLootTablesWork]==])

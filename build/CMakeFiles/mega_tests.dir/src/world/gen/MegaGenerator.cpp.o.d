@@ -160,6 +160,12 @@ CMakeFiles/mega_tests.dir/src/world/gen/MegaGenerator.cpp.o: \
  /usr/include/c++/16/x86_64-pc-linux-gnu/bits/c++io.h \
  /usr/include/c++/16/bits/fstream.tcc /usr/include/c++/16/sstream \
  /usr/include/c++/16/bits/sstream.tcc \
+ /home/ivan/ImportantFiles/My\ Games/MEGA/src/core/LootTable.hpp \
+ /home/ivan/ImportantFiles/My\ Games/MEGA/src/core/Rng.hpp \
+ /usr/include/c++/16/cstdint \
+ /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdint.h \
+ /usr/include/stdint.h /usr/include/bits/stdint-uintn.h \
+ /usr/include/bits/stdint-least.h /usr/include/c++/16/array \
  /home/ivan/ImportantFiles/My\ Games/MEGA/src/core/Math3D.hpp \
  /usr/include/c++/16/cmath /usr/include/math.h \
  /usr/include/bits/math-vector.h /usr/include/bits/libm-simd-decl-stubs.h \
@@ -179,13 +185,10 @@ CMakeFiles/mega_tests.dir/src/world/gen/MegaGenerator.cpp.o: \
  /usr/include/c++/16/tr1/modified_bessel_func.tcc \
  /usr/include/c++/16/tr1/poly_hermite.tcc \
  /usr/include/c++/16/tr1/poly_laguerre.tcc \
- /usr/include/c++/16/tr1/riemann_zeta.tcc /usr/include/c++/16/cstdint \
- /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdint.h \
- /usr/include/stdint.h /usr/include/bits/stdint-uintn.h \
- /usr/include/bits/stdint-least.h \
+ /usr/include/c++/16/tr1/riemann_zeta.tcc \
  /home/ivan/ImportantFiles/My\ Games/MEGA/src/world/Biome.hpp \
  /home/ivan/ImportantFiles/My\ Games/MEGA/src/world/WorldGrid.hpp \
- /usr/include/c++/16/array /usr/include/c++/16/unordered_map \
+ /usr/include/c++/16/unordered_map \
  /usr/include/c++/16/bits/unordered_map.h \
  /usr/include/c++/16/bits/hashtable.h \
  /usr/include/c++/16/bits/hashtable_policy.h \
@@ -199,7 +202,6 @@ CMakeFiles/mega_tests.dir/src/world/gen/MegaGenerator.cpp.o: \
  /usr/include/c++/16/bits/stl_tree.h /usr/include/c++/16/bits/stl_set.h \
  /usr/include/c++/16/bits/stl_multiset.h /usr/include/c++/16/utility \
  /usr/include/c++/16/bits/stl_relops.h /usr/include/c++/16/bits/intcmp.h \
- /home/ivan/ImportantFiles/My\ Games/MEGA/src/core/Rng.hpp \
  /usr/include/c++/16/chrono /usr/include/c++/16/bits/chrono.h \
  /usr/include/c++/16/ratio /usr/include/c++/16/ctime \
  /usr/include/c++/16/bits/parse_numbers.h \

@@ -15,6 +15,7 @@ mega: \
   CMakeFiles/mega.dir/src/world/gen/MegaGenerator.cpp.o \
   CMakeFiles/mega.dir/src/game/Player.cpp.o \
   CMakeFiles/mega.dir/src/game/GameWorld.cpp.o \
+  CMakeFiles/mega.dir/src/game/Inventory3D.cpp.o \
   CMakeFiles/mega.dir/src/game/LockpickMinigame.cpp.o \
   CMakeFiles/mega.dir/src/audio/AudioEngine.cpp.o \
   /usr/lib/libSDL3.so.0.4.20 \
@@ -94,6 +95,8 @@ CMakeFiles/mega.dir/src/world/gen/MegaGenerator.cpp.o:
 CMakeFiles/mega.dir/src/game/Player.cpp.o:
 
 CMakeFiles/mega.dir/src/game/GameWorld.cpp.o:
+
+CMakeFiles/mega.dir/src/game/Inventory3D.cpp.o:
 
 CMakeFiles/mega.dir/src/game/LockpickMinigame.cpp.o:
 

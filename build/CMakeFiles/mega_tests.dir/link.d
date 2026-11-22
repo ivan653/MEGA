@@ -8,6 +8,7 @@ mega_tests: \
   CMakeFiles/mega_tests.dir/src/world/gen/MegaGenerator.cpp.o \
   CMakeFiles/mega_tests.dir/src/game/Player.cpp.o \
   CMakeFiles/mega_tests.dir/src/game/GameWorld.cpp.o \
+  CMakeFiles/mega_tests.dir/src/game/Inventory3D.cpp.o \
   CMakeFiles/mega_tests.dir/src/game/LockpickMinigame.cpp.o \
   CMakeFiles/mega_tests.dir/src/audio/AudioEngine.cpp.o \
   /usr/lib/libgtest_main.so.1.18.0 \
@@ -62,6 +63,8 @@ CMakeFiles/mega_tests.dir/src/world/gen/MegaGenerator.cpp.o:
 CMakeFiles/mega_tests.dir/src/game/Player.cpp.o:
 
 CMakeFiles/mega_tests.dir/src/game/GameWorld.cpp.o:
+
+CMakeFiles/mega_tests.dir/src/game/Inventory3D.cpp.o:
 
 CMakeFiles/mega_tests.dir/src/game/LockpickMinigame.cpp.o:
 

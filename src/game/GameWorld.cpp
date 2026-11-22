@@ -9,13 +9,16 @@ namespace mega {
 
 namespace {
 
-bool rayIntersectAABB(const Vec3& orig, const Vec3& dir, const AABB& b, float maxDist, float& outT) {
+bool rayIntersectAABB(const Vec3& orig, const Vec3& dir, const AABB& b, float maxDist,
+                      float& outT, Vec3* outNormal = nullptr) {
     float tmin = 0.0f;
     float tmax = maxDist;
     float o[3] = {orig.x, orig.y, orig.z};
     float d[3] = {dir.x, dir.y, dir.z};
     float mn[3] = {b.min.x, b.min.y, b.min.z};
     float mx[3] = {b.max.x, b.max.y, b.max.z};
+    int hitAxis = -1;
+    float hitSign = 1.0f;
 
     for (int i = 0; i < 3; ++i) {
         if (std::abs(d[i]) < 1e-6f) {
@@ -24,17 +27,43 @@ bool rayIntersectAABB(const Vec3& orig, const Vec3& dir, const AABB& b, float ma
             float inv = 1.0f / d[i];
             float t1 = (mn[i] - o[i]) * inv;
             float t2 = (mx[i] - o[i]) * inv;
-            if (t1 > t2) std::swap(t1, t2);
-            tmin = std::max(tmin, t1);
+            float s = -1.0f;
+            if (t1 > t2) {
+                std::swap(t1, t2);
+                s = 1.0f;
+            }
+            if (t1 > tmin) {
+                tmin = t1;
+                hitAxis = i;
+                hitSign = s;
+            }
             tmax = std::min(tmax, t2);
             if (tmin > tmax) return false;
         }
     }
+    if (tmax < 0.0f) return false;
     outT = tmin;
+    if (outNormal) {
+        *outNormal = {0.0f, 1.0f, 0.0f};
+        if (hitAxis == 0) *outNormal = {hitSign, 0.0f, 0.0f};
+        else if (hitAxis == 1) *outNormal = {0.0f, hitSign, 0.0f};
+        else if (hitAxis == 2) *outNormal = {0.0f, 0.0f, hitSign};
+    }
     return true;
 }
 
 } // namespace
+
+AABB WorldItem::worldBounds() const {
+    Int3 sz = orient.applyToSize(itemBaseGridSize(type));
+    float hx = sz.x * Backpack3D::CELL_SIZE * 0.5f;
+    float hy = sz.y * Backpack3D::CELL_SIZE;
+    float hz = sz.z * Backpack3D::CELL_SIZE * 0.5f;
+    return {
+        {pos.x - hx, pos.y, pos.z - hz},
+        {pos.x + hx, pos.y + hy, pos.z + hz}
+    };
+}
 
 AABB HingeDoor::worldBounds() const {
     float y = currentYaw();
@@ -61,6 +90,15 @@ void GameWorld::startNewRun(uint64_t seed) {
     ammo = 48;
     kills = 0;
     inventory = Inventory{};
+    backpack.clear();
+    backpackMode = BackpackMode::OnBack;
+    hasHeldItem = false;
+    draggingItem = false;
+    dragOriginBackpackId = -1;
+    hoveredBackpackItemId = -1;
+    hoveredBackpackBlocked = false;
+    hoveredGroundedBackpack = false;
+    placementPreview = GhostPreviewState{};
     lockpick.close();
     flashlightOn = false;
     inventoryOpen = false;
@@ -109,37 +147,53 @@ void GameWorld::generateLevel(uint64_t seed) {
     exitDoor.lockSeed = seed ^ 0xE17D00BULL;
     doors.push_back(exitDoor);
 
-    // 2) Hinged Cabinet Door on the Food/Water cabinet against the North wall (x=57.36..58.64, z=56.05)
-    HingeDoor cabDoor;
-    cabDoor.hingePos = {57.36f, 1.04f, 56.05f};
-    cabDoor.width = 1.28f;
-    cabDoor.height = 1.76f;
-    cabDoor.thickness = 0.05f;
-    cabDoor.closedYaw = 0.0f;        // Lies along +X (57.36 .. 58.64)
-    cabDoor.openSign = -1.0f;        // Swings open into the room (+Z)
-    cabDoor.maxAngle = 1.85f;
-    cabDoor.isCabinet = true;
-    doors.push_back(cabDoor);
+    // 2) Double Hinged Cabinet Doors on the Food/Water cabinet against the North wall (x=57.36..58.64, z=56.05)
+    HingeDoor cabLeft;
+    cabLeft.hingePos = {57.36f, 1.04f, 56.05f};
+    cabLeft.width = 0.635f;
+    cabLeft.height = 1.76f;
+    cabLeft.thickness = 0.05f;
+    cabLeft.closedYaw = 0.0f;        // Extends along +X (57.36 .. 58.00)
+    cabLeft.openSign = -1.0f;        // Swings open into room (+Z)
+    cabLeft.maxAngle = 1.85f;
+    cabLeft.isCabinet = true;
+    int cabLeftIdx = static_cast<int>(doors.size());
+    doors.push_back(cabLeft);
+
+    HingeDoor cabRight;
+    cabRight.hingePos = {58.64f, 1.04f, 56.05f};
+    cabRight.width = 0.635f;
+    cabRight.height = 1.76f;
+    cabRight.thickness = 0.05f;
+    cabRight.closedYaw = PI;         // Extends along -X (58.64 .. 58.00)
+    cabRight.openSign = 1.0f;        // Swings open into room (+Z)
+    cabRight.maxAngle = 1.85f;
+    cabRight.isCabinet = true;
+    cabRight.linkedDoorIdx = cabLeftIdx;
+    int cabRightIdx = static_cast<int>(doors.size());
+    doors[cabLeftIdx].linkedDoorIdx = cabRightIdx;
+    doors.push_back(cabRight);
 
     // 3) Starter Room Items on West Table (x=55.15..56.15, z=57.0..58.8, y=1.84)
-    worldItems.push_back({{55.65f, 1.84f, 58.38f}, ItemType::Flashlight, false, 0, 0});
-    worldItems.push_back({{55.55f, 1.84f, 57.35f}, ItemType::Battery, false, 0, 0});
-    worldItems.push_back({{55.78f, 1.84f, 57.50f}, ItemType::Battery, false, 0, 0});
-    worldItems.push_back({{55.56f, 1.84f, 57.82f}, ItemType::Lockpick, false, 0, 0});
-    worldItems.push_back({{55.76f, 1.84f, 57.94f}, ItemType::Lockpick, false, 0, 0});
-    worldItems.push_back({{55.58f, 1.84f, 58.08f}, ItemType::Lockpick, false, 0, 0});
+    worldItems.push_back({{55.65f, 1.84f, 58.38f}, ItemType::Flashlight, false, 0, 0, {}});
+    worldItems.push_back({{55.55f, 1.84f, 57.35f}, ItemType::Battery, false, 0, 0, {}});
+    worldItems.push_back({{55.78f, 1.84f, 57.50f}, ItemType::Battery, false, 0, 0, {}});
+    worldItems.push_back({{55.56f, 1.84f, 57.82f}, ItemType::Lockpick, false, 0, 0, {}});
+    worldItems.push_back({{55.76f, 1.84f, 57.94f}, ItemType::Lockpick, false, 0, 0, {}});
+    worldItems.push_back({{55.58f, 1.84f, 58.08f}, ItemType::Lockpick, false, 0, 0, {}});
 
     // 4) Starter Room Items inside North Cabinet (Food on y=2.16, Water on y=1.64)
-    worldItems.push_back({{57.78f, 2.16f, 55.55f}, ItemType::Food, false, 0, 0});
-    worldItems.push_back({{58.22f, 2.16f, 55.55f}, ItemType::Food, false, 0, 0});
-    worldItems.push_back({{57.78f, 1.64f, 55.55f}, ItemType::Water, false, 0, 0});
-    worldItems.push_back({{58.22f, 1.64f, 55.55f}, ItemType::Water, false, 0, 0});
+    worldItems.push_back({{57.78f, 2.16f, 55.55f}, ItemType::Food, false, 0, 0, {}});
+    worldItems.push_back({{58.22f, 2.16f, 55.55f}, ItemType::Food, false, 0, 0, {}});
+    worldItems.push_back({{57.78f, 1.64f, 55.55f}, ItemType::Water, false, 0, 0, {}});
+    worldItems.push_back({{58.22f, 1.64f, 55.55f}, ItemType::Water, false, 0, 0, {}});
 
     syncLockersFromMap();
     spawnRobotsInLoadedRegions();
 }
 
 void GameWorld::syncLockersFromMap() {
+    // 1) Hideable Corridor Lockers: 90% UNLOCKED (only 10% locked!)
     for (const auto& lp : map.lockers) {
         bool exists = false;
         for (const auto& d : doors) {
@@ -164,24 +218,114 @@ void GameWorld::syncLockersFromMap() {
         ld.regX = lp.regX;
         ld.regZ = lp.regZ;
 
-        // ~45% of corridor lockers spawn locked
         uint64_t lSeed = map.seed ^
                          (static_cast<uint64_t>(std::llround(lp.hingePos.x * 100.0f)) * 73856093ULL) ^
                          (static_cast<uint64_t>(std::llround(lp.hingePos.z * 100.0f)) * 83492791ULL);
         Rng lRng(lSeed);
-        ld.locked = lRng.chance(0.45f);
+        ld.locked = lRng.chance(0.10f); // 90% open, 10% locked!
         ld.lockSeed = lSeed;
-
         doors.push_back(ld);
+    }
 
-        // ~35% chance to find a spare lockpick inside a corridor locker
-        if (lRng.chance(0.35f)) {
-            Vec3 itemPos{
-                0.5f * (lp.interiorBox.min.x + lp.interiorBox.max.x),
-                lp.interiorBox.min.y + 0.04f,
-                0.5f * (lp.interiorBox.min.z + lp.interiorBox.max.z)
-            };
-            worldItems.push_back({itemPos, ItemType::Lockpick, false, lp.regX, lp.regZ});
+    // 2) Metal Corridor Storage Cabinets: Double doors (2 handles) sharing 1 lock (ALWAYS LOCKED!)
+    for (const auto& cp : map.cabinets) {
+        bool exists = false;
+        for (const auto& d : doors) {
+            if (d.isCabinet && !d.isLocker && lengthSq(d.hingePos - cp.leftHingePos) < 0.01f) {
+                exists = true;
+                break;
+            }
+        }
+        if (exists) continue;
+
+        uint64_t cSeed = map.seed ^ 0xCA81E7ULL ^
+                         (static_cast<uint64_t>(std::llround(cp.leftHingePos.x * 100.0f)) * 19349663ULL) ^
+                         (static_cast<uint64_t>(std::llround(cp.leftHingePos.z * 100.0f)) * 83492791ULL);
+
+        HingeDoor leftLeaf;
+        leftLeaf.hingePos = cp.leftHingePos;
+        leftLeaf.width = cp.leafWidth;
+        leftLeaf.height = cp.height;
+        leftLeaf.thickness = 0.045f;
+        leftLeaf.closedYaw = cp.leftClosedYaw;
+        leftLeaf.openSign = cp.leftOpenSign;
+        leftLeaf.maxAngle = 1.85f;
+        leftLeaf.isCabinet = true;
+        leftLeaf.locked = true; // Metal cabinets always spawn locked!
+        leftLeaf.lockSeed = cSeed;
+        leftLeaf.regX = cp.regX;
+        leftLeaf.regZ = cp.regZ;
+
+        HingeDoor rightLeaf = leftLeaf;
+        rightLeaf.hingePos = cp.rightHingePos;
+        rightLeaf.closedYaw = cp.rightClosedYaw;
+        rightLeaf.openSign = cp.rightOpenSign;
+
+        int leftIdx = static_cast<int>(doors.size());
+        int rightIdx = leftIdx + 1;
+        leftLeaf.linkedDoorIdx = rightIdx;
+        rightLeaf.linkedDoorIdx = leftIdx;
+        doors.push_back(leftLeaf);
+        doors.push_back(rightLeaf);
+    }
+
+    // 3) Spawn Loot on Crates, Metal Cabinet Shelves, Shelving Racks & Lockers from configurable LootTables
+    constexpr float GRID = Backpack3D::CELL_SIZE;
+    for (const auto& ls : map.lootSurfaces) {
+        Vec3 surfCenter{
+            0.5f * (ls.surfaceBox.min.x + ls.surfaceBox.max.x),
+            ls.surfaceBox.min.y,
+            0.5f * (ls.surfaceBox.min.z + ls.surfaceBox.max.z)
+        };
+        // Avoid spawning twice on the same surface across region stream ticks
+        bool alreadyHasItem = false;
+        for (const auto& wi : worldItems) {
+            if (std::abs(wi.pos.y - surfCenter.y) < 0.08f &&
+                wi.pos.x >= ls.surfaceBox.min.x - 0.04f && wi.pos.x <= ls.surfaceBox.max.x + 0.04f &&
+                wi.pos.z >= ls.surfaceBox.min.z - 0.04f && wi.pos.z <= ls.surfaceBox.max.z + 0.04f) {
+                alreadyHasItem = true;
+                break;
+            }
+        }
+        if (alreadyHasItem) continue;
+
+        uint64_t sSeed = map.seed ^ 0x10075EEDULL ^
+                         (static_cast<uint64_t>(std::llround(surfCenter.x * 100.0f)) * 73856093ULL) ^
+                         (static_cast<uint64_t>(std::llround(surfCenter.y * 100.0f)) * 19349663ULL) ^
+                         (static_cast<uint64_t>(std::llround(surfCenter.z * 100.0f)) * 83492791ULL);
+        Rng sRng(sSeed);
+
+        const auto& tbl = lootTables.get(ls.source);
+        if (tbl.maxItems <= 0 || !sRng.chance(tbl.spawnChance)) continue;
+
+        int count = sRng.rangeInt(1, tbl.maxItems);
+        float spanX = std::max(0.02f, ls.surfaceBox.max.x - ls.surfaceBox.min.x);
+        float spanZ = std::max(0.02f, ls.surfaceBox.max.z - ls.surfaceBox.min.z);
+
+        for (int k = 0; k < count; ++k) {
+            ItemType itType = tbl.rollItem(sRng);
+            ItemOrientation ori{};
+            ori.rotY = sRng.rangeInt(0, 3);
+            float px = ls.surfaceBox.min.x + sRng.nextFloat() * spanX;
+            float pz = ls.surfaceBox.min.z + sRng.nextFloat() * spanZ;
+            // Snap to 3D world grid
+            px = std::round(px / GRID) * GRID;
+            pz = std::round(pz / GRID) * GRID;
+            px = clampf(px, ls.surfaceBox.min.x, ls.surfaceBox.max.x);
+            pz = clampf(pz, ls.surfaceBox.min.z, ls.surfaceBox.max.z);
+
+            WorldItem cand{{px, surfCenter.y, pz}, itType, false, ls.regX, ls.regZ, ori};
+            AABB cb = cand.worldBounds();
+            bool overlap = false;
+            for (const auto& wi : worldItems) {
+                if (!wi.pickedUp && cb.intersects(wi.worldBounds())) {
+                    overlap = true;
+                    break;
+                }
+            }
+            if (!overlap) {
+                worldItems.push_back(cand);
+            }
         }
     }
 }
@@ -276,7 +420,8 @@ void GameWorld::spawnRobotsInLoadedRegions() {
     }
 }
 
-float GameWorld::raycastWorld(const Vec3& origin, const Vec3& dir, float maxDist) const {
+float GameWorld::raycastWorld(const Vec3& origin, const Vec3& dir, float maxDist,
+                              Vec3* outNormal) const {
     // 3D Amanatides-Woo DDA voxel traversal
     int x = static_cast<int>(std::floor(origin.x));
     int y = static_cast<int>(std::floor(origin.y));
@@ -300,26 +445,55 @@ float GameWorld::raycastWorld(const Vec3& origin, const Vec3& dir, float maxDist
     if (stepY == 0) tMaxY = 1e30f;
     if (stepZ == 0) tMaxZ = 1e30f;
 
+    float bestT = maxDist;
+    Vec3 bestN{0.0f, 1.0f, 0.0f};
     float t = 0.0f;
+    int lastAxis = 1;
     for (int i = 0; i < 256 && t < maxDist; ++i) {
         if (map.world.getCell(x, y, z).isOpaque()) {
-            return t;
+            bestT = t;
+            if (lastAxis == 0) bestN = {static_cast<float>(-stepX), 0.0f, 0.0f};
+            else if (lastAxis == 1) bestN = {0.0f, static_cast<float>(-stepY), 0.0f};
+            else bestN = {0.0f, 0.0f, static_cast<float>(-stepZ)};
+            break;
         }
         if (tMaxX < tMaxY && tMaxX < tMaxZ) {
             t = tMaxX;
             tMaxX += tDeltaX;
             x += stepX;
+            lastAxis = 0;
         } else if (tMaxY < tMaxZ) {
             t = tMaxY;
             tMaxY += tDeltaY;
             y += stepY;
+            lastAxis = 1;
         } else {
             t = tMaxZ;
             tMaxZ += tDeltaZ;
             z += stepZ;
+            lastAxis = 2;
         }
     }
-    return maxDist;
+
+    // Also test against 3D solid props (locker walls, cabinets, crates, tables, shelves)
+    Vec3 endPt = origin + dir * bestT;
+    AABB rayBounds{
+        {std::min(origin.x, endPt.x) - 0.05f, std::min(origin.y, endPt.y) - 0.05f, std::min(origin.z, endPt.z) - 0.05f},
+        {std::max(origin.x, endPt.x) + 0.05f, std::max(origin.y, endPt.y) + 0.05f, std::max(origin.z, endPt.z) + 0.05f}
+    };
+    for (const auto& pc : map.world.propColliders()) {
+        if (!rayBounds.intersects(pc)) continue;
+        float pt = 0.0f;
+        Vec3 pn{};
+        if (rayIntersectAABB(origin, dir, pc, bestT, pt, &pn)) {
+            if (pt < bestT) {
+                bestT = pt;
+                bestN = pn;
+            }
+        }
+    }
+    if (outNormal) *outNormal = bestN;
+    return bestT;
 }
 
 void GameWorld::fireWeapon(AudioEngine& audio) {
@@ -570,7 +744,20 @@ void GameWorld::update(const PlayerInput& input, bool firePressed, float dt, Aud
         lockpick.update(dt, audio);
         if (lockpick.pickSnappedJustNow) {
             lockpick.pickSnappedJustNow = false;
-            inventory.lockpicks = std::max(0, inventory.lockpicks - 1);
+            if (hasHeldItem && heldItemType == ItemType::Lockpick) {
+                hasHeldItem = false;
+            } else {
+                int lpId = backpack.findFirstAccessible(ItemType::Lockpick);
+                if (lpId < 0) {
+                    // Fallback: consume any lockpick in backpack if one was used
+                    for (const auto& it : backpack.items) {
+                        if (it.type == ItemType::Lockpick) { lpId = it.id; break; }
+                    }
+                }
+                if (lpId >= 0) backpack.removeById(lpId);
+                else inventory.lockpicks = std::max(0, inventory.lockpicks - 1);
+            }
+            syncInventoryCounts();
             if (inventory.lockpicks <= 0) {
                 hudNoticeText = "OUT OF LOCKPICKS";
                 hudNoticeTimer = 2.2f;
@@ -581,8 +768,14 @@ void GameWorld::update(const PlayerInput& input, bool firePressed, float dt, Aud
             }
         } else if (lockpick.unlockedJustNow) {
             if (lockpick.targetDoorIdx >= 0 && lockpick.targetDoorIdx < static_cast<int>(doors.size())) {
-                doors[lockpick.targetDoorIdx].locked = false; // Stays unlocked permanently
-                doors[lockpick.targetDoorIdx].angularVel = 2.4f;
+                auto& d = doors[lockpick.targetDoorIdx];
+                d.locked = false; // Stays unlocked permanently
+                d.angularVel = 2.4f;
+                // Double-door cabinets share 1 lock: unlocking one leaf unlocks both!
+                if (d.linkedDoorIdx >= 0 && d.linkedDoorIdx < static_cast<int>(doors.size())) {
+                    doors[d.linkedDoorIdx].locked = false;
+                    doors[d.linkedDoorIdx].angularVel = 2.1f;
+                }
             }
             lockpick.unlockedJustNow = false;
             lockpick.close();
@@ -937,7 +1130,7 @@ void GameWorld::update(const PlayerInput& input, bool firePressed, float dt, Aud
                         }
                     }
                 }
-                if (wall >= dist - 0.6f && !blockedByDoor) {
+                if (wall >= dist - 0.08f && !blockedByDoor) {
                     canSeePlayer = true;
                 }
             }
@@ -1452,6 +1645,509 @@ void GameWorld::gatherRobots(std::vector<RobotRenderState>& out) const {
     }
 }
 
+void GameWorld::syncInventoryCounts() {
+    int nFlash = backpack.countType(ItemType::Flashlight);
+    int nBatt  = backpack.countType(ItemType::Battery);
+    int nFood  = backpack.countType(ItemType::Food);
+    int nWater = backpack.countType(ItemType::Water);
+    int nPick  = backpack.countType(ItemType::Lockpick);
+
+    auto countExtra = [&](ItemType t) {
+        switch (t) {
+            case ItemType::Flashlight: nFlash++; break;
+            case ItemType::Battery:    nBatt++; break;
+            case ItemType::Food:       nFood++; break;
+            case ItemType::Water:      nWater++; break;
+            case ItemType::Lockpick:   nPick++; break;
+        }
+    };
+    if (hasHeldItem) countExtra(heldItemType);
+    if (draggingItem) countExtra(dragItemType);
+
+    inventory.hasFlashlight = (nFlash > 0);
+    inventory.batteries = nBatt;
+    inventory.food = nFood;
+    inventory.water = nWater;
+    inventory.lockpicks = nPick;
+    if (!inventory.hasFlashlight) flashlightOn = false;
+}
+
+Mat4 GameWorld::backpackWorldMatrix() const {
+    constexpr float W = Backpack3D::DIM_X * Backpack3D::CELL_SIZE;
+    constexpr float H = Backpack3D::DIM_Y * Backpack3D::CELL_SIZE;
+    constexpr float D = Backpack3D::DIM_Z * Backpack3D::CELL_SIZE;
+
+    Mat4 M = Mat4::identity();
+    Vec3 bX, bY, bZ, origin;
+
+    if (backpackMode == BackpackMode::OnGround) {
+        float c = std::cos(backpackGroundYaw);
+        float s = std::sin(backpackGroundYaw);
+        bX = {c, 0.0f, s};
+        bY = {0.0f, 1.0f, 0.0f};
+        bZ = cross(bX, bY);
+        origin = backpackGroundPos - bX * (W * 0.5f) - bZ * (D * 0.5f);
+    } else {
+        // Held in front of player's hands and tilted ~52 degrees so player looks right into the 6x8x4 cavity
+        Vec3 eye = player.eyePosition();
+        Vec3 fwd = player.forwardDir();
+        Vec3 right = player.rightDir();
+        Vec3 up = normalize(cross(right, fwd));
+
+        float tilt = radians(52.0f);
+        float ct = std::cos(tilt), st = std::sin(tilt);
+        bX = right;
+        bY = normalize(up * ct - fwd * st);
+        bZ = cross(bX, bY); // Exact right-handed orthonormal frame
+
+        Vec3 center = eye + fwd * 0.66f - up * 0.11f;
+        origin = center - bX * (W * 0.5f) - bY * (H * 0.5f) - bZ * (D * 0.5f);
+    }
+
+    M.m[0] = bX.x; M.m[1] = bX.y; M.m[2]  = bX.z; M.m[3]  = 0.0f;
+    M.m[4] = bY.x; M.m[5] = bY.y; M.m[6]  = bY.z; M.m[7]  = 0.0f;
+    M.m[8] = bZ.x; M.m[9] = bZ.y; M.m[10] = bZ.z; M.m[11] = 0.0f;
+    M.m[12] = origin.x; M.m[13] = origin.y; M.m[14] = origin.z; M.m[15] = 1.0f;
+    return M;
+}
+
+Mat4 GameWorld::heldItemWorldMatrix() const {
+    Vec3 eye = player.eyePosition();
+    Vec3 fwd = player.forwardDir();
+    Vec3 right = player.rightDir();
+    Vec3 up = normalize(cross(right, fwd));
+    Vec3 pos = eye + fwd * 0.42f + right * 0.22f - up * 0.16f;
+    return Mat4::translate(pos) * Mat4::rotateY(-player.yaw) * heldItemOrient.toMatrix();
+}
+
+void GameWorld::toggleBackpackInHands() {
+    if (lockpick.active) lockpick.close();
+    endInteract();
+
+    if (backpackMode == BackpackMode::OnGround) {
+        if (length(backpackGroundPos - player.position) <= 3.4f) {
+            backpackMode = BackpackMode::InHands;
+            inventoryOpen = true;
+            draggingItem = false;
+        } else {
+            hudNoticeText = "TOO FAR FROM BACKPACK";
+            hudNoticeTimer = 1.6f;
+        }
+        return;
+    }
+
+    if (backpackMode == BackpackMode::OnBack) {
+        backpackMode = BackpackMode::InHands;
+        inventoryOpen = true;
+    } else {
+        // Returning backpack to back: if currently dragging an item, put it back in backpack or hand
+        if (draggingItem) {
+            if (backpack.tryAutoAdd(dragItemType) < 0 && !hasHeldItem) {
+                hasHeldItem = true;
+                heldItemType = dragItemType;
+                heldItemOrient = dragItemOrient;
+            }
+            draggingItem = false;
+            syncInventoryCounts();
+        }
+        backpackMode = BackpackMode::OnBack;
+        inventoryOpen = false;
+        hoveredBackpackItemId = -1;
+        placementPreview = GhostPreviewState{};
+    }
+}
+
+bool GameWorld::togglePlaceBackpackOnGround(AudioEngine& audio) {
+    if (lockpick.active) return false;
+    endInteract();
+
+    if (backpackMode == BackpackMode::OnGround) {
+        if (length(backpackGroundPos - player.position) <= 3.4f) {
+            backpackMode = BackpackMode::OnBack;
+            inventoryOpen = false;
+            draggingItem = false;
+            hoveredBackpackItemId = -1;
+            audio.play(SoundId::Pickup, 0.85f);
+            hudNoticeText = "BACKPACK EQUIPPED";
+            hudNoticeTimer = 1.4f;
+            return true;
+        }
+        hudNoticeText = "WALK CLOSER TO BACKPACK";
+        hudNoticeTimer = 1.6f;
+        return false;
+    }
+
+    // Place backpack on the floor / table in front of the player (snapped to 3D grid)
+    Vec3 eye = player.eyePosition();
+    Vec3 dir = player.forwardDir();
+    Vec3 hitN{0.0f, 1.0f, 0.0f};
+    float hitT = raycastWorld(eye, dir, 2.6f, &hitN);
+    Vec3 placePos;
+    if (hitT < 2.55f && hitN.y > 0.5f) {
+        placePos = eye + dir * hitT;
+    } else {
+        // Fallback: directly on the floor 0.85m in front of player
+        Vec3 fwdXZ = normalize({std::sin(player.yaw), 0.0f, -std::cos(player.yaw)});
+        Vec3 probe = {player.position.x + fwdXZ.x * 0.85f, player.position.y + 0.6f, player.position.z + fwdXZ.z * 0.85f};
+        float downT = raycastWorld(probe, {0.0f, -1.0f, 0.0f}, 2.0f);
+        placePos = {probe.x, probe.y - std::min(downT, 0.6f), probe.z};
+    }
+
+    constexpr float G = Backpack3D::CELL_SIZE;
+    placePos.x = std::round(placePos.x / G) * G;
+    placePos.z = std::round(placePos.z / G) * G;
+
+    if (draggingItem) {
+        backpack.tryAutoAdd(dragItemType);
+        draggingItem = false;
+        syncInventoryCounts();
+    }
+
+    backpackGroundPos = placePos;
+    backpackGroundYaw = player.yaw;
+    backpackMode = BackpackMode::OnGround;
+    inventoryOpen = false;
+    audio.play3D(SoundId::DoorImpact, placePos, 0.32f, 0.0f, 0.35f);
+    hudNoticeText = "BACKPACK PLACED  [B PICK UP]";
+    hudNoticeTimer = 1.8f;
+    return true;
+}
+
+bool GameWorld::computeWorldGridSnap(const Vec3& rayOrig, const Vec3& rayDir,
+                                     ItemType type, const ItemOrientation& orient,
+                                     Vec3& outSnappedPos) const {
+    constexpr float MAX_PLACE_DIST = 3.2f;
+    Vec3 hitN{0.0f, 1.0f, 0.0f};
+    float bestT = raycastWorld(rayOrig, rayDir, MAX_PLACE_DIST, &hitN);
+    bool hitAny = (bestT < MAX_PLACE_DIST - 0.01f);
+
+    // Also allow stacking on top of existing world items on the 3D grid!
+    for (const auto& wi : worldItems) {
+        if (wi.pickedUp) continue;
+        float itT = 0.0f;
+        Vec3 itN{};
+        if (rayIntersectAABB(rayOrig, rayDir, wi.worldBounds(), bestT, itT, &itN)) {
+            if (itT < bestT) {
+                bestT = itT;
+                hitN = itN;
+                hitAny = true;
+            }
+        }
+    }
+    if (!hitAny || hitN.y < -0.3f) return false; // Cannot hang from ceiling
+
+    Vec3 hitPt = rayOrig + rayDir * bestT;
+    Int3 sz = orient.applyToSize(itemBaseGridSize(type));
+    constexpr float G = Backpack3D::CELL_SIZE;
+    float halfX = sz.x * G * 0.5f;
+    float halfZ = sz.z * G * 0.5f;
+
+    Vec3 pos = hitPt;
+    if (hitN.y <= 0.5f) {
+        // Side face hit: offset outward along wall normal so it doesn't clip into wall
+        pos.x += hitN.x * (halfX + 0.01f);
+        pos.z += hitN.z * (halfZ + 0.01f);
+        // Drop down to floor/surface below
+        float dropT = raycastWorld({pos.x, pos.y + 0.05f, pos.z}, {0.0f, -1.0f, 0.0f}, 2.2f);
+        if (dropT >= 2.15f) return false;
+        pos.y = pos.y + 0.05f - dropT;
+    }
+
+    // Snap X/Z cleanly to the 3D world grid (0.06m cell size)
+    pos.x = std::round(pos.x / G) * G;
+    pos.z = std::round(pos.z / G) * G;
+
+    // Validate no overlap with solid WorldGrid voxels or existing items
+    WorldItem probe{pos, type, false, 0, 0, orient};
+    AABB box = probe.worldBounds();
+    int minX = static_cast<int>(std::floor(box.min.x + 0.005f));
+    int maxX = static_cast<int>(std::floor(box.max.x - 0.005f));
+    int minY = static_cast<int>(std::floor(box.min.y + 0.005f));
+    int maxY = static_cast<int>(std::floor(box.max.y - 0.005f));
+    int minZ = static_cast<int>(std::floor(box.min.z + 0.005f));
+    int maxZ = static_cast<int>(std::floor(box.max.z - 0.005f));
+    for (int y = minY; y <= maxY; ++y)
+        for (int z = minZ; z <= maxZ; ++z)
+            for (int x = minX; x <= maxX; ++x)
+                if (map.world.getCell(x, y, z).isSolid()) return false;
+
+    for (const auto& wi : worldItems) {
+        if (wi.pickedUp) continue;
+        AABB wb = wi.worldBounds();
+        // Allow resting directly on top (min.y == wb.max.y) without false overlap
+        AABB shrunk{{box.min.x + 0.005f, box.min.y + 0.005f, box.min.z + 0.005f},
+                    {box.max.x - 0.005f, box.max.y - 0.005f, box.max.z - 0.005f}};
+        if (shrunk.intersects(wb)) return false;
+    }
+
+    outSnappedPos = pos;
+    return true;
+}
+
+void GameWorld::updateCursorHover(const Vec3& rayOrig, const Vec3& rayDir) {
+    hoveredBackpackItemId = -1;
+    hoveredBackpackBlocked = false;
+    hoveredGroundedBackpack = false;
+    placementPreview = GhostPreviewState{};
+
+    bool backpackVisible = (backpackMode == BackpackMode::InHands) ||
+                           (backpackMode == BackpackMode::OnGround &&
+                            length(backpackGroundPos - player.position) <= 3.5f);
+
+    bool placingActive = draggingItem || hasHeldItem;
+    ItemType activeType = draggingItem ? dragItemType : heldItemType;
+    ItemOrientation activeOri = draggingItem ? dragItemOrient : heldItemOrient;
+
+    // 1) Raycast into the 3D backpack (if held in hands OR placed on the ground nearby)
+    if (backpackVisible) {
+        Mat4 invBp = backpackWorldMatrix().inverseRigid();
+        Vec3 localOrig = invBp.transformPoint(rayOrig);
+        Vec3 localDir = normalize(invBp.transformDir(rayDir));
+
+        constexpr float W = Backpack3D::DIM_X * Backpack3D::CELL_SIZE;
+        constexpr float H = Backpack3D::DIM_Y * Backpack3D::CELL_SIZE;
+        constexpr float D = Backpack3D::DIM_Z * Backpack3D::CELL_SIZE;
+        AABB outerLocal{{-0.03f, -0.03f, -0.03f}, {W + 0.03f, H + 0.03f, D + 0.03f}};
+        float outerT = 0.0f;
+        if (rayIntersectAABB(localOrig, localDir, outerLocal, 3.5f, outerT)) {
+            if (backpackMode == BackpackMode::OnGround) hoveredGroundedBackpack = true;
+
+            if (placingActive) {
+                int gx = 0, gy = 0, gz = 0;
+                if (backpack.raycastPlacementLocal(localOrig, localDir, 3.5f, activeType, activeOri, gx, gy, gz)) {
+                    placementPreview.active = true;
+                    placementPreview.valid = true;
+                    placementPreview.inBackpack = true;
+                    placementPreview.type = activeType;
+                    placementPreview.orient = activeOri;
+                    placementPreview.gx = gx;
+                    placementPreview.gy = gy;
+                    placementPreview.gz = gz;
+                    return;
+                }
+            } else {
+                int hitId = backpack.raycastItemsLocal(localOrig, localDir, 3.5f);
+                if (hitId >= 0) {
+                    hoveredBackpackItemId = hitId;
+                    hoveredBackpackBlocked = backpack.isBlockedFromAbove(hitId);
+                    return;
+                }
+            }
+        }
+    }
+
+    // 2) If dragging an item (RMB) or holding an item in hand -> show 3D world-grid placement preview!
+    if (draggingItem || (hasHeldItem && backpackMode != BackpackMode::InHands && hoveredDoorIdx < 0 && hoveredItemIdx < 0)) {
+        Vec3 snapped{};
+        bool ok = computeWorldGridSnap(rayOrig, rayDir, activeType, activeOri, snapped);
+        placementPreview.active = ok;
+        placementPreview.valid = ok;
+        placementPreview.inBackpack = false;
+        placementPreview.type = activeType;
+        placementPreview.orient = activeOri;
+        placementPreview.worldPos = snapped;
+    }
+}
+
+void GameWorld::rotateActiveItem(int axis) {
+    ItemOrientation* targetOri = nullptr;
+    if (draggingItem) targetOri = &dragItemOrient;
+    else if (hasHeldItem) targetOri = &heldItemOrient;
+    if (!targetOri) return;
+    if (axis == 0) targetOri->rotateX();
+    else if (axis == 1) targetOri->rotateY();
+    else targetOri->rotateZ();
+}
+
+bool GameWorld::useHeldItem(AudioEngine& audio) {
+    if (!hasHeldItem) return false;
+    switch (heldItemType) {
+        case ItemType::Battery:
+            if (inventory.hasFlashlight && inventory.flashlightBattery < settings.maxBattery - 0.5f) {
+                inventory.flashlightBattery = std::min(settings.maxBattery,
+                                                       inventory.flashlightBattery + settings.batteryRestore);
+                hasHeldItem = false;
+                syncInventoryCounts();
+                audio.play(SoundId::Pickup, 0.75f);
+                return true;
+            }
+            return false;
+        case ItemType::Food:
+            if (hunger < settings.maxHunger - 0.5f) {
+                hunger = std::min(settings.maxHunger, hunger + settings.foodRestore);
+                hasHeldItem = false;
+                syncInventoryCounts();
+                audio.play(SoundId::Pickup, 0.75f);
+                return true;
+            }
+            return false;
+        case ItemType::Water:
+            if (thirst < settings.maxThirst - 0.5f) {
+                thirst = std::min(settings.maxThirst, thirst + settings.waterRestore);
+                hasHeldItem = false;
+                syncInventoryCounts();
+                audio.play(SoundId::Pickup, 0.75f);
+                return true;
+            }
+            return false;
+        case ItemType::Flashlight:
+            if (inventory.flashlightBattery > 0.0f) {
+                flashlightOn = !flashlightOn;
+                audio.play(SoundId::FlashlightClick, 0.95f);
+                return true;
+            }
+            return false;
+        default:
+            return false;
+    }
+}
+
+bool GameWorld::handlePrimaryClick(const Vec3& rayOrig, const Vec3& rayDir, AudioEngine& audio) {
+    updateCursorHover(rayOrig, rayDir);
+
+    // 1) If RMB-dragging an item, LMB places it into backpack cell or onto 3D world grid
+    if (draggingItem) {
+        if (placementPreview.active && placementPreview.valid) {
+            if (placementPreview.inBackpack) {
+                backpack.placeAt(placementPreview.gx, placementPreview.gy, placementPreview.gz,
+                                 dragItemType, dragItemOrient);
+                audio.play(SoundId::Pickup, 0.75f);
+            } else {
+                int rx = WorldGrid::floorDiv(static_cast<int>(std::floor(placementPreview.worldPos.x)), cfg::REGION_SIZE);
+                int rz = WorldGrid::floorDiv(static_cast<int>(std::floor(placementPreview.worldPos.z)), cfg::REGION_SIZE);
+                worldItems.push_back({placementPreview.worldPos, dragItemType, false, rx, rz, dragItemOrient});
+                audio.play3D(SoundId::Pickup, placementPreview.worldPos, 0.8f);
+            }
+            draggingItem = false;
+            dragOriginBackpackId = -1;
+            placementPreview = GhostPreviewState{};
+            syncInventoryCounts();
+            return true;
+        }
+        hudNoticeText = "INVALID PLACEMENT";
+        hudNoticeTimer = 1.2f;
+        return true;
+    }
+
+    // 2) Clicking LMB on an item inside the 3D backpack -> take into hand & return backpack to back!
+    if (hoveredBackpackItemId >= 0) {
+        if (hoveredBackpackBlocked) {
+            hudNoticeText = "BLOCKED ABOVE - MOVE TOP ITEMS";
+            hudNoticeTimer = 1.8f;
+            audio.play(SoundId::DoorImpact, 0.25f, 0.0f, 0.3f);
+            return true;
+        }
+        PackedItem removed;
+        if (backpack.removeById(hoveredBackpackItemId, &removed)) {
+            if (hasHeldItem) {
+                // Auto-pack previously held item if possible, otherwise drop at feet
+                if (backpack.tryAutoAdd(heldItemType) < 0) {
+                    worldItems.push_back({player.position, heldItemType, false, map.currentRegX, map.currentRegZ, heldItemOrient});
+                }
+            }
+            hasHeldItem = true;
+            heldItemType = removed.type;
+            heldItemOrient = removed.orient;
+            hoveredBackpackItemId = -1;
+            // Automatically put backpack back on back when taking an item into hand!
+            if (backpackMode == BackpackMode::InHands) {
+                backpackMode = BackpackMode::OnBack;
+                inventoryOpen = false;
+            }
+            syncInventoryCounts();
+            audio.play(SoundId::Pickup, 0.85f);
+            return true;
+        }
+    }
+
+    // 3) If holding an item and clicking a valid slot inside the backpack -> pack it!
+    if (hasHeldItem && placementPreview.active && placementPreview.valid && placementPreview.inBackpack) {
+        backpack.placeAt(placementPreview.gx, placementPreview.gy, placementPreview.gz,
+                         heldItemType, heldItemOrient);
+        hasHeldItem = false;
+        placementPreview = GhostPreviewState{};
+        syncInventoryCounts();
+        audio.play(SoundId::Pickup, 0.8f);
+        return true;
+    }
+
+    // 4) Normal world interaction when backpack is NOT in hands
+    if (backpackMode != BackpackMode::InHands) {
+        if (beginInteract(audio)) return true;
+        // If holding an item and clicking empty floor/surface with valid 3D grid preview -> place it!
+        if (hasHeldItem && placementPreview.active && placementPreview.valid && !placementPreview.inBackpack) {
+            int rx = WorldGrid::floorDiv(static_cast<int>(std::floor(placementPreview.worldPos.x)), cfg::REGION_SIZE);
+            int rz = WorldGrid::floorDiv(static_cast<int>(std::floor(placementPreview.worldPos.z)), cfg::REGION_SIZE);
+            worldItems.push_back({placementPreview.worldPos, heldItemType, false, rx, rz, heldItemOrient});
+            hasHeldItem = false;
+            placementPreview = GhostPreviewState{};
+            syncInventoryCounts();
+            audio.play3D(SoundId::Pickup, worldItems.back().pos, 0.8f);
+            return true;
+        }
+    }
+    return false;
+}
+
+bool GameWorld::handleSecondaryClick(const Vec3& rayOrig, const Vec3& rayDir, AudioEngine& audio) {
+    updateCursorHover(rayOrig, rayDir);
+
+    // 1) If already RMB-dragging an item -> drop/place it (or cancel back into backpack if invalid)
+    if (draggingItem) {
+        if (placementPreview.active && placementPreview.valid) {
+            return handlePrimaryClick(rayOrig, rayDir, audio);
+        }
+        // Cancel drag: restore item into backpack or hand
+        if (backpack.tryAutoAdd(dragItemType) < 0 && !hasHeldItem) {
+            hasHeldItem = true;
+            heldItemType = dragItemType;
+            heldItemOrient = dragItemOrient;
+        }
+        draggingItem = false;
+        dragOriginBackpackId = -1;
+        placementPreview = GhostPreviewState{};
+        syncInventoryCounts();
+        return true;
+    }
+
+    // 2) Pressing RMB on an unblocked item in the backpack -> stop camera & drag to floor / surface / slot!
+    if (hoveredBackpackItemId >= 0) {
+        if (hoveredBackpackBlocked) {
+            hudNoticeText = "BLOCKED ABOVE - MOVE TOP ITEMS";
+            hudNoticeTimer = 1.8f;
+            audio.play(SoundId::DoorImpact, 0.25f, 0.0f, 0.3f);
+            return true;
+        }
+        PackedItem removed;
+        if (backpack.removeById(hoveredBackpackItemId, &removed)) {
+            draggingItem = true;
+            dragItemType = removed.type;
+            dragItemOrient = removed.orient;
+            dragOriginBackpackId = removed.id;
+            hoveredBackpackItemId = -1;
+            syncInventoryCounts();
+            audio.play(SoundId::Pickup, 0.7f);
+            return true;
+        }
+    }
+
+    // 3) If holding an item in hand -> RMB places on 3D world grid (or uses consumable if not aiming at floor)
+    if (hasHeldItem && backpackMode != BackpackMode::InHands) {
+        if (placementPreview.active && placementPreview.valid && !placementPreview.inBackpack) {
+            int rx = WorldGrid::floorDiv(static_cast<int>(std::floor(placementPreview.worldPos.x)), cfg::REGION_SIZE);
+            int rz = WorldGrid::floorDiv(static_cast<int>(std::floor(placementPreview.worldPos.z)), cfg::REGION_SIZE);
+            worldItems.push_back({placementPreview.worldPos, heldItemType, false, rx, rz, heldItemOrient});
+            hasHeldItem = false;
+            placementPreview = GhostPreviewState{};
+            syncInventoryCounts();
+            audio.play3D(SoundId::Pickup, worldItems.back().pos, 0.8f);
+            return true;
+        }
+        return useHeldItem(audio);
+    }
+    return false;
+}
+
 void GameWorld::updateHover() {
     hoveredDoorIdx = -1;
     hoveredItemIdx = -1;
@@ -1472,10 +2168,10 @@ void GameWorld::updateHover() {
 
     for (size_t i = 0; i < worldItems.size(); ++i) {
         if (worldItems[i].pickedUp) continue;
-        AABB itemBox{
-            {worldItems[i].pos.x - 0.18f, worldItems[i].pos.y - 0.05f, worldItems[i].pos.z - 0.18f},
-            {worldItems[i].pos.x + 0.18f, worldItems[i].pos.y + 0.28f, worldItems[i].pos.z + 0.18f}
-        };
+        AABB itemBox = worldItems[i].worldBounds();
+        // Slight generous pad so tiny lockpicks/batteries are comfortable to target
+        itemBox.min -= Vec3{0.04f, 0.02f, 0.04f};
+        itemBox.max += Vec3{0.04f, 0.04f, 0.04f};
         float t = 0.0f;
         if (rayIntersectAABB(orig, dir, itemBox, bestT, t)) {
             bestT = t;
@@ -1489,27 +2185,36 @@ bool GameWorld::beginInteract(AudioEngine& audio) {
     updateHover();
     if (hoveredItemIdx >= 0 && hoveredItemIdx < static_cast<int>(worldItems.size())) {
         auto& it = worldItems[hoveredItemIdx];
-        it.pickedUp = true;
-        audio.play3D(SoundId::Pickup, it.pos, 0.9f);
-        switch (it.type) {
-            case ItemType::Flashlight:
-                inventory.hasFlashlight = true;
+        // Auto-place picked up item into the 6x8x4 3D backpack!
+        int placedId = backpack.tryAutoAdd(it.type);
+        if (placedId >= 0) {
+            it.pickedUp = true;
+            if (it.type == ItemType::Flashlight && !inventory.hasFlashlight) {
                 inventory.flashlightBattery = settings.maxBattery;
-                break;
-            case ItemType::Battery:
-                inventory.batteries++;
-                break;
-            case ItemType::Food:
-                inventory.food++;
-                break;
-            case ItemType::Water:
-                inventory.water++;
-                break;
-            case ItemType::Lockpick:
-                inventory.lockpicks++;
-                break;
+            }
+            syncInventoryCounts();
+            audio.play3D(SoundId::Pickup, it.pos, 0.9f);
+            hoveredItemIdx = -1;
+            return true;
         }
-        hoveredItemIdx = -1;
+        // Backpack is full: take into hand if hands are free!
+        if (!hasHeldItem) {
+            it.pickedUp = true;
+            hasHeldItem = true;
+            heldItemType = it.type;
+            heldItemOrient = it.orient;
+            if (it.type == ItemType::Flashlight && !inventory.hasFlashlight) {
+                inventory.flashlightBattery = settings.maxBattery;
+            }
+            syncInventoryCounts();
+            audio.play3D(SoundId::Pickup, it.pos, 0.9f);
+            hudNoticeText = "BACKPACK FULL - IN HAND";
+            hudNoticeTimer = 1.8f;
+            hoveredItemIdx = -1;
+            return true;
+        }
+        hudNoticeText = "BACKPACK AND HANDS FULL";
+        hudNoticeTimer = 1.8f;
         return true;
     }
     if (hoveredDoorIdx >= 0 && hoveredDoorIdx < static_cast<int>(doors.size())) {
@@ -1535,8 +2240,6 @@ bool GameWorld::beginInteract(AudioEngine& audio) {
 void GameWorld::dragGrabbedDoor(float mouseDx, float mouseDy) {
     if (grabbedDoorIdx < 0 || grabbedDoorIdx >= static_cast<int>(doors.size())) return;
     auto& d = doors[grabbedDoorIdx];
-    // True 3D camera-relative door drag:
-    // Derivative of latch direction (cos(y), 0, -sin(y)) w.r.t. angle is openSign * (-sin(y), 0, -cos(y))
     float y = d.currentYaw();
     Vec3 swingDir = Vec3{-std::sin(y), 0.0f, -std::cos(y)} * d.openSign;
     Vec3 mouseWorldMove = player.rightDir() * mouseDx + player.forwardDir() * (-mouseDy);
@@ -1549,11 +2252,34 @@ void GameWorld::endInteract() {
 }
 
 bool GameWorld::useInventoryItem(ItemType type, AudioEngine& audio) {
+    // Allow consuming from hand first, else from an UNBLOCKED slot in the 3D backpack!
+    auto consumeOne = [&]() -> bool {
+        if (hasHeldItem && heldItemType == type) {
+            hasHeldItem = false;
+            syncInventoryCounts();
+            return true;
+        }
+        int id = backpack.findFirstAccessible(type);
+        if (id >= 0) {
+            backpack.removeById(id);
+            syncInventoryCounts();
+            return true;
+        }
+        if (backpack.countType(type) > 0) {
+            hudNoticeText = "BLOCKED ABOVE - MOVE TOP ITEMS";
+            hudNoticeTimer = 1.8f;
+            return false;
+        }
+        // Fallback for tests that manipulate legacy inventory counts directly without backpack
+        if (type == ItemType::Battery && inventory.batteries > 0) { inventory.batteries--; return true; }
+        if (type == ItemType::Food && inventory.food > 0) { inventory.food--; return true; }
+        if (type == ItemType::Water && inventory.water > 0) { inventory.water--; return true; }
+        return false;
+    };
+
     switch (type) {
         case ItemType::Battery:
-            if (inventory.batteries > 0 && inventory.hasFlashlight &&
-                inventory.flashlightBattery < settings.maxBattery - 0.5f) {
-                inventory.batteries--;
+            if (inventory.hasFlashlight && inventory.flashlightBattery < settings.maxBattery - 0.5f && consumeOne()) {
                 inventory.flashlightBattery = std::min(settings.maxBattery,
                                                        inventory.flashlightBattery + settings.batteryRestore);
                 audio.play(SoundId::Pickup, 0.7f);
@@ -1561,16 +2287,14 @@ bool GameWorld::useInventoryItem(ItemType type, AudioEngine& audio) {
             }
             return false;
         case ItemType::Food:
-            if (inventory.food > 0 && hunger < settings.maxHunger - 0.5f) {
-                inventory.food--;
+            if (hunger < settings.maxHunger - 0.5f && consumeOne()) {
                 hunger = std::min(settings.maxHunger, hunger + settings.foodRestore);
                 audio.play(SoundId::Pickup, 0.7f);
                 return true;
             }
             return false;
         case ItemType::Water:
-            if (inventory.water > 0 && thirst < settings.maxThirst - 0.5f) {
-                inventory.water--;
+            if (thirst < settings.maxThirst - 0.5f && consumeOne()) {
                 thirst = std::min(settings.maxThirst, thirst + settings.waterRestore);
                 audio.play(SoundId::Pickup, 0.7f);
                 return true;
@@ -1594,8 +2318,20 @@ void GameWorld::gatherInteractables(std::vector<DoorRenderState>& outDoors,
     for (size_t i = 0; i < worldItems.size(); ++i) {
         if (worldItems[i].pickedUp) continue;
         bool hl = (static_cast<int>(i) == hoveredItemIdx);
-        outItems.push_back({worldItems[i].pos, static_cast<int>(worldItems[i].type), hl});
+        outItems.push_back({worldItems[i].pos, static_cast<int>(worldItems[i].type), worldItems[i].orient, hl});
     }
+}
+
+BackpackRenderState GameWorld::gatherBackpackState() const {
+    BackpackRenderState bs;
+    bs.visible = (backpackMode == BackpackMode::InHands || backpackMode == BackpackMode::OnGround);
+    if (bs.visible) {
+        bs.worldMatrix = backpackWorldMatrix();
+        bs.hoveredItemId = hoveredBackpackItemId;
+        bs.hoveredBlocked = hoveredBackpackBlocked;
+        bs.backpack = &backpack;
+    }
+    return bs;
 }
 
 void GameWorld::gatherRobotLights(std::vector<PointLight3D>& out) const {

@@ -736,4 +736,166 @@ TEST(GodModeTest, NoclipInvisibilityAndSpeedWork) {
     gw.update(idle, false, cfg::FIXED_DT, audio);
     EXPECT_NE(gw.enemies[0].aiState, EnemyAIState::Chase);
     EXPECT_FALSE(gw.enemies[0].alerted);
+
+    // 3. Locker occlusion: robot looking at player through locker side/back/closed-door cannot see player
+    gw.godMode = false;
+    gw.godInvisible = false;
+    gw.godNoclip = false;
+    gw.map.world = WorldGrid{};
+    for (int x = 0; x <= 12; ++x)
+        for (int z = 0; z <= 12; ++z)
+            gw.map.world.setBlock(x, 0, z, BlockType::TechPanel);
+
+    // Build a 1m x 2m locker at x=[5..6], z=[5..6] with back/side walls and closed front door
+    gw.map.world.addProp({{5.0f, 1.0f, 5.0f}, {5.06f, 3.0f, 6.0f}}, BlockType::RustPlate, true); // West wall
+    gw.map.world.addProp({{5.94f, 1.0f, 5.0f}, {6.0f, 3.0f, 6.0f}}, BlockType::RustPlate, true); // East wall
+    gw.map.world.addProp({{5.0f, 1.0f, 5.94f}, {6.0f, 3.0f, 6.0f}}, BlockType::RustPlate, true); // South wall
+    gw.doors.clear();
+    HingeDoor ld;
+    ld.hingePos = {5.0f, 1.0f, 5.02f};
+    ld.width = 1.0f; ld.height = 2.0f; ld.thickness = 0.05f;
+    ld.closedYaw = 0.0f; ld.angle = 0.0f; ld.isLocker = true;
+    gw.doors.push_back(ld);
+
+    gw.player.position = {5.5f, 1.0f, 5.5f}; // Inside locker
+    gw.enemies.clear();
+    Enemy watcher;
+    watcher.pos = {3.2f, 1.0f, 5.5f}; // Standing right outside West locker wall looking East (+X)
+    watcher.yaw = PI * 0.5f;
+    watcher.aiState = EnemyAIState::Patrol;
+    gw.enemies.push_back(watcher);
+
+    gw.update(idle, false, cfg::FIXED_DT, audio);
+    EXPECT_EQ(gw.enemies[0].aiState, EnemyAIState::Patrol);
+    EXPECT_FALSE(gw.enemies[0].alerted);
+}
+
+TEST(Inventory3DTest, VolumeRotationTopBlockingAndWorldGridPlacement) {
+    Backpack3D bp;
+    // Verify item 3D dimensions
+    Int3 fSz = itemBaseGridSize(ItemType::Flashlight);
+    EXPECT_EQ(fSz.x, 2); EXPECT_EQ(fSz.y, 2); EXPECT_EQ(fSz.z, 4);
+    Int3 barSz = itemBaseGridSize(ItemType::Food);
+    EXPECT_EQ(barSz.x, 1); EXPECT_EQ(barSz.y, 1); EXPECT_EQ(barSz.z, 2);
+
+    // 3-axis rotation swaps dimensions accurately
+    ItemOrientation ori;
+    ori.rotateY(); // 2x2x4 -> 4x2x2
+    Int3 rotY = ori.applyToSize(fSz);
+    EXPECT_EQ(rotY.x, 4); EXPECT_EQ(rotY.y, 2); EXPECT_EQ(rotY.z, 2);
+    ori.rotateX(); // 4x2x2 -> 4x2x2; test with Food (1x1x2)
+    ItemOrientation barOri;
+    barOri.rotateX(); // 1x1x2 -> 1x2x1 (standing upright!)
+    Int3 barUp = barOri.applyToSize(barSz);
+    EXPECT_EQ(barUp.x, 1); EXPECT_EQ(barUp.y, 2); EXPECT_EQ(barUp.z, 1);
+
+    // Gravity/support inside 6x8x4 backpack: cannot float at gy=2 with nothing below!
+    EXPECT_FALSE(bp.canPlaceAt(0, 2, 0, ItemType::Food, {}));
+    int bottomId = bp.placeAt(0, 0, 0, ItemType::Flashlight, {}); // occupies x=[0..2), y=[0..2), z=[0..4)
+    ASSERT_GT(bottomId, 0);
+    EXPECT_FALSE(bp.isBlockedFromAbove(bottomId));
+
+    // Stack a Food bar directly on top of the Flashlight at gy=2 -> now Flashlight IS blocked from above!
+    int topId = bp.placeAt(0, 2, 0, ItemType::Food, {});
+    ASSERT_GT(topId, 0);
+    EXPECT_TRUE(bp.isBlockedFromAbove(bottomId));
+    EXPECT_FALSE(bp.isBlockedFromAbove(topId));
+
+    // Removing the top item unblocks the bottom Flashlight!
+    EXPECT_TRUE(bp.removeById(topId));
+    EXPECT_FALSE(bp.isBlockedFromAbove(bottomId));
+
+    // Auto-pack fills cleanly and respects 6x8x4 volume limits
+    int autoId = bp.tryAutoAdd(ItemType::Water);
+    EXPECT_GT(autoId, 0);
+    EXPECT_EQ(bp.countType(ItemType::Water), 1);
+
+    // Diegetic backpack: LMB takes unblocked item into hand and returns backpack to back!
+    AudioEngine audio;
+    GameWorld gw;
+    gw.startNewRun(7070ULL);
+    int id1 = gw.backpack.placeAt(0, 0, 0, ItemType::Food, {});
+    int id2 = gw.backpack.placeAt(0, 1, 0, ItemType::Battery, {});
+    gw.syncInventoryCounts();
+    gw.toggleBackpackInHands();
+    EXPECT_EQ(gw.backpackMode, BackpackMode::InHands);
+
+    // Attempting to consume bottom Food while Battery sits above it must fail!
+    gw.hunger = 50.0f;
+    EXPECT_FALSE(gw.useInventoryItem(ItemType::Food, audio));
+    // Removing top Battery unblocks Food!
+    EXPECT_TRUE(gw.backpack.removeById(id2));
+    gw.syncInventoryCounts();
+    EXPECT_FALSE(gw.backpack.isBlockedFromAbove(id1));
+    EXPECT_TRUE(gw.useInventoryItem(ItemType::Food, audio));
+
+    // Place backpack on the ground & verify mode switches cleanly
+    EXPECT_TRUE(gw.togglePlaceBackpackOnGround(audio));
+    EXPECT_EQ(gw.backpackMode, BackpackMode::OnGround);
+    EXPECT_TRUE(gw.togglePlaceBackpackOnGround(audio));
+    EXPECT_EQ(gw.backpackMode, BackpackMode::OnBack);
+
+    // 3D world-grid snap places item cleanly on floor snapped to CELL_SIZE (0.06m)
+    Vec3 snapped{};
+    Vec3 downOrig = {58.0f, 2.2f, 58.0f};
+    Vec3 downDir  = {0.0f, -1.0f, 0.0f};
+    ASSERT_TRUE(gw.computeWorldGridSnap(downOrig, downDir, ItemType::Food, {}, snapped));
+    EXPECT_NEAR(snapped.y, 1.0f, 0.02f);
+    EXPECT_NEAR(std::fmod(std::abs(snapped.x), Backpack3D::CELL_SIZE), 0.0f, 0.002f);
+}
+
+TEST(DoubleDoorAndLootTableTest, Lockers90PercentOpenMetalCabinetsAlwaysLockedAndLootTablesWork) {
+    // 1. Custom loot_tables.cfg parsing
+    const std::string tmpLoot = "/tmp/mega_test_loot.cfg";
+    {
+        std::ofstream out(tmpLoot);
+        out << "crate.spawn_chance = 1.0\n"
+            << "crate.max_items = 2\n"
+            << "crate.weight_lockpick = 1.0\n"
+            << "crate.weight_flashlight = 0.0\n"
+            << "crate.weight_battery = 0.0\n"
+            << "crate.weight_food = 0.0\n"
+            << "crate.weight_water = 0.0\n";
+    }
+    LootTables lt = LootTables::loadOrCreate(tmpLoot);
+    EXPECT_FLOAT_EQ(lt.get(LootSource::Crate).spawnChance, 1.0f);
+    EXPECT_EQ(lt.get(LootSource::Crate).maxItems, 2);
+    Rng r(123ULL);
+    EXPECT_EQ(lt.get(LootSource::Crate).rollItem(r), ItemType::Lockpick);
+
+    // 2. Starter room double doors + metal corridor cabinets (always locked, paired leaves) + 90% open lockers
+    GameWorld gw;
+    gw.lootTables = lt;
+    gw.startNewRun(8888ULL);
+
+    // Starter room cabinet has double doors (indices 1 & 2 linked together)
+    ASSERT_GE(gw.doors.size(), 3u);
+    EXPECT_TRUE(gw.doors[1].isCabinet);
+    EXPECT_TRUE(gw.doors[2].isCabinet);
+    EXPECT_EQ(gw.doors[1].linkedDoorIdx, 2);
+    EXPECT_EQ(gw.doors[2].linkedDoorIdx, 1);
+
+    // Metal corridor cabinets (linked double doors beyond starter room) MUST ALWAYS be locked
+    int metalCabinetLeaves = 0;
+    int lockersTotal = 0;
+    int lockersOpen = 0;
+    for (size_t i = 3; i < gw.doors.size(); ++i) {
+        const auto& d = gw.doors[i];
+        if (d.isLocker) {
+            lockersTotal++;
+            if (!d.locked) lockersOpen++;
+        } else if (d.isCabinet && d.linkedDoorIdx >= 0) {
+            metalCabinetLeaves++;
+            EXPECT_TRUE(d.locked);
+            EXPECT_EQ(gw.doors[d.linkedDoorIdx].linkedDoorIdx, static_cast<int>(i));
+        }
+    }
+    EXPECT_GT(metalCabinetLeaves, 0);
+    EXPECT_GT(lockersTotal, 0);
+    float openPct = static_cast<float>(lockersOpen) / std::max(1, lockersTotal);
+    std::printf("[LOCKERS & CABINETS] lockers=%d open=%.1f%% | metalCabinetLeaves=%d | lootSurfaces=%zu | items=%zu\n",
+                lockersTotal, openPct * 100.0f, metalCabinetLeaves, gw.map.lootSurfaces.size(), gw.worldItems.size());
+    EXPECT_GT(openPct, 0.70f); // Statistically ~90% open
+    EXPECT_GT(gw.map.lootSurfaces.size(), 10u);
+    EXPECT_GT(gw.worldItems.size(), 15u);
 }

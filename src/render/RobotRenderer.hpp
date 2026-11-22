@@ -2,6 +2,7 @@
 
 #include "core/Config.hpp"
 #include "core/Math3D.hpp"
+#include "game/Inventory3D.hpp"
 #include "render/Shader.hpp"
 #include <epoxy/gl.h>
 #include <vector>
@@ -30,9 +31,28 @@ struct DoorRenderState {
 };
 
 struct ItemRenderState {
-    Vec3 pos;
-    int itemKind = 0; // 0=Flashlight, 1=Battery, 2=Food, 3=Water
+    Vec3 pos;               // World bottom-center or min corner of item
+    int itemKind = 0;       // 0=Flashlight, 1=Battery, 2=Food, 3=Water, 4=Lockpick
+    ItemOrientation orient{};
     bool highlighted = false;
+};
+
+struct GhostPreviewState {
+    bool active = false;
+    bool valid = false;
+    bool inBackpack = false;
+    ItemType type = ItemType::Food;
+    ItemOrientation orient{};
+    Vec3 worldPos{};        // World bottom-center when !inBackpack
+    int gx = 0, gy = 0, gz = 0; // Backpack cell coords when inBackpack
+};
+
+struct BackpackRenderState {
+    bool visible = false;
+    Mat4 worldMatrix = Mat4::identity(); // Local [0..DIM_X*CELL, 0..DIM_Y*CELL, 0..DIM_Z*CELL] -> World
+    int hoveredItemId = -1;
+    bool hoveredBlocked = false;
+    const Backpack3D* backpack = nullptr;
 };
 
 class RobotRenderer {
@@ -47,13 +67,19 @@ public:
     void renderInteractables(const Shader& worldShader, const Mat4& view, const Mat4& proj,
                              const Vec3& camPos,
                              const std::vector<DoorRenderState>& doors,
-                             const std::vector<ItemRenderState>& items);
+                             const std::vector<ItemRenderState>& items,
+                             const BackpackRenderState& backpackState = {},
+                             const GhostPreviewState& ghost = {},
+                             bool hasHeldItem = false,
+                             ItemType heldType = ItemType::Food,
+                             const ItemOrientation& heldOrient = {},
+                             const Mat4& heldMatrix = Mat4::identity());
 
 private:
     GLuint vao_ = 0;
     GLuint vbo_ = 0;
     GLuint ebo_ = 0;
-    Shader robotShader_; // Shares lighting uniforms or renders with model matrix
+    Shader robotShader_;
 
     void drawPart(const Mat4& model, const Vec3& partScale, float texLayer, float emissive,
                   const Vec3& emissiveColor = {1.0f, 1.0f, 1.0f});

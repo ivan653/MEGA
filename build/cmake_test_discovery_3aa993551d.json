@@ -1,5 +1,5 @@
 {
-  "tests": 12,
+  "tests": 14,
   "name": "AllTests",
   "testsuites": [
     {
@@ -125,6 +125,28 @@
           "name": "NoclipInvisibilityAndSpeedWork",
           "file": "\/home\/ivan\/ImportantFiles\/My Games\/MEGA\/tests\/CoreTests.cpp",
           "line": 701
+        }
+      ]
+    },
+    {
+      "name": "Inventory3DTest",
+      "tests": 1,
+      "testsuite": [
+        {
+          "name": "VolumeRotationTopBlockingAndWorldGridPlacement",
+          "file": "\/home\/ivan\/ImportantFiles\/My Games\/MEGA\/tests\/CoreTests.cpp",
+          "line": 773
+        }
+      ]
+    },
+    {
+      "name": "DoubleDoorAndLootTableTest",
+      "tests": 1,
+      "testsuite": [
+        {
+          "name": "Lockers90PercentOpenMetalCabinetsAlwaysLockedAndLootTablesWork",
+          "file": "\/home\/ivan\/ImportantFiles\/My Games\/MEGA\/tests\/CoreTests.cpp",
+          "line": 847
         }
       ]
     }

@@ -231,6 +231,9 @@ CMakeFiles/mega.dir/src/main.cpp.o: \
  /usr/include/c++/16/bits/std_mutex.h \
  /usr/include/c++/16/bits/unique_lock.h \
  /home/ivan/ImportantFiles/My\ Games/MEGA/src/game/GameWorld.hpp \
+ /home/ivan/ImportantFiles/My\ Games/MEGA/src/core/LootTable.hpp \
+ /home/ivan/ImportantFiles/My\ Games/MEGA/src/core/Rng.hpp \
+ /home/ivan/ImportantFiles/My\ Games/MEGA/src/game/Inventory3D.hpp \
  /home/ivan/ImportantFiles/My\ Games/MEGA/src/game/LockpickMinigame.hpp \
  /home/ivan/ImportantFiles/My\ Games/MEGA/src/game/Player.hpp \
  /home/ivan/ImportantFiles/My\ Games/MEGA/src/render/BillboardRenderer.hpp \

@@ -2,7 +2,9 @@
 
 #include "audio/AudioEngine.hpp"
 #include "core/Config.hpp"
+#include "core/LootTable.hpp"
 #include "core/Math3D.hpp"
+#include "game/Inventory3D.hpp"
 #include "game/LockpickMinigame.hpp"
 #include "game/Player.hpp"
 #include "render/BillboardRenderer.hpp"
@@ -101,20 +103,15 @@ struct Particle {
     Vec3 color{1.0f, 0.8f, 0.3f};
 };
 
-enum class ItemType : int {
-    Flashlight = 0,
-    Battery    = 1,
-    Food       = 2,
-    Water      = 3,
-    Lockpick   = 4
-};
-
 struct WorldItem {
-    Vec3 pos;
+    Vec3 pos; // World bottom-center on 3D grid
     ItemType type = ItemType::Battery;
     bool pickedUp = false;
     int regX = 0;
     int regZ = 0;
+    ItemOrientation orient{};
+
+    AABB worldBounds() const;
 };
 
 struct HingeDoor {
@@ -133,12 +130,19 @@ struct HingeDoor {
     bool isExitDoor = false; // Starter 2m heavy steel exit door (0% lockpick break chance)
     bool locked = false;
     uint64_t lockSeed = 0;
+    int linkedDoorIdx = -1;  // Paired leaf index for double-door cabinets sharing 1 lock
     AABB lockerInterior{};
     int regX = 0;
     int regZ = 0;
 
     float currentYaw() const { return closedYaw + openSign * angle; }
     AABB worldBounds() const;
+};
+
+enum class BackpackMode : uint8_t {
+    OnBack = 0,
+    InHands = 1,   // Tilted in front of player's hands so you can view & pick items inside
+    OnGround = 2   // Placed upright on floor/table for easy 3D sorting
 };
 
 struct Inventory {
@@ -153,9 +157,11 @@ struct Inventory {
 class GameWorld {
 public:
     GameSettings settings;
+    LootTables lootTables;
     MegaResult map;
     Player player;
     Inventory inventory;
+    Backpack3D backpack;
     LockpickMinigame lockpick;
     std::vector<Enemy> enemies;
     std::vector<HingeDoor> doors;
@@ -169,7 +175,7 @@ public:
     float health = 100.0f;
     float hunger = 100.0f;
     float thirst = 100.0f;
-    float energy = 100.0f; // Stamina for sprint & jump
+    float energy = 100.0f;
     float oxygen = 100.0f;
     int ammo = 48;
     int kills = 0;
@@ -181,6 +187,22 @@ public:
     bool inventoryOpen = false;
     bool gameOver = false;
     bool worldStreamChanged = false;
+
+    // 3D Diegetic Backpack & Hand / Dragging state
+    BackpackMode backpackMode = BackpackMode::OnBack;
+    Vec3 backpackGroundPos{};
+    float backpackGroundYaw = 0.0f;
+    bool hasHeldItem = false;
+    ItemType heldItemType = ItemType::Food;
+    ItemOrientation heldItemOrient{};
+    bool draggingItem = false;        // True when RMB-dragging an item with paused camera + free mouse cursor
+    ItemType dragItemType = ItemType::Food;
+    ItemOrientation dragItemOrient{};
+    int dragOriginBackpackId = -1;
+    int hoveredBackpackItemId = -1;
+    bool hoveredBackpackBlocked = false;
+    bool hoveredGroundedBackpack = false;
+    GhostPreviewState placementPreview{};
 
     // God Mode debug/testing controls
     bool godMode = false;
@@ -206,6 +228,24 @@ public:
     void update(const PlayerInput& input, bool firePressed, float dt, AudioEngine& audio);
     void fireWeapon(AudioEngine& audio);
 
+    // 3D Backpack & World-Grid Placement API
+    void syncInventoryCounts();
+    Mat4 backpackWorldMatrix() const;
+    Mat4 heldItemWorldMatrix() const;
+    bool isCameraPausedForInventory() const {
+        return backpackMode == BackpackMode::InHands || draggingItem || lockpick.active;
+    }
+    void toggleBackpackInHands();
+    bool togglePlaceBackpackOnGround(AudioEngine& audio);
+    void updateCursorHover(const Vec3& rayOrig, const Vec3& rayDir);
+    bool handlePrimaryClick(const Vec3& rayOrig, const Vec3& rayDir, AudioEngine& audio);
+    bool handleSecondaryClick(const Vec3& rayOrig, const Vec3& rayDir, AudioEngine& audio);
+    void rotateActiveItem(int axis); // 0=X, 1=Y, 2=Z
+    bool useHeldItem(AudioEngine& audio);
+    bool computeWorldGridSnap(const Vec3& rayOrig, const Vec3& rayDir,
+                              ItemType type, const ItemOrientation& orient,
+                              Vec3& outSnappedPos) const;
+
     // Amnesia-style grab & drag interaction
     void updateHover();
     bool beginInteract(AudioEngine& audio);
@@ -218,6 +258,7 @@ public:
     void gatherRobotLights(std::vector<PointLight3D>& out) const;
     void gatherInteractables(std::vector<DoorRenderState>& outDoors,
                              std::vector<ItemRenderState>& outItems) const;
+    BackpackRenderState gatherBackpackState() const;
     void spawnRobotsInLoadedRegions();
     void syncLockersFromMap();
     int playerHiddenLockerIdx() const;
@@ -225,7 +266,8 @@ public:
     const char* currentBiomeName() const;
     BiomeType currentBiome() const;
 
-    float raycastWorld(const Vec3& origin, const Vec3& dir, float maxDist) const;
+    float raycastWorld(const Vec3& origin, const Vec3& dir, float maxDist,
+                       Vec3* outNormal = nullptr) const;
 };
 
 } // namespace mega

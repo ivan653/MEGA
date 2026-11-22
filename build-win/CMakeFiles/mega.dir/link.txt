@@ -1,0 +1,3 @@
+/usr/bin/cmake -E rm -f CMakeFiles/mega.dir/objects.a
+/usr/bin/x86_64-w64-mingw32-ar qc CMakeFiles/mega.dir/objects.a @CMakeFiles/mega.dir/objects1.rsp
+/usr/bin/x86_64-w64-mingw32-g++ -D_FORTIFY_SOURCE=3 -D_GLIBCXX_ASSERTIONS -O2 -pipe -fexceptions --param=ssp-buffer-size=4 -Wformat -Werror=format-security -fcf-protection -O3 -DNDEBUG -Wl,-O1,--sort-common,--as-needed -fstack-protector -Wl,--whole-archive CMakeFiles/mega.dir/objects.a -Wl,--no-whole-archive -o mega.exe -Wl,--out-implib,libmega.dll.a -Wl,--major-image-version,0,--minor-image-version,0 @CMakeFiles/mega.dir/linkLibs.rsp

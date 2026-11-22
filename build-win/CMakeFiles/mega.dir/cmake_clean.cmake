@@ -1,0 +1,42 @@
+file(REMOVE_RECURSE
+  "CMakeFiles/mega.dir/src/audio/AudioEngine.cpp.obj"
+  "CMakeFiles/mega.dir/src/audio/AudioEngine.cpp.obj.d"
+  "CMakeFiles/mega.dir/src/game/GameWorld.cpp.obj"
+  "CMakeFiles/mega.dir/src/game/GameWorld.cpp.obj.d"
+  "CMakeFiles/mega.dir/src/game/Inventory3D.cpp.obj"
+  "CMakeFiles/mega.dir/src/game/Inventory3D.cpp.obj.d"
+  "CMakeFiles/mega.dir/src/game/LockpickMinigame.cpp.obj"
+  "CMakeFiles/mega.dir/src/game/LockpickMinigame.cpp.obj.d"
+  "CMakeFiles/mega.dir/src/game/Player.cpp.obj"
+  "CMakeFiles/mega.dir/src/game/Player.cpp.obj.d"
+  "CMakeFiles/mega.dir/src/main.cpp.obj"
+  "CMakeFiles/mega.dir/src/main.cpp.obj.d"
+  "CMakeFiles/mega.dir/src/render/BillboardRenderer.cpp.obj"
+  "CMakeFiles/mega.dir/src/render/BillboardRenderer.cpp.obj.d"
+  "CMakeFiles/mega.dir/src/render/Framebuffer.cpp.obj"
+  "CMakeFiles/mega.dir/src/render/Framebuffer.cpp.obj.d"
+  "CMakeFiles/mega.dir/src/render/HudRenderer.cpp.obj"
+  "CMakeFiles/mega.dir/src/render/HudRenderer.cpp.obj.d"
+  "CMakeFiles/mega.dir/src/render/RobotRenderer.cpp.obj"
+  "CMakeFiles/mega.dir/src/render/RobotRenderer.cpp.obj.d"
+  "CMakeFiles/mega.dir/src/render/Shader.cpp.obj"
+  "CMakeFiles/mega.dir/src/render/Shader.cpp.obj.d"
+  "CMakeFiles/mega.dir/src/render/TextureAtlas.cpp.obj"
+  "CMakeFiles/mega.dir/src/render/TextureAtlas.cpp.obj.d"
+  "CMakeFiles/mega.dir/src/render/WorldMesher.cpp.obj"
+  "CMakeFiles/mega.dir/src/render/WorldMesher.cpp.obj.d"
+  "CMakeFiles/mega.dir/src/world/LightBaker.cpp.obj"
+  "CMakeFiles/mega.dir/src/world/LightBaker.cpp.obj.d"
+  "CMakeFiles/mega.dir/src/world/WorldGrid.cpp.obj"
+  "CMakeFiles/mega.dir/src/world/WorldGrid.cpp.obj.d"
+  "CMakeFiles/mega.dir/src/world/gen/MegaGenerator.cpp.obj"
+  "CMakeFiles/mega.dir/src/world/gen/MegaGenerator.cpp.obj.d"
+  "libmega.dll.a"
+  "mega.exe"
+  "mega.pdb"
+)
+
+# Per-language clean rules from dependency scanning.
+foreach(lang CXX)
+  include(CMakeFiles/mega.dir/cmake_clean_${lang}.cmake OPTIONAL)
+endforeach()

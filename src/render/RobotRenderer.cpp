@@ -306,11 +306,17 @@ void RobotRenderer::render(const Mat4& view, const Mat4& proj, const Vec3& camPo
 void RobotRenderer::renderInteractables(const Shader& worldShader, const Mat4& view, const Mat4& proj,
                                         const Vec3& camPos,
                                         const std::vector<DoorRenderState>& doors,
-                                        const std::vector<ItemRenderState>& items) {
-    if (doors.empty() && items.empty()) return;
+                                        const std::vector<ItemRenderState>& items,
+                                        const BackpackRenderState& backpackState,
+                                        const GhostPreviewState& ghost,
+                                        bool hasHeldItem,
+                                        ItemType heldType,
+                                        const ItemOrientation& heldOrient,
+                                        const Mat4& heldMatrix) {
+    if (doors.empty() && items.empty() && !backpackState.visible && !ghost.active && !hasHeldItem) return;
     (void)view; (void)proj; (void)camPos;
 
-    // Render doors & items using the exact same real-time 3D world lighting shader!
+    // Render doors, items & 3D backpack using the exact same real-time 3D world lighting shader!
     worldShader.use();
     glBindVertexArray(vao_);
 
@@ -324,7 +330,43 @@ void RobotRenderer::renderInteractables(const Shader& worldShader, const Mat4& v
         glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, nullptr);
     };
 
-    // Render hinged doors (2m metal exit door + cabinet/locker doors)
+    // Unified 3D item geometry matching exact (X, Y, Z) * CELL_SIZE grid dimensions!
+    auto drawItemCentered = [&](const Mat4& centerM, ItemType type, const Vec3& tint, float forceEmissive = 0.0f) {
+        constexpr float C = Backpack3D::CELL_SIZE;
+        Int3 bsz = itemBaseGridSize(type);
+        float sx = bsz.x * C;
+        float sy = bsz.y * C;
+        float sz = bsz.z * C;
+
+        if (type == ItemType::Flashlight) { // 2 x 2 x 4 -> 0.12 x 0.12 x 0.24m
+            drawLitPart(centerM * Mat4::translate({0.0f, 0.0f, -0.02f}) * Mat4::scale({sx * 0.65f, sy * 0.65f, sz * 0.78f}),
+                        {sx * 0.65f, sy * 0.65f, sz * 0.78f}, 10.0f, forceEmissive, tint);
+            drawLitPart(centerM * Mat4::translate({0.0f, 0.0f, sz * 0.38f}) * Mat4::scale({sx * 0.85f, sy * 0.85f, sz * 0.22f}),
+                        {sx * 0.85f, sy * 0.85f, sz * 0.22f}, 6.0f, 1.0f, {0.85f, 0.96f, 1.15f});
+        } else if (type == ItemType::Battery) { // 1 x 2 x 1 -> 0.06 x 0.12 x 0.06m
+            drawLitPart(centerM * Mat4::translate({0.0f, -0.008f, 0.0f}) * Mat4::scale({sx * 0.82f, sy * 0.84f, sz * 0.82f}),
+                        {sx * 0.82f, sy * 0.84f, sz * 0.82f}, 3.0f, forceEmissive, Vec3{1.25f, 1.02f, 0.35f} * tint.x);
+            drawLitPart(centerM * Mat4::translate({0.0f, sy * 0.44f, 0.0f}) * Mat4::scale({sx * 0.48f, sy * 0.14f, sz * 0.48f}),
+                        {sx * 0.48f, sy * 0.14f, sz * 0.48f}, 4.0f, forceEmissive, tint);
+        } else if (type == ItemType::Food) { // 1 x 1 x 2 -> 0.06 x 0.06 x 0.12m ration bar
+            drawLitPart(centerM * Mat4::scale({sx * 0.88f, sy * 0.78f, sz * 0.92f}),
+                        {sx * 0.88f, sy * 0.78f, sz * 0.92f}, 3.0f, forceEmissive, Vec3{1.05f, 0.72f, 0.42f} * tint.x);
+        } else if (type == ItemType::Water) { // 2 x 3 x 2 -> 0.12 x 0.18 x 0.12m bottle
+            drawLitPart(centerM * Mat4::translate({0.0f, -0.012f, 0.0f}) * Mat4::scale({sx * 0.78f, sy * 0.82f, sz * 0.78f}),
+                        {sx * 0.78f, sy * 0.82f, sz * 0.78f}, 9.0f, forceEmissive, Vec3{0.55f, 0.98f, 1.38f} * tint.x);
+            drawLitPart(centerM * Mat4::translate({0.0f, sy * 0.43f, 0.0f}) * Mat4::scale({sx * 0.42f, sy * 0.16f, sz * 0.42f}),
+                        {sx * 0.42f, sy * 0.16f, sz * 0.42f}, 1.0f, forceEmissive, tint);
+        } else { // ItemType::Lockpick: 1 x 1 x 3 -> 0.06 x 0.06 x 0.18m L-shaped steel pick
+            drawLitPart(centerM * Mat4::translate({0.0f, 0.0f, -sz * 0.30f}) * Mat4::scale({sx * 0.40f, sy * 0.35f, sz * 0.38f}),
+                        {sx * 0.40f, sy * 0.35f, sz * 0.38f}, 10.0f, forceEmissive, Vec3{0.55f, 0.68f, 0.85f} * tint.x);
+            drawLitPart(centerM * Mat4::translate({0.0f, 0.0f, sz * 0.12f}) * Mat4::scale({sx * 0.18f, sy * 0.18f, sz * 0.66f}),
+                        {sx * 0.18f, sy * 0.18f, sz * 0.66f}, 4.0f, forceEmissive, Vec3{1.25f, 1.30f, 1.38f} * tint.x);
+            drawLitPart(centerM * Mat4::translate({sx * 0.25f, 0.0f, sz * 0.42f}) * Mat4::scale({sx * 0.50f, sy * 0.18f, sz * 0.10f}),
+                        {sx * 0.50f, sy * 0.18f, sz * 0.10f}, 4.0f, forceEmissive, Vec3{1.25f, 1.30f, 1.38f} * tint.x);
+        }
+    };
+
+    // 1) Render hinged doors (2m metal exit door + double-door cabinets + hideable lockers)
     for (const auto& d : doors) {
         Vec3 tint = d.highlighted ? Vec3{1.25f, 1.35f, 1.50f} : Vec3{1.0f, 1.0f, 1.0f};
         float layer = d.isCabinet ? 11.0f : 12.0f;
@@ -332,45 +374,100 @@ void RobotRenderer::renderInteractables(const Shader& worldShader, const Mat4& v
 
         Vec3 leafSize{d.width, d.height, d.thickness};
         Mat4 leafM = pivot * Mat4::translate({d.width * 0.5f, d.height * 0.5f, 0.0f}) * Mat4::scale(leafSize);
-        // Use 1:1 non-repeating door panel UVs (partScale = 1,1,1) so door pattern never duplicates!
         drawLitPart(leafM, {1.0f, 1.0f, 1.0f}, layer, 0.0f, tint);
 
-        Vec3 handleSize{0.05f, 0.14f, d.thickness + 0.08f};
-        Mat4 handleM = pivot * Mat4::translate({d.width - 0.12f, d.height * 0.48f, 0.0f}) * Mat4::scale(handleSize);
+        // Handle placed near latch edge so double-door cabinets show two handles meeting at center!
+        Vec3 handleSize{0.045f, 0.14f, d.thickness + 0.075f};
+        float handleX = std::max(0.07f, d.width - 0.08f);
+        Mat4 handleM = pivot * Mat4::translate({handleX, d.height * 0.48f, 0.0f}) * Mat4::scale(handleSize);
         drawLitPart(handleM, handleSize, 4.0f, 0.0f, tint);
     }
 
-    // Render 3D world pickup items (Flashlight, Battery, Food, Water)
+    // 2) Render 3D world pickup items with their exact 3D orientation & dimensions
     for (const auto& it : items) {
-        Vec3 tint = it.highlighted ? Vec3{1.35f, 1.45f, 1.55f} : Vec3{1.0f, 1.0f, 1.0f};
-        Mat4 base = Mat4::translate(it.pos);
-        if (it.itemKind == 0) {
-            drawLitPart(base * Mat4::translate({0.0f, 0.04f, 0.0f}) * Mat4::scale({0.26f, 0.07f, 0.07f}),
-                        {0.26f, 0.07f, 0.07f}, 10.0f, 0.0f, tint);
-            drawLitPart(base * Mat4::translate({0.14f, 0.04f, 0.0f}) * Mat4::scale({0.06f, 0.09f, 0.09f}),
-                        {0.06f, 0.09f, 0.09f}, 6.0f, 1.0f, {0.8f, 0.95f, 1.15f});
-        } else if (it.itemKind == 1) {
-            drawLitPart(base * Mat4::translate({0.0f, 0.06f, 0.0f}) * Mat4::scale({0.07f, 0.12f, 0.07f}),
-                        {0.07f, 0.12f, 0.07f}, 3.0f, 0.0f, Vec3{1.2f, 1.0f, 0.35f} * tint.x);
-            drawLitPart(base * Mat4::translate({0.0f, 0.125f, 0.0f}) * Mat4::scale({0.04f, 0.02f, 0.04f}),
-                        {0.04f, 0.02f, 0.04f}, 4.0f, 0.0f, tint);
-        } else if (it.itemKind == 2) {
-            drawLitPart(base * Mat4::translate({0.0f, 0.07f, 0.0f}) * Mat4::scale({0.18f, 0.14f, 0.14f}),
-                        {0.18f, 0.14f, 0.14f}, 3.0f, 0.0f, Vec3{0.95f, 0.65f, 0.45f} * tint.x);
-        } else if (it.itemKind == 3) {
-            drawLitPart(base * Mat4::translate({0.0f, 0.12f, 0.0f}) * Mat4::scale({0.09f, 0.24f, 0.09f}),
-                        {0.09f, 0.24f, 0.09f}, 9.0f, 0.0f, Vec3{0.55f, 0.95f, 1.35f} * tint.x);
-            drawLitPart(base * Mat4::translate({0.0f, 0.25f, 0.0f}) * Mat4::scale({0.05f, 0.04f, 0.05f}),
-                        {0.05f, 0.04f, 0.05f}, 1.0f, 0.0f, tint);
-        } else {
-            // ItemType::Lockpick: steel L-shaped lockpick + dark grip handle
-            drawLitPart(base * Mat4::translate({-0.05f, 0.015f, 0.0f}) * Mat4::scale({0.07f, 0.018f, 0.022f}),
-                        {0.07f, 0.018f, 0.022f}, 10.0f, 0.0f, Vec3{0.55f, 0.65f, 0.78f} * tint.x);
-            drawLitPart(base * Mat4::translate({0.04f, 0.015f, 0.0f}) * Mat4::scale({0.13f, 0.010f, 0.010f}),
-                        {0.13f, 0.010f, 0.010f}, 4.0f, 0.0f, Vec3{1.20f, 1.25f, 1.32f} * tint.x);
-            drawLitPart(base * Mat4::translate({0.10f, 0.015f, 0.022f}) * Mat4::scale({0.010f, 0.010f, 0.045f}),
-                        {0.010f, 0.010f, 0.045f}, 4.0f, 0.0f, Vec3{1.20f, 1.25f, 1.32f} * tint.x);
+        Vec3 tint = it.highlighted ? Vec3{1.40f, 1.50f, 1.65f} : Vec3{1.0f, 1.0f, 1.0f};
+        ItemType t = static_cast<ItemType>(std::clamp(it.itemKind, 0, 4));
+        Int3 osz = it.orient.applyToSize(itemBaseGridSize(t));
+        float cy = osz.y * Backpack3D::CELL_SIZE * 0.5f;
+        Mat4 centerM = Mat4::translate({it.pos.x, it.pos.y + cy, it.pos.z}) * it.orient.toMatrix();
+        drawItemCentered(centerM, t, tint, 0.0f);
+    }
+
+    // 3) Render Diegetic 3D Backpack (6 x 8 x 4 cavity — tilted in hands OR placed upright on ground!)
+    if (backpackState.visible && backpackState.backpack) {
+        constexpr float C = Backpack3D::CELL_SIZE;
+        constexpr float W = Backpack3D::DIM_X * C;
+        constexpr float H = Backpack3D::DIM_Y * C;
+        constexpr float D = Backpack3D::DIM_Z * C;
+        constexpr float WT = 0.014f;
+        const Mat4& B = backpackState.worldMatrix;
+        Vec3 shellTint{0.42f, 0.48f, 0.40f}; // Olive-slate tactical pack
+        Vec3 trimTint{0.25f, 0.30f, 0.34f};
+
+        // Bottom, back, left, right, and slightly lower front lip so interior layers are clearly visible
+        drawLitPart(B * Mat4::translate({W * 0.5f, -WT * 0.5f, D * 0.5f}) * Mat4::scale({W + WT * 2, WT, D + WT * 2}),
+                    {W, WT, D}, 3.0f, 0.0f, shellTint);
+        drawLitPart(B * Mat4::translate({W * 0.5f, H * 0.5f, -WT * 0.5f}) * Mat4::scale({W + WT * 2, H, WT}),
+                    {W, H, WT}, 3.0f, 0.0f, shellTint);
+        drawLitPart(B * Mat4::translate({-WT * 0.5f, H * 0.5f, D * 0.5f}) * Mat4::scale({WT, H, D}),
+                    {WT, H, D}, 3.0f, 0.0f, shellTint);
+        drawLitPart(B * Mat4::translate({W + WT * 0.5f, H * 0.5f, D * 0.5f}) * Mat4::scale({WT, H, D}),
+                    {WT, H, D}, 3.0f, 0.0f, shellTint);
+        drawLitPart(B * Mat4::translate({W * 0.5f, H * 0.34f, D + WT * 0.5f}) * Mat4::scale({W + WT * 2, H * 0.68f, WT}),
+                    {W, H * 0.68f, WT}, 3.0f, 0.0f, trimTint);
+
+        // Subtle 3D floor grid guide lines (6x4 grid cells) so player can clearly align items
+        for (int gx = 1; gx < Backpack3D::DIM_X; ++gx) {
+            drawLitPart(B * Mat4::translate({gx * C, 0.002f, D * 0.5f}) * Mat4::scale({0.003f, 0.003f, D}),
+                        {0.01f, 0.01f, D}, 6.0f, 1.0f, {0.22f, 0.36f, 0.44f});
         }
+        for (int gz = 1; gz < Backpack3D::DIM_Z; ++gz) {
+            drawLitPart(B * Mat4::translate({W * 0.5f, 0.002f, gz * C}) * Mat4::scale({W, 0.003f, 0.003f}),
+                        {W, 0.01f, 0.01f}, 6.0f, 1.0f, {0.22f, 0.36f, 0.44f});
+        }
+
+        // Render every 3D item packed inside the backpack
+        for (const auto& pi : backpackState.backpack->items) {
+            Int3 osz = pi.size();
+            Vec3 localCenter{
+                (pi.gx + osz.x * 0.5f) * C,
+                (pi.gy + osz.y * 0.5f) * C,
+                (pi.gz + osz.z * 0.5f) * C
+            };
+            bool isHov = (pi.id == backpackState.hoveredItemId);
+            bool isBlk = backpackState.backpack->isBlockedFromAbove(pi.id);
+            Vec3 tint = {1.15f, 1.15f, 1.15f};
+            float em = 0.0f;
+            if (isHov) {
+                tint = isBlk ? Vec3{1.9f, 0.45f, 0.40f} : Vec3{1.65f, 1.95f, 2.15f};
+                em = 1.0f;
+            }
+            Mat4 itemM = B * Mat4::translate(localCenter) * pi.orient.toMatrix();
+            drawItemCentered(itemM, pi.type, tint, em);
+        }
+    }
+
+    // 4) Render 3D Grid Placement Ghost Preview (either inside backpack or on world floor/table/shelf)
+    if (ghost.active) {
+        constexpr float C = Backpack3D::CELL_SIZE;
+        Int3 osz = ghost.orient.applyToSize(itemBaseGridSize(ghost.type));
+        Vec3 gCol = ghost.valid ? Vec3{0.35f, 1.35f, 1.55f} : Vec3{1.55f, 0.35f, 0.35f};
+        Vec3 gScale{osz.x * C * 0.96f, osz.y * C * 0.96f, osz.z * C * 0.96f};
+
+        Mat4 gCenterM;
+        if (ghost.inBackpack && backpackState.visible) {
+            Vec3 lc{(ghost.gx + osz.x * 0.5f) * C, (ghost.gy + osz.y * 0.5f) * C, (ghost.gz + osz.z * 0.5f) * C};
+            gCenterM = backpackState.worldMatrix * Mat4::translate(lc);
+        } else {
+            gCenterM = Mat4::translate({ghost.worldPos.x, ghost.worldPos.y + osz.y * C * 0.5f, ghost.worldPos.z});
+        }
+        drawLitPart(gCenterM * Mat4::scale(gScale), gScale, 6.0f, 1.0f, gCol * 0.55f);
+        drawItemCentered(gCenterM * ghost.orient.toMatrix(), ghost.type, gCol, 1.0f);
+    }
+
+    // 5) Render Item Currently Held in Player's Right Hand
+    if (hasHeldItem) {
+        drawItemCentered(heldMatrix, heldType, {1.15f, 1.15f, 1.15f}, 0.0f);
     }
 
     // Reset worldShader overrides for next frame's chunks

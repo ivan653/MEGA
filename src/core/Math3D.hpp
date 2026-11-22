@@ -145,6 +145,38 @@ struct Mat4 {
         }
         return r;
     }
+
+    Vec3 transformPoint(const Vec3& p) const {
+        return {
+            m[0] * p.x + m[4] * p.y + m[8]  * p.z + m[12],
+            m[1] * p.x + m[5] * p.y + m[9]  * p.z + m[13],
+            m[2] * p.x + m[6] * p.y + m[10] * p.z + m[14]
+        };
+    }
+
+    Vec3 transformDir(const Vec3& v) const {
+        return {
+            m[0] * v.x + m[4] * v.y + m[8]  * v.z,
+            m[1] * v.x + m[5] * v.y + m[9]  * v.z,
+            m[2] * v.x + m[6] * v.y + m[10] * v.z
+        };
+    }
+
+    // Exact inverse for rigid body transforms (orthonormal rotation + translation)
+    Mat4 inverseRigid() const {
+        Mat4 r = identity();
+        // Transpose 3x3 rotation
+        r.m[0] = m[0]; r.m[4] = m[1]; r.m[8]  = m[2];
+        r.m[1] = m[4]; r.m[5] = m[5]; r.m[9]  = m[6];
+        r.m[2] = m[8]; r.m[6] = m[9]; r.m[10] = m[10];
+        // -R^T * t
+        Vec3 t{m[12], m[13], m[14]};
+        Vec3 invT = r.transformDir(-t);
+        r.m[12] = invT.x;
+        r.m[13] = invT.y;
+        r.m[14] = invT.z;
+        return r;
+    }
 };
 
 struct AABB {

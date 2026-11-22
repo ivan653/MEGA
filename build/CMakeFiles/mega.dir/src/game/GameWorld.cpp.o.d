@@ -231,6 +231,9 @@ CMakeFiles/mega.dir/src/game/GameWorld.cpp.o: \
  /usr/include/c++/16/ctime /usr/include/c++/16/bits/parse_numbers.h \
  /usr/include/c++/16/bits/std_mutex.h \
  /usr/include/c++/16/bits/unique_lock.h \
+ /home/ivan/ImportantFiles/My\ Games/MEGA/src/core/LootTable.hpp \
+ /home/ivan/ImportantFiles/My\ Games/MEGA/src/core/Rng.hpp \
+ /home/ivan/ImportantFiles/My\ Games/MEGA/src/game/Inventory3D.hpp \
  /home/ivan/ImportantFiles/My\ Games/MEGA/src/game/LockpickMinigame.hpp \
  /home/ivan/ImportantFiles/My\ Games/MEGA/src/game/Player.hpp \
  /home/ivan/ImportantFiles/My\ Games/MEGA/src/render/BillboardRenderer.hpp \
@@ -245,7 +248,6 @@ CMakeFiles/mega.dir/src/game/GameWorld.cpp.o: \
  /usr/include/c++/16/bits/stl_set.h \
  /usr/include/c++/16/bits/stl_multiset.h /usr/include/c++/16/utility \
  /usr/include/c++/16/bits/stl_relops.h /usr/include/c++/16/bits/intcmp.h \
- /home/ivan/ImportantFiles/My\ Games/MEGA/src/core/Rng.hpp \
  /usr/include/c++/16/queue /usr/include/c++/16/deque \
  /usr/include/c++/16/bits/stl_deque.h /usr/include/c++/16/bits/deque.tcc \
  /usr/include/c++/16/bits/stl_queue.h

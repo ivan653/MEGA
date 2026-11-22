@@ -100,7 +100,8 @@ void placeWallLamp(WorldGrid& w, std::vector<PointLight3D>& lights,
     lights.push_back(pl);
 }
 
-void placeWoodenCrates(WorldGrid& w, float wallX, float wallZ, int normalX, int normalZ,
+void placeWoodenCrates(WorldGrid& w, std::vector<LootSurface>& lootSurfaces,
+                       float wallX, float wallZ, int normalX, int normalZ,
                        int regX, int regZ, const Vec3& spawnPos, Rng& rng) {
     float depth = 0.74f + rng.nextFloat() * 0.14f;
     float width = 0.78f + rng.nextFloat() * 0.22f;
@@ -123,6 +124,7 @@ void placeWoodenCrates(WorldGrid& w, float wallX, float wallZ, int normalX, int 
     if (!canPlaceProp(w, baseBox, spawnPos)) return;
     w.addProp(baseBox, BlockType::HazardStripe, true, false, true, regX, regZ);
 
+    AABB topSurface = baseBox;
     if (rng.chance(0.55f)) {
         float shrink = 0.08f;
         float h2 = 0.64f + rng.nextFloat() * 0.12f;
@@ -131,7 +133,14 @@ void placeWoodenCrates(WorldGrid& w, float wallX, float wallZ, int normalX, int 
             {baseBox.max.x - shrink, baseBox.max.y + h2, baseBox.max.z - shrink}
         };
         w.addProp(topBox, BlockType::HazardStripe, true, false, true, regX, regZ);
+        topSurface = topBox;
     }
+    lootSurfaces.push_back({
+        LootSource::Crate,
+        {{topSurface.min.x + 0.08f, topSurface.max.y, topSurface.min.z + 0.08f},
+         {topSurface.max.x - 0.08f, topSurface.max.y, topSurface.max.z - 0.08f}},
+        regX, regZ
+    });
 
     if (rng.chance(0.45f)) {
         float sideW = 0.70f;
@@ -147,35 +156,116 @@ void placeWoodenCrates(WorldGrid& w, float wallX, float wallZ, int normalX, int 
         sideBox.max.y = y0 + sideH;
         if (canPlaceProp(w, sideBox, spawnPos, 0.02f)) {
             w.addProp(sideBox, BlockType::HazardStripe, true, false, true, regX, regZ);
+            lootSurfaces.push_back({
+                LootSource::Crate,
+                {{sideBox.min.x + 0.08f, sideBox.max.y, sideBox.min.z + 0.08f},
+                 {sideBox.max.x - 0.08f, sideBox.max.y, sideBox.max.z - 0.08f}},
+                regX, regZ
+            });
         }
     }
 }
 
-void placeMetalCabinet(WorldGrid& w, float wallX, float wallZ, int normalX, int normalZ,
+// Hollow Metal Storage Cabinet with interior shelves, double doors (2 handles) & 1 shared lock (always locked!)
+void placeMetalCabinet(WorldGrid& w, std::vector<DoubleCabinetPlacement>& cabinets,
+                       std::vector<LootSurface>& lootSurfaces,
+                       float wallX, float wallZ, int normalX, int normalZ,
                        int regX, int regZ, const Vec3& spawnPos, Rng& rng) {
-    float depth = 0.52f;
-    float width = rng.chance(0.5f) ? 0.92f : 1.45f;
+    float depth = 0.58f;
+    float width = rng.chance(0.55f) ? 1.16f : 1.44f;
     float height = 2.08f;
     float y0 = static_cast<float>(FLOOR_Y);
+    float t = 0.055f;
 
-    AABB box;
+    AABB outer;
     if (normalX != 0) {
         float xA = wallX + normalX * 0.02f;
         float xB = wallX + normalX * (0.02f + depth);
-        box = {{std::min(xA, xB), y0, wallZ - width * 0.5f},
-               {std::max(xA, xB), y0 + height, wallZ + width * 0.5f}};
+        outer = {{std::min(xA, xB), y0, wallZ - width * 0.5f},
+                 {std::max(xA, xB), y0 + height, wallZ + width * 0.5f}};
     } else {
         float zA = wallZ + normalZ * 0.02f;
         float zB = wallZ + normalZ * (0.02f + depth);
-        box = {{wallX - width * 0.5f, y0, std::min(zA, zB)},
-               {wallX + width * 0.5f, y0 + height, std::max(zA, zB)}};
+        outer = {{wallX - width * 0.5f, y0, std::min(zA, zB)},
+                 {wallX + width * 0.5f, y0 + height, std::max(zA, zB)}};
     }
 
-    if (!canPlaceProp(w, box, spawnPos)) return;
-    w.addProp(box, BlockType::RustPlate, true, false, true, regX, regZ);
+    if (!canPlaceProp(w, outer, spawnPos)) return;
+
+    // Top & bottom plates
+    w.addProp({{outer.min.x, outer.max.y - t, outer.min.z}, {outer.max.x, outer.max.y, outer.max.z}},
+              BlockType::RustPlate, true, false, true, regX, regZ);
+    w.addProp({{outer.min.x, y0, outer.min.z}, {outer.max.x, y0 + t, outer.max.z}},
+              BlockType::RustPlate, true, false, true, regX, regZ);
+
+    // 3 interior steel shelves + loot surfaces
+    AABB inner{{outer.min.x + t, y0 + t, outer.min.z + t},
+               {outer.max.x - t, outer.max.y - t, outer.max.z - t}};
+    const float shelfOffsets[3] = {0.52f, 1.04f, 1.54f};
+    for (float sh : shelfOffsets) {
+        float sy = y0 + sh;
+        w.addProp({{inner.min.x, sy, inner.min.z}, {inner.max.x, sy + 0.045f, inner.max.z}},
+                  BlockType::Grate, true, false, true, regX, regZ);
+        lootSurfaces.push_back({
+            LootSource::CabinetShelf,
+            {{inner.min.x + 0.06f, sy + 0.045f, inner.min.z + 0.06f},
+             {inner.max.x - 0.06f, sy + 0.045f, inner.max.z - 0.06f}},
+            regX, regZ
+        });
+    }
+
+    DoubleCabinetPlacement cp;
+    cp.leafWidth = (width - t * 2.0f) * 0.5f - 0.005f;
+    cp.height = height - t * 2.0f;
+    cp.regX = regX;
+    cp.regZ = regZ;
+
+    if (normalX > 0) { // Back at min.x, opens toward +X at max.x
+        w.addProp({{outer.min.x, y0, outer.min.z}, {outer.min.x + t, outer.max.y, outer.max.z}}, BlockType::RustPlate, true, false, true, regX, regZ);
+        w.addProp({{outer.min.x, y0, outer.min.z}, {outer.max.x, outer.max.y, outer.min.z + t}}, BlockType::RustPlate, true, false, true, regX, regZ);
+        w.addProp({{outer.min.x, y0, outer.max.z - t}, {outer.max.x, outer.max.y, outer.max.z}}, BlockType::RustPlate, true, false, true, regX, regZ);
+        cp.leftHingePos  = {outer.max.x, y0 + t, outer.min.z + t};
+        cp.leftClosedYaw = -PI * 0.5f;
+        cp.leftOpenSign  = 1.0f;
+        cp.rightHingePos  = {outer.max.x, y0 + t, outer.max.z - t};
+        cp.rightClosedYaw = PI * 0.5f;
+        cp.rightOpenSign  = -1.0f;
+    } else if (normalX < 0) { // Back at max.x, opens toward -X at min.x
+        w.addProp({{outer.max.x - t, y0, outer.min.z}, {outer.max.x, outer.max.y, outer.max.z}}, BlockType::RustPlate, true, false, true, regX, regZ);
+        w.addProp({{outer.min.x, y0, outer.min.z}, {outer.max.x, outer.max.y, outer.min.z + t}}, BlockType::RustPlate, true, false, true, regX, regZ);
+        w.addProp({{outer.min.x, y0, outer.max.z - t}, {outer.max.x, outer.max.y, outer.max.z}}, BlockType::RustPlate, true, false, true, regX, regZ);
+        cp.leftHingePos  = {outer.min.x, y0 + t, outer.max.z - t};
+        cp.leftClosedYaw = PI * 0.5f;
+        cp.leftOpenSign  = 1.0f;
+        cp.rightHingePos  = {outer.min.x, y0 + t, outer.min.z + t};
+        cp.rightClosedYaw = -PI * 0.5f;
+        cp.rightOpenSign  = -1.0f;
+    } else if (normalZ > 0) { // Back at min.z, opens toward +Z at max.z
+        w.addProp({{outer.min.x, y0, outer.min.z}, {outer.max.x, outer.max.y, outer.min.z + t}}, BlockType::RustPlate, true, false, true, regX, regZ);
+        w.addProp({{outer.min.x, y0, outer.min.z}, {outer.min.x + t, outer.max.y, outer.max.z}}, BlockType::RustPlate, true, false, true, regX, regZ);
+        w.addProp({{outer.max.x - t, y0, outer.min.z}, {outer.max.x, outer.max.y, outer.max.z}}, BlockType::RustPlate, true, false, true, regX, regZ);
+        cp.leftHingePos  = {outer.min.x + t, y0 + t, outer.max.z};
+        cp.leftClosedYaw = 0.0f;
+        cp.leftOpenSign  = -1.0f;
+        cp.rightHingePos  = {outer.max.x - t, y0 + t, outer.max.z};
+        cp.rightClosedYaw = PI;
+        cp.rightOpenSign  = 1.0f;
+    } else { // Back at max.z, opens toward -Z at min.z
+        w.addProp({{outer.min.x, y0, outer.max.z - t}, {outer.max.x, outer.max.y, outer.max.z}}, BlockType::RustPlate, true, false, true, regX, regZ);
+        w.addProp({{outer.min.x, y0, outer.min.z}, {outer.min.x + t, outer.max.y, outer.max.z}}, BlockType::RustPlate, true, false, true, regX, regZ);
+        w.addProp({{outer.max.x - t, y0, outer.min.z}, {outer.max.x, outer.max.y, outer.max.z}}, BlockType::RustPlate, true, false, true, regX, regZ);
+        cp.leftHingePos  = {outer.max.x - t, y0 + t, outer.min.z};
+        cp.leftClosedYaw = PI;
+        cp.leftOpenSign  = -1.0f;
+        cp.rightHingePos  = {outer.min.x + t, y0 + t, outer.min.z};
+        cp.rightClosedYaw = 0.0f;
+        cp.rightOpenSign  = 1.0f;
+    }
+    cabinets.push_back(cp);
 }
 
-void placeShelvingRack(WorldGrid& w, float wallX, float wallZ, int normalX, int normalZ,
+void placeShelvingRack(WorldGrid& w, std::vector<LootSurface>& lootSurfaces,
+                       float wallX, float wallZ, int normalX, int normalZ,
                        int regX, int regZ, const Vec3& spawnPos, Rng& rng) {
     float depth = 0.54f;
     float width = 1.55f;
@@ -213,15 +303,22 @@ void placeShelvingRack(WorldGrid& w, float wallX, float wallZ, int normalX, int 
         float sy = y0 + shelfHeights[s];
         w.addProp({{bounds.min.x, sy, bounds.min.z},
                    {bounds.max.x, sy + 0.05f, bounds.max.z}},
-                  BlockType::Grate, false, false, true, regX, regZ);
+                  BlockType::Grate, true, false, true, regX, regZ);
 
-        if (s < 3 && rng.chance(0.75f)) {
+        if (s < 3 && rng.chance(0.32f)) {
             float boxH = 0.34f + rng.nextFloat() * 0.12f;
             float marginX = (bounds.max.x - bounds.min.x) * 0.14f;
             float marginZ = (bounds.max.z - bounds.min.z) * 0.14f;
             w.addProp({{bounds.min.x + marginX, sy + 0.05f, bounds.min.z + marginZ},
                        {bounds.max.x - marginX, sy + 0.05f + boxH, bounds.max.z - marginZ}},
                       BlockType::HazardStripe, false, false, true, regX, regZ);
+        } else if (s < 3) {
+            lootSurfaces.push_back({
+                LootSource::ShelvingRack,
+                {{bounds.min.x + 0.08f, sy + 0.05f, bounds.min.z + 0.08f},
+                 {bounds.max.x - 0.08f, sy + 0.05f, bounds.max.z - 0.08f}},
+                regX, regZ
+            });
         }
     }
 
@@ -270,6 +367,7 @@ void carveCorridor(WorldGrid& w, const CorridorSegment& seg) {
 
 // Hideable Hollow Locker (player can walk inside & close door!)
 void placeHideableLocker(WorldGrid& w, std::vector<LockerPlacement>& lockers,
+                         std::vector<LootSurface>& lootSurfaces,
                          float wallX, float wallZ, int normalX, int normalZ,
                          int regX, int regZ, const Vec3& spawnPos) {
     float depth = 0.88f;
@@ -337,10 +435,19 @@ void placeHideableLocker(WorldGrid& w, std::vector<LockerPlacement>& lockers,
         lp.openSign = -1.0f;
     }
     lockers.push_back(lp);
+    lootSurfaces.push_back({
+        LootSource::Locker,
+        {{lp.interiorBox.min.x + 0.12f, y0 + 0.03f, lp.interiorBox.min.z + 0.12f},
+         {lp.interiorBox.max.x - 0.12f, y0 + 0.03f, lp.interiorBox.max.z - 0.12f}},
+        regX, regZ
+    });
 }
 
 void populateCorridor(WorldGrid& w, const CorridorSegment& seg,
-                      std::vector<PointLight3D>& lights, std::vector<LockerPlacement>& lockers,
+                      std::vector<PointLight3D>& lights,
+                      std::vector<LockerPlacement>& lockers,
+                      std::vector<DoubleCabinetPlacement>& cabinets,
+                      std::vector<LootSurface>& lootSurfaces,
                       const Vec3& spawnPos, const GameSettings& settings, Rng& rng) {
     int minX = std::min(seg.x0, seg.x1);
     int maxX = std::max(seg.x0, seg.x1);
@@ -373,14 +480,14 @@ void populateCorridor(WorldGrid& w, const CorridorSegment& seg,
 
             int roll = rng.rangeInt(0, 9);
             if (seg.width == 2) {
-                if (roll < 5) placeMetalCabinet(w, x + 0.5f, wz, 0, nz, seg.regX, seg.regZ, spawnPos, rng);
-                else placeShelvingRack(w, x + 0.5f, wz, 0, nz, seg.regX, seg.regZ, spawnPos, rng);
+                if (roll < 5) placeMetalCabinet(w, cabinets, lootSurfaces, x + 0.5f, wz, 0, nz, seg.regX, seg.regZ, spawnPos, rng);
+                else placeShelvingRack(w, lootSurfaces, x + 0.5f, wz, 0, nz, seg.regX, seg.regZ, spawnPos, rng);
             } else {
-                if (roll < 4) placeWoodenCrates(w, x + 0.5f, wz, 0, nz, seg.regX, seg.regZ, spawnPos, rng);
+                if (roll < 4) placeWoodenCrates(w, lootSurfaces, x + 0.5f, wz, 0, nz, seg.regX, seg.regZ, spawnPos, rng);
                 else if (roll < 7) {
-                    if (rng.chance(0.25f)) placeHideableLocker(w, lockers, x + 0.5f, wz, 0, nz, seg.regX, seg.regZ, spawnPos);
-                    else placeMetalCabinet(w, x + 0.5f, wz, 0, nz, seg.regX, seg.regZ, spawnPos, rng);
-                } else placeShelvingRack(w, x + 0.5f, wz, 0, nz, seg.regX, seg.regZ, spawnPos, rng);
+                    if (rng.chance(0.25f)) placeHideableLocker(w, lockers, lootSurfaces, x + 0.5f, wz, 0, nz, seg.regX, seg.regZ, spawnPos);
+                    else placeMetalCabinet(w, cabinets, lootSurfaces, x + 0.5f, wz, 0, nz, seg.regX, seg.regZ, spawnPos, rng);
+                } else placeShelvingRack(w, lootSurfaces, x + 0.5f, wz, 0, nz, seg.regX, seg.regZ, spawnPos, rng);
             }
         }
     } else {
@@ -409,14 +516,14 @@ void populateCorridor(WorldGrid& w, const CorridorSegment& seg,
 
             int roll = rng.rangeInt(0, 9);
             if (seg.width == 2) {
-                if (roll < 5) placeMetalCabinet(w, wx, z + 0.5f, nx, 0, seg.regX, seg.regZ, spawnPos, rng);
-                else placeShelvingRack(w, wx, z + 0.5f, nx, 0, seg.regX, seg.regZ, spawnPos, rng);
+                if (roll < 5) placeMetalCabinet(w, cabinets, lootSurfaces, wx, z + 0.5f, nx, 0, seg.regX, seg.regZ, spawnPos, rng);
+                else placeShelvingRack(w, lootSurfaces, wx, z + 0.5f, nx, 0, seg.regX, seg.regZ, spawnPos, rng);
             } else {
-                if (roll < 4) placeWoodenCrates(w, wx, z + 0.5f, nx, 0, seg.regX, seg.regZ, spawnPos, rng);
+                if (roll < 4) placeWoodenCrates(w, lootSurfaces, wx, z + 0.5f, nx, 0, seg.regX, seg.regZ, spawnPos, rng);
                 else if (roll < 7) {
-                    if (rng.chance(0.25f)) placeHideableLocker(w, lockers, wx, z + 0.5f, nx, 0, seg.regX, seg.regZ, spawnPos);
-                    else placeMetalCabinet(w, wx, z + 0.5f, nx, 0, seg.regX, seg.regZ, spawnPos, rng);
-                } else placeShelvingRack(w, wx, z + 0.5f, nx, 0, seg.regX, seg.regZ, spawnPos, rng);
+                    if (rng.chance(0.25f)) placeHideableLocker(w, lockers, lootSurfaces, wx, z + 0.5f, nx, 0, seg.regX, seg.regZ, spawnPos);
+                    else placeMetalCabinet(w, cabinets, lootSurfaces, wx, z + 0.5f, nx, 0, seg.regX, seg.regZ, spawnPos, rng);
+                } else placeShelvingRack(w, lootSurfaces, wx, z + 0.5f, nx, 0, seg.regX, seg.regZ, spawnPos, rng);
             }
         }
     }
@@ -601,9 +708,10 @@ void MegaGenerator::generateRegion(MegaResult& state, int regX, int regZ,
         }
     }
 
-    // Populate lamps, lockers and 3D furniture
+    // Populate lamps, lockers, double-door metal cabinets and 3D furniture
     for (const auto& seg : regCorridors) {
-        populateCorridor(state.world, seg, state.pointLights, state.lockers, state.spawnPos, settings, rng);
+        populateCorridor(state.world, seg, state.pointLights, state.lockers,
+                         state.cabinets, state.lootSurfaces, state.spawnPos, settings, rng);
         state.corridors.push_back(seg);
     }
 
@@ -690,6 +798,27 @@ bool MegaGenerator::updateInfiniteStream(MegaResult& state, const Vec3& playerPo
                                       std::abs(c.regZ - rz) > keepRadius;
                            }),
             state.corridors.end());
+        state.lockers.erase(
+            std::remove_if(state.lockers.begin(), state.lockers.end(),
+                           [&](const LockerPlacement& l) {
+                               return std::abs(l.regX - rx) > keepRadius ||
+                                      std::abs(l.regZ - rz) > keepRadius;
+                           }),
+            state.lockers.end());
+        state.cabinets.erase(
+            std::remove_if(state.cabinets.begin(), state.cabinets.end(),
+                           [&](const DoubleCabinetPlacement& c) {
+                               return std::abs(c.regX - rx) > keepRadius ||
+                                      std::abs(c.regZ - rz) > keepRadius;
+                           }),
+            state.cabinets.end());
+        state.lootSurfaces.erase(
+            std::remove_if(state.lootSurfaces.begin(), state.lootSurfaces.end(),
+                           [&](const LootSurface& s) {
+                               return std::abs(s.regX - rx) > keepRadius ||
+                                      std::abs(s.regZ - rz) > keepRadius;
+                           }),
+            state.lootSurfaces.end());
         changed = true;
     }
 

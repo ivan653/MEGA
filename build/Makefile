@@ -222,6 +222,33 @@ src/game/GameWorld.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/mega_tests.dir/build.make CMakeFiles/mega_tests.dir/src/game/GameWorld.cpp.s
 .PHONY : src/game/GameWorld.cpp.s
 
+src/game/Inventory3D.o: src/game/Inventory3D.cpp.o
+.PHONY : src/game/Inventory3D.o
+
+# target to build an object file
+src/game/Inventory3D.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/mega.dir/build.make CMakeFiles/mega.dir/src/game/Inventory3D.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/mega_tests.dir/build.make CMakeFiles/mega_tests.dir/src/game/Inventory3D.cpp.o
+.PHONY : src/game/Inventory3D.cpp.o
+
+src/game/Inventory3D.i: src/game/Inventory3D.cpp.i
+.PHONY : src/game/Inventory3D.i
+
+# target to preprocess a source file
+src/game/Inventory3D.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/mega.dir/build.make CMakeFiles/mega.dir/src/game/Inventory3D.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/mega_tests.dir/build.make CMakeFiles/mega_tests.dir/src/game/Inventory3D.cpp.i
+.PHONY : src/game/Inventory3D.cpp.i
+
+src/game/Inventory3D.s: src/game/Inventory3D.cpp.s
+.PHONY : src/game/Inventory3D.s
+
+# target to generate assembly for a file
+src/game/Inventory3D.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/mega.dir/build.make CMakeFiles/mega.dir/src/game/Inventory3D.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/mega_tests.dir/build.make CMakeFiles/mega_tests.dir/src/game/Inventory3D.cpp.s
+.PHONY : src/game/Inventory3D.cpp.s
+
 src/game/LockpickMinigame.o: src/game/LockpickMinigame.cpp.o
 .PHONY : src/game/LockpickMinigame.o
 
@@ -590,6 +617,9 @@ help:
 	@echo "... src/game/GameWorld.o"
 	@echo "... src/game/GameWorld.i"
 	@echo "... src/game/GameWorld.s"
+	@echo "... src/game/Inventory3D.o"
+	@echo "... src/game/Inventory3D.i"
+	@echo "... src/game/Inventory3D.s"
 	@echo "... src/game/LockpickMinigame.o"
 	@echo "... src/game/LockpickMinigame.i"
 	@echo "... src/game/LockpickMinigame.s"

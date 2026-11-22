@@ -294,6 +294,7 @@ int main(int argc, char** argv) {
 
     GameWorld gw;
     gw.settings = GameSettings::loadOrCreate("mega.cfg");
+    gw.lootTables = LootTables::loadOrCreate("loot_tables.cfg");
     audio.applySettings(gw.settings);
     uint64_t worldSeed = 0x4D4547410001ULL;
     gw.startNewRun(worldSeed);
@@ -347,15 +348,36 @@ int main(int argc, char** argv) {
 
     auto reloadConfig = [&]() {
         gw.settings = GameSettings::loadOrCreate("mega.cfg");
+        gw.lootTables = LootTables::loadOrCreate("loot_tables.cfg");
         audio.applySettings(gw.settings);
         for (auto& l : gw.map.pointLights) {
             l.color = {gw.settings.lampColorR, gw.settings.lampColorG, gw.settings.lampColorB};
             l.intensity = gw.settings.lampIntensity;
             l.radius = gw.settings.lampRadius;
         }
-        std::cout << "Reloaded mega.cfg (ambient=" << gw.settings.ambientBrightness
+        std::cout << "Reloaded mega.cfg & loot_tables.cfg (ambient=" << gw.settings.ambientBrightness
                   << " masterVol=" << gw.settings.masterVolume
                   << " echo=" << gw.settings.echoStrength << ")\n";
+    };
+
+    float mouseWinX = static_cast<float>(winW) * 0.5f;
+    float mouseWinY = static_cast<float>(winH) * 0.5f;
+    bool prevFreeCursor = false;
+
+    auto computeCursorRay = [&](Vec3& outOrig, Vec3& outDir) {
+        outOrig = gw.player.eyePosition();
+        if (gw.backpackMode == BackpackMode::InHands || gw.draggingItem) {
+            float ndcX = (2.0f * mouseWinX / std::max(1, winW)) - 1.0f;
+            float ndcY = 1.0f - (2.0f * mouseWinY / std::max(1, winH));
+            float aspect = static_cast<float>(cfg::RETRO_WIDTH) / static_cast<float>(cfg::RETRO_HEIGHT);
+            float tanHalf = std::tan(radians(cfg::FOV_DEGREES) * 0.5f);
+            Vec3 fwd = gw.player.forwardDir();
+            Vec3 right = gw.player.rightDir();
+            Vec3 up = normalize(cross(right, fwd));
+            outDir = normalize(fwd + right * (ndcX * aspect * tanHalf) + up * (ndcY * tanHalf));
+        } else {
+            outDir = gw.player.forwardDir();
+        }
     };
 
     while (running) {
@@ -398,20 +420,24 @@ int main(int argc, char** argv) {
                 if (ev.key.key == SDLK_ESCAPE) {
                     if (gw.lockpick.active) {
                         gw.lockpick.close();
-                    } else if (gw.inventoryOpen) {
-                        gw.inventoryOpen = false;
-                        mouseCaptured = true;
-                        SDL_SetWindowRelativeMouseMode(window, true);
+                    } else if (gw.draggingItem) {
+                        Vec3 ro, rd;
+                        computeCursorRay(ro, rd);
+                        gw.handleSecondaryClick(ro, rd, audio);
+                    } else if (gw.backpackMode == BackpackMode::InHands) {
+                        gw.toggleBackpackInHands();
                     } else {
                         mouseCaptured = !mouseCaptured;
                         SDL_SetWindowRelativeMouseMode(window, mouseCaptured);
                     }
                 } else if (ev.key.key == SDLK_TAB || ev.key.key == SDLK_I) {
-                    gw.lockpick.close();
-                    gw.inventoryOpen = !gw.inventoryOpen;
-                    gw.endInteract();
-                    mouseCaptured = !gw.inventoryOpen;
-                    SDL_SetWindowRelativeMouseMode(window, mouseCaptured);
+                    gw.toggleBackpackInHands();
+                } else if (ev.key.key == SDLK_B) {
+                    gw.togglePlaceBackpackOnGround(audio);
+                } else if (ev.key.key == SDLK_T) {
+                    gw.rotateActiveItem(0);
+                } else if (ev.key.key == SDLK_Y) {
+                    gw.rotateActiveItem(2);
                 } else if (ev.key.key == SDLK_F) {
                     if (gw.inventory.hasFlashlight) {
                         if (gw.inventory.flashlightBattery > 0.0f) {
@@ -421,9 +447,13 @@ int main(int argc, char** argv) {
                             audio.play(SoundId::FlashlightClick, 0.45f);
                         }
                     }
-                } else if (ev.key.key == SDLK_E && !gw.inventoryOpen) {
-                    gw.beginInteract(audio);
-                    gw.endInteract();
+                } else if (ev.key.key == SDLK_E && gw.backpackMode != BackpackMode::InHands) {
+                    if (gw.hasHeldItem && gw.hoveredDoorIdx < 0 && gw.hoveredItemIdx < 0) {
+                        gw.useHeldItem(audio);
+                    } else {
+                        gw.beginInteract(audio);
+                        gw.endInteract();
+                    }
                 } else if (ev.key.key == SDLK_1) {
                     gw.useInventoryItem(ItemType::Battery, audio);
                 } else if (ev.key.key == SDLK_2) {
@@ -466,47 +496,74 @@ int main(int argc, char** argv) {
                 } else if (ev.key.key == SDLK_F5) {
                     reloadConfig();
                 } else if (ev.key.key == SDLK_R) {
-                    reloadConfig();
-                    worldSeed += 1337ULL;
-                    gw.startNewRun(worldSeed);
-                    mesher.syncWorld(gw.map.world);
-                    gw.worldStreamChanged = false;
+                    if (gw.draggingItem || gw.hasHeldItem) {
+                        gw.rotateActiveItem(1);
+                    } else {
+                        reloadConfig();
+                        worldSeed += 1337ULL;
+                        gw.startNewRun(worldSeed);
+                        mesher.syncWorld(gw.map.world);
+                        gw.worldStreamChanged = false;
+                    }
                 } else if (ev.key.key == SDLK_Q && (ev.key.mod & SDL_KMOD_CTRL)) {
                     running = false;
                 }
-            } else if (ev.type == SDL_EVENT_MOUSE_MOTION && mouseCaptured) {
-                if (gw.lockpick.active) {
-                    gw.lockpick.handleMouseMove(ev.motion.xrel, ev.motion.yrel);
-                } else if (gw.grabbedDoorIdx >= 0) {
-                    gw.dragGrabbedDoor(ev.motion.xrel, ev.motion.yrel);
-                } else {
-                    yawDelta += ev.motion.xrel * cfg::MOUSE_SENS;
-                    pitchDelta -= ev.motion.yrel * cfg::MOUSE_SENS;
+            } else if (ev.type == SDL_EVENT_MOUSE_MOTION) {
+                bool freeCursor = (gw.backpackMode == BackpackMode::InHands || gw.draggingItem);
+                if (freeCursor) {
+                    mouseWinX = ev.motion.x;
+                    mouseWinY = ev.motion.y;
+                } else if (mouseCaptured) {
+                    if (gw.lockpick.active) {
+                        gw.lockpick.handleMouseMove(ev.motion.xrel, ev.motion.yrel);
+                    } else if (gw.grabbedDoorIdx >= 0) {
+                        gw.dragGrabbedDoor(ev.motion.xrel, ev.motion.yrel);
+                    } else {
+                        yawDelta += ev.motion.xrel * cfg::MOUSE_SENS;
+                        pitchDelta -= ev.motion.yrel * cfg::MOUSE_SENS;
+                    }
                 }
             } else if (ev.type == SDL_EVENT_MOUSE_BUTTON_UP) {
                 if (ev.button.button == SDL_BUTTON_LEFT) {
                     gw.endInteract();
                 }
             } else if (ev.type == SDL_EVENT_MOUSE_BUTTON_DOWN) {
-                if (gw.inventoryOpen && ev.button.button == SDL_BUTTON_LEFT) {
-                    // Convert click to HUD coordinates (1280x720)
-                    float mx = ev.button.x * (static_cast<float>(cfg::RETRO_WIDTH) / std::max(1, winW));
-                    float my = ev.button.y * (static_cast<float>(cfg::RETRO_HEIGHT) / std::max(1, winH));
-                    int ix = cfg::RETRO_WIDTH / 2 - 180;
-                    int iy = cfg::RETRO_HEIGHT / 2 - 145;
-                    if (mx >= ix + 18 && mx <= ix + 342) {
-                        if (my >= iy + 86 && my <= iy + 122) gw.useInventoryItem(ItemType::Battery, audio);
-                        else if (my >= iy + 132 && my <= iy + 168) gw.useInventoryItem(ItemType::Food, audio);
-                        else if (my >= iy + 178 && my <= iy + 214) gw.useInventoryItem(ItemType::Water, audio);
+                bool freeCursor = (gw.backpackMode == BackpackMode::InHands || gw.draggingItem);
+                if (freeCursor) {
+                    mouseWinX = ev.button.x;
+                    mouseWinY = ev.button.y;
+                    Vec3 ro, rd;
+                    computeCursorRay(ro, rd);
+                    if (ev.button.button == SDL_BUTTON_LEFT) {
+                        gw.handlePrimaryClick(ro, rd, audio);
+                    } else if (ev.button.button == SDL_BUTTON_RIGHT) {
+                        gw.handleSecondaryClick(ro, rd, audio);
                     }
                 } else if (!mouseCaptured) {
                     mouseCaptured = true;
                     SDL_SetWindowRelativeMouseMode(window, true);
-                } else if (ev.button.button == SDL_BUTTON_LEFT) {
-                    if (!gw.beginInteract(audio)) {
-                        fireClicked = true;
+                } else {
+                    Vec3 ro, rd;
+                    computeCursorRay(ro, rd);
+                    if (ev.button.button == SDL_BUTTON_LEFT) {
+                        if (!gw.handlePrimaryClick(ro, rd, audio)) {
+                            fireClicked = true;
+                        }
+                    } else if (ev.button.button == SDL_BUTTON_RIGHT) {
+                        gw.handleSecondaryClick(ro, rd, audio);
                     }
                 }
+            }
+        }
+
+        // Automatically unlock mouse cursor & pause camera whenever backpack is in hands or RMB-dragging an item
+        bool wantFreeCursor = (gw.backpackMode == BackpackMode::InHands || gw.draggingItem);
+        if (wantFreeCursor != prevFreeCursor) {
+            prevFreeCursor = wantFreeCursor;
+            SDL_SetWindowRelativeMouseMode(window, !wantFreeCursor && mouseCaptured && !visualTest);
+            if (wantFreeCursor) {
+                mouseWinX = static_cast<float>(winW) * 0.5f;
+                mouseWinY = static_cast<float>(winH) * 0.5f;
             }
         }
 
@@ -668,8 +725,19 @@ int main(int argc, char** argv) {
         gw.gatherRobots(robotQueue);
         robotRenderer.render(view, proj, camPos, robotQueue, gw.settings);
 
+        // Update 3D cursor ray hover for diegetic backpack & 3D world-grid placement preview
+        {
+            Vec3 ro, rd;
+            computeCursorRay(ro, rd);
+            gw.updateCursorHover(ro, rd);
+        }
+
         gw.gatherInteractables(doorQueue, itemQueue);
-        robotRenderer.renderInteractables(worldShader, view, proj, camPos, doorQueue, itemQueue);
+        BackpackRenderState bpState = gw.gatherBackpackState();
+        robotRenderer.renderInteractables(worldShader, view, proj, camPos, doorQueue, itemQueue,
+                                          bpState, gw.placementPreview,
+                                          gw.hasHeldItem, gw.heldItemType, gw.heldItemOrient,
+                                          gw.heldItemWorldMatrix());
 
         gw.gatherBillboards(spriteQueue, totalTime);
         billboards.render(view, proj, camPos, spriteQueue);

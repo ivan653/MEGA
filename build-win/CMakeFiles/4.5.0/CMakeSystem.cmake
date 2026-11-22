@@ -1,0 +1,17 @@
+set(CMAKE_HOST_SYSTEM "Linux-7.3.4-arch1-2")
+set(CMAKE_HOST_SYSTEM_NAME "Linux")
+set(CMAKE_HOST_SYSTEM_VERSION "7.3.4-arch1-2")
+set(CMAKE_HOST_SYSTEM_PROCESSOR "x86_64")
+
+set(_CMAKE_INPUT_TOOLCHAIN_FILE [==[/usr/share/mingw/toolchain-x86_64-w64-mingw32.cmake]==])
+set(_CMAKE_SYSTEM_TOOLCHAIN_FILE "/usr/share/mingw/toolchain-x86_64-w64-mingw32.cmake")
+include("${_CMAKE_SYSTEM_TOOLCHAIN_FILE}")
+
+set(CMAKE_SYSTEM "Windows")
+set(CMAKE_SYSTEM_NAME "Windows")
+set(CMAKE_SYSTEM_VERSION "")
+set(CMAKE_SYSTEM_PROCESSOR "x86_64")
+
+set(CMAKE_CROSSCOMPILING "TRUE")
+
+set(CMAKE_SYSTEM_LOADED 1)
