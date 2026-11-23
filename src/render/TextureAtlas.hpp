@@ -9,7 +9,7 @@ namespace mega {
 class TextureAtlas {
 public:
     static constexpr int TEX_SIZE = 32;
-    static constexpr int LAYER_COUNT = 16;
+    static constexpr int LAYER_COUNT = 17;
 
     TextureAtlas() = default;
     ~TextureAtlas();

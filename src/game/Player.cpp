@@ -70,11 +70,13 @@ bool Player::collides(const WorldGrid& world, const AABB& box,
 
 void Player::update(const PlayerInput& input, const WorldGrid& world, float dt,
                     const std::vector<AABB>& dynamicColliders,
-                    float moveSpeed, float sprintMult, float jumpSpeed) {
+                    float moveSpeed, float sprintMult, float jumpSpeed,
+                    const std::vector<AABB>& ladderVolumes) {
     yaw += input.yawDelta;
     pitch = clampf(pitch + input.pitchDelta, -radians(89.0f), radians(89.0f));
 
     if (input.noclip) {
+        onLadder = false;
         Vec3 wish = forwardDir() * input.moveForward + rightDir() * input.moveRight +
                     Vec3{0.0f, input.moveUp, 0.0f};
         if (lengthSq(wish) > 1e-5f) {
@@ -92,6 +94,47 @@ void Player::update(const PlayerInput& input, const WorldGrid& world, float dt,
     Vec3 wish = fwdXZ * input.moveForward + rightXZ * input.moveRight;
     if (lengthSq(wish) > 1e-5f) {
         wish = normalize(wish);
+    }
+
+    // Check 6m vertical ladder volumes (hatch shafts)
+    const AABB* activeLadder = nullptr;
+    if (!ladderVolumes.empty()) {
+        AABB pBox = boundingBox();
+        for (const auto& lb : ladderVolumes) {
+            if (pBox.intersects(lb)) {
+                activeLadder = &lb;
+                break;
+            }
+        }
+    }
+    onLadder = (activeLadder != nullptr);
+
+    if (onLadder) {
+        grounded = false;
+        float climbSpeed = input.sprint ? 4.4f : 3.2f;
+        float climbDir = 0.0f;
+        if (input.jump) {
+            climbDir = 1.0f;
+        } else if (input.moveUp < -0.1f) {
+            climbDir = -1.0f;
+        } else if (std::abs(input.moveForward) > 0.05f) {
+            climbDir = (pitch < -0.22f) ? -input.moveForward : input.moveForward;
+        }
+
+        velocity.x = wish.x * moveSpeed * 0.55f;
+        velocity.z = wish.z * moveSpeed * 0.55f;
+        velocity.y = climbDir * climbSpeed;
+
+        // Smooth top-of-ladder rim mount assist when reaching room floor level
+        if (position.y >= activeLadder->max.y - 0.50f && lengthSq(wish) > 1e-4f && climbDir >= 0.0f) {
+            Vec3 probe = position + wish * 0.14f;
+            if (collides(world, boxAt(probe), dynamicColliders)) {
+                velocity.y = std::max(velocity.y, 3.2f);
+            }
+        }
+
+        moveAndSlide(world, velocity * dt, dynamicColliders);
+        return;
     }
 
     float maxSpeed = moveSpeed * (input.sprint ? sprintMult : 1.0f);

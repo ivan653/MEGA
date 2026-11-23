@@ -43,7 +43,7 @@ set_tests_properties([=[LockpickTest.SlowPushOverforceBreakAndGentleTapPhysics]=
   PROPERTIES
     
     _CMAKE_TEST_BUILD_DEPENDS [==[/home/ivan/ImportantFiles/My Games/MEGA/build/mega_tests]==]
-    DEF_SOURCE_LINE [==[/home/ivan/ImportantFiles/My Games/MEGA/tests/CoreTests.cpp:169]==]
+    DEF_SOURCE_LINE [==[/home/ivan/ImportantFiles/My Games/MEGA/tests/CoreTests.cpp:212]==]
     WORKING_DIRECTORY [==[/home/ivan/ImportantFiles/My Games/MEGA/build]==]
     SKIP_REGULAR_EXPRESSION [==[\[  SKIPPED \]]==]
     
@@ -53,7 +53,7 @@ set_tests_properties([=[RobotSimTest.ObservePatrolAndChaseFootKinematics]=]
   PROPERTIES
     
     _CMAKE_TEST_BUILD_DEPENDS [==[/home/ivan/ImportantFiles/My Games/MEGA/build/mega_tests]==]
-    DEF_SOURCE_LINE [==[/home/ivan/ImportantFiles/My Games/MEGA/tests/CoreTests.cpp:255]==]
+    DEF_SOURCE_LINE [==[/home/ivan/ImportantFiles/My Games/MEGA/tests/CoreTests.cpp:298]==]
     WORKING_DIRECTORY [==[/home/ivan/ImportantFiles/My Games/MEGA/build]==]
     SKIP_REGULAR_EXPRESSION [==[\[  SKIPPED \]]==]
     
@@ -63,7 +63,7 @@ set_tests_properties([=[RobotSimTest.ObserveMapNavigationPatrolAndChase]=]
   PROPERTIES
     
     _CMAKE_TEST_BUILD_DEPENDS [==[/home/ivan/ImportantFiles/My Games/MEGA/build/mega_tests]==]
-    DEF_SOURCE_LINE [==[/home/ivan/ImportantFiles/My Games/MEGA/tests/CoreTests.cpp:329]==]
+    DEF_SOURCE_LINE [==[/home/ivan/ImportantFiles/My Games/MEGA/tests/CoreTests.cpp:372]==]
     WORKING_DIRECTORY [==[/home/ivan/ImportantFiles/My Games/MEGA/build]==]
     SKIP_REGULAR_EXPRESSION [==[\[  SKIPPED \]]==]
     
@@ -73,7 +73,7 @@ set_tests_properties([=[Audio3DAcousticsTest.PanningObstacleThicknessAndConditio
   PROPERTIES
     
     _CMAKE_TEST_BUILD_DEPENDS [==[/home/ivan/ImportantFiles/My Games/MEGA/build/mega_tests]==]
-    DEF_SOURCE_LINE [==[/home/ivan/ImportantFiles/My Games/MEGA/tests/CoreTests.cpp:438]==]
+    DEF_SOURCE_LINE [==[/home/ivan/ImportantFiles/My Games/MEGA/tests/CoreTests.cpp:481]==]
     WORKING_DIRECTORY [==[/home/ivan/ImportantFiles/My Games/MEGA/build]==]
     SKIP_REGULAR_EXPRESSION [==[\[  SKIPPED \]]==]
     
@@ -83,7 +83,7 @@ set_tests_properties([=[LockpickItemAndExitDoorTest.FivePercentBreakChanceAndSaf
   PROPERTIES
     
     _CMAKE_TEST_BUILD_DEPENDS [==[/home/ivan/ImportantFiles/My Games/MEGA/build/mega_tests]==]
-    DEF_SOURCE_LINE [==[/home/ivan/ImportantFiles/My Games/MEGA/tests/CoreTests.cpp:533]==]
+    DEF_SOURCE_LINE [==[/home/ivan/ImportantFiles/My Games/MEGA/tests/CoreTests.cpp:576]==]
     WORKING_DIRECTORY [==[/home/ivan/ImportantFiles/My Games/MEGA/build]==]
     SKIP_REGULAR_EXPRESSION [==[\[  SKIPPED \]]==]
     
@@ -93,7 +93,7 @@ set_tests_properties([=[ConfigHotReloadTest.ParsesPlayerLightingAndAudioSettings
   PROPERTIES
     
     _CMAKE_TEST_BUILD_DEPENDS [==[/home/ivan/ImportantFiles/My Games/MEGA/build/mega_tests]==]
-    DEF_SOURCE_LINE [==[/home/ivan/ImportantFiles/My Games/MEGA/tests/CoreTests.cpp:633]==]
+    DEF_SOURCE_LINE [==[/home/ivan/ImportantFiles/My Games/MEGA/tests/CoreTests.cpp:676]==]
     WORKING_DIRECTORY [==[/home/ivan/ImportantFiles/My Games/MEGA/build]==]
     SKIP_REGULAR_EXPRESSION [==[\[  SKIPPED \]]==]
     
@@ -103,7 +103,7 @@ set_tests_properties([=[RobotNavigationTest.CenterlineBypassAndCooperativePassin
   PROPERTIES
     
     _CMAKE_TEST_BUILD_DEPENDS [==[/home/ivan/ImportantFiles/My Games/MEGA/build/mega_tests]==]
-    DEF_SOURCE_LINE [==[/home/ivan/ImportantFiles/My Games/MEGA/tests/CoreTests.cpp:666]==]
+    DEF_SOURCE_LINE [==[/home/ivan/ImportantFiles/My Games/MEGA/tests/CoreTests.cpp:709]==]
     WORKING_DIRECTORY [==[/home/ivan/ImportantFiles/My Games/MEGA/build]==]
     SKIP_REGULAR_EXPRESSION [==[\[  SKIPPED \]]==]
     
@@ -113,7 +113,7 @@ set_tests_properties([=[GodModeTest.NoclipInvisibilityAndSpeedWork]=]
   PROPERTIES
     
     _CMAKE_TEST_BUILD_DEPENDS [==[/home/ivan/ImportantFiles/My Games/MEGA/build/mega_tests]==]
-    DEF_SOURCE_LINE [==[/home/ivan/ImportantFiles/My Games/MEGA/tests/CoreTests.cpp:752]==]
+    DEF_SOURCE_LINE [==[/home/ivan/ImportantFiles/My Games/MEGA/tests/CoreTests.cpp:795]==]
     WORKING_DIRECTORY [==[/home/ivan/ImportantFiles/My Games/MEGA/build]==]
     SKIP_REGULAR_EXPRESSION [==[\[  SKIPPED \]]==]
     
@@ -123,7 +123,7 @@ set_tests_properties([=[Inventory3DTest.VolumeRotationTopBlockingAndWorldGridPla
   PROPERTIES
     
     _CMAKE_TEST_BUILD_DEPENDS [==[/home/ivan/ImportantFiles/My Games/MEGA/build/mega_tests]==]
-    DEF_SOURCE_LINE [==[/home/ivan/ImportantFiles/My Games/MEGA/tests/CoreTests.cpp:824]==]
+    DEF_SOURCE_LINE [==[/home/ivan/ImportantFiles/My Games/MEGA/tests/CoreTests.cpp:867]==]
     WORKING_DIRECTORY [==[/home/ivan/ImportantFiles/My Games/MEGA/build]==]
     SKIP_REGULAR_EXPRESSION [==[\[  SKIPPED \]]==]
     
@@ -133,7 +133,7 @@ set_tests_properties([=[DoubleDoorAndLootTableTest.Lockers90PercentOpenMetalCabi
   PROPERTIES
     
     _CMAKE_TEST_BUILD_DEPENDS [==[/home/ivan/ImportantFiles/My Games/MEGA/build/mega_tests]==]
-    DEF_SOURCE_LINE [==[/home/ivan/ImportantFiles/My Games/MEGA/tests/CoreTests.cpp:898]==]
+    DEF_SOURCE_LINE [==[/home/ivan/ImportantFiles/My Games/MEGA/tests/CoreTests.cpp:941]==]
     WORKING_DIRECTORY [==[/home/ivan/ImportantFiles/My Games/MEGA/build]==]
     SKIP_REGULAR_EXPRESSION [==[\[  SKIPPED \]]==]
     
@@ -143,7 +143,7 @@ set_tests_properties([=[RingLoopsAndRareRoomsTest.DeadEndsConvertToRingLoopsAndR
   PROPERTIES
     
     _CMAKE_TEST_BUILD_DEPENDS [==[/home/ivan/ImportantFiles/My Games/MEGA/build/mega_tests]==]
-    DEF_SOURCE_LINE [==[/home/ivan/ImportantFiles/My Games/MEGA/tests/CoreTests.cpp:958]==]
+    DEF_SOURCE_LINE [==[/home/ivan/ImportantFiles/My Games/MEGA/tests/CoreTests.cpp:1001]==]
     WORKING_DIRECTORY [==[/home/ivan/ImportantFiles/My Games/MEGA/build]==]
     SKIP_REGULAR_EXPRESSION [==[\[  SKIPPED \]]==]
     
@@ -153,7 +153,7 @@ set_tests_properties([=[BackSlotMeleeAndCraftingTest.RearStrapSlotBreakingWeapon
   PROPERTIES
     
     _CMAKE_TEST_BUILD_DEPENDS [==[/home/ivan/ImportantFiles/My Games/MEGA/build/mega_tests]==]
-    DEF_SOURCE_LINE [==[/home/ivan/ImportantFiles/My Games/MEGA/tests/CoreTests.cpp:1063]==]
+    DEF_SOURCE_LINE [==[/home/ivan/ImportantFiles/My Games/MEGA/tests/CoreTests.cpp:1106]==]
     WORKING_DIRECTORY [==[/home/ivan/ImportantFiles/My Games/MEGA/build]==]
     SKIP_REGULAR_EXPRESSION [==[\[  SKIPPED \]]==]
     
@@ -163,9 +163,19 @@ set_tests_properties([=[RealisticConsumptionAndFixedHandPoseTest.FixedHandGripWa
   PROPERTIES
     
     _CMAKE_TEST_BUILD_DEPENDS [==[/home/ivan/ImportantFiles/My Games/MEGA/build/mega_tests]==]
-    DEF_SOURCE_LINE [==[/home/ivan/ImportantFiles/My Games/MEGA/tests/CoreTests.cpp:1188]==]
+    DEF_SOURCE_LINE [==[/home/ivan/ImportantFiles/My Games/MEGA/tests/CoreTests.cpp:1231]==]
     WORKING_DIRECTORY [==[/home/ivan/ImportantFiles/My Games/MEGA/build]==]
     SKIP_REGULAR_EXPRESSION [==[\[  SKIPPED \]]==]
     
 )
-set(mega_tests_TESTS [==[WorldGridTest.BoundsAndBlockPlacement]==] [==[PlayerPhysicsTest.GravityLandsOnFloorAndStepUpWorks]==] [==[MegaGeneratorTest.GeneratesConnectedMultiBiomeMegastructureQuickly]==] [==[GameWorldTest.RaycastAndStarterRoomSurvivalWork]==] [==[LockpickTest.SlowPushOverforceBreakAndGentleTapPhysics]==] [==[RobotSimTest.ObservePatrolAndChaseFootKinematics]==] [==[RobotSimTest.ObserveMapNavigationPatrolAndChase]==] [==[Audio3DAcousticsTest.PanningObstacleThicknessAndConditionalEcho]==] [==[LockpickItemAndExitDoorTest.FivePercentBreakChanceAndSafeExitDoor]==] [==[ConfigHotReloadTest.ParsesPlayerLightingAndAudioSettings]==] [==[RobotNavigationTest.CenterlineBypassAndCooperativePassing]==] [==[GodModeTest.NoclipInvisibilityAndSpeedWork]==] [==[Inventory3DTest.VolumeRotationTopBlockingAndWorldGridPlacement]==] [==[DoubleDoorAndLootTableTest.Lockers90PercentOpenMetalCabinetsAlwaysLockedAndLootTablesWork]==] [==[RingLoopsAndRareRoomsTest.DeadEndsConvertToRingLoopsAndRareCabinetRooms]==] [==[BackSlotMeleeAndCraftingTest.RearStrapSlotBreakingWeaponsAndSurfaceSpearCraft]==] [==[RealisticConsumptionAndFixedHandPoseTest.FixedHandGripWaterDrinkingAndFoodBitingWork]==])
+add_test([=[SewerBiomeTest.HatchRoomsLaddersAndSewerTopologyWork]=]  [==[/home/ivan/ImportantFiles/My Games/MEGA/build/mega_tests]==] [==[--gtest_filter=SewerBiomeTest.HatchRoomsLaddersAndSewerTopologyWork]==] --gtest_also_run_disabled_tests)
+set_tests_properties([=[SewerBiomeTest.HatchRoomsLaddersAndSewerTopologyWork]=]
+  PROPERTIES
+    
+    _CMAKE_TEST_BUILD_DEPENDS [==[/home/ivan/ImportantFiles/My Games/MEGA/build/mega_tests]==]
+    DEF_SOURCE_LINE [==[/home/ivan/ImportantFiles/My Games/MEGA/tests/CoreTests.cpp:1320]==]
+    WORKING_DIRECTORY [==[/home/ivan/ImportantFiles/My Games/MEGA/build]==]
+    SKIP_REGULAR_EXPRESSION [==[\[  SKIPPED \]]==]
+    
+)
+set(mega_tests_TESTS [==[WorldGridTest.BoundsAndBlockPlacement]==] [==[PlayerPhysicsTest.GravityLandsOnFloorAndStepUpWorks]==] [==[MegaGeneratorTest.GeneratesConnectedMultiBiomeMegastructureQuickly]==] [==[GameWorldTest.RaycastAndStarterRoomSurvivalWork]==] [==[LockpickTest.SlowPushOverforceBreakAndGentleTapPhysics]==] [==[RobotSimTest.ObservePatrolAndChaseFootKinematics]==] [==[RobotSimTest.ObserveMapNavigationPatrolAndChase]==] [==[Audio3DAcousticsTest.PanningObstacleThicknessAndConditionalEcho]==] [==[LockpickItemAndExitDoorTest.FivePercentBreakChanceAndSafeExitDoor]==] [==[ConfigHotReloadTest.ParsesPlayerLightingAndAudioSettings]==] [==[RobotNavigationTest.CenterlineBypassAndCooperativePassing]==] [==[GodModeTest.NoclipInvisibilityAndSpeedWork]==] [==[Inventory3DTest.VolumeRotationTopBlockingAndWorldGridPlacement]==] [==[DoubleDoorAndLootTableTest.Lockers90PercentOpenMetalCabinetsAlwaysLockedAndLootTablesWork]==] [==[RingLoopsAndRareRoomsTest.DeadEndsConvertToRingLoopsAndRareCabinetRooms]==] [==[BackSlotMeleeAndCraftingTest.RearStrapSlotBreakingWeaponsAndSurfaceSpearCraft]==] [==[RealisticConsumptionAndFixedHandPoseTest.FixedHandGripWaterDrinkingAndFoodBitingWork]==] [==[SewerBiomeTest.HatchRoomsLaddersAndSewerTopologyWork]==])

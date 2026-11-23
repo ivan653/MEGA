@@ -12,13 +12,18 @@ namespace mega {
 enum class BlockType : uint8_t {
     Air = 0,
     Concrete = 1,     // Liminal utility wall
-    RustPlate = 2,    // Painted metal cabinet
+    RustPlate = 2,    // Painted metal cabinet / rusty pipe
     HazardStripe = 3, // Wooden crate
-    Grate = 4,        // Shelving rack dark steel
+    Grate = 4,        // Shelving rack / drainage grate dark steel
     TechPanel = 5,    // Worn floor tile
     ReactorGlow = 6,  // Emissive blue-white wall lamp
     DarkSteel = 7,    // Concrete ceiling slab
-    BioWall = 8
+    BioWall = 8,
+    // Layers 9..12 are reserved in TextureAtlas for robot/door meshes
+    SewerBrick = 13,  // Damp stained sewer masonry/concrete wall
+    SewerFloor = 14,  // Wet cracked dark sewer walkway
+    SewerWater = 15,  // Murky flowing wastewater surface
+    SewerLamp  = 16   // Warm amber-green caged sewer lamp
 };
 
 struct Cell {
@@ -37,7 +42,7 @@ struct Cell {
     }
 
     bool isEmissive() const {
-        return type == BlockType::ReactorGlow;
+        return type == BlockType::ReactorGlow || type == BlockType::SewerLamp;
     }
 
     float topHeight() const {

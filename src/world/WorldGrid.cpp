@@ -11,7 +11,7 @@ WorldGrid::WorldGrid(int chunksX, int chunksY, int chunksZ, BlockType defaultFil
 
 bool WorldGrid::inBounds(int x, int y, int z) const {
     if (infinite_) {
-        return y >= 0 && y < Chunk::SIZE;
+        return y >= -Chunk::SIZE && y < Chunk::SIZE;
     }
     return x >= 0 && x < sizeX() &&
            y >= 0 && y < sizeY() &&

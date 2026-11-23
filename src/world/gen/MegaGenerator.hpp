@@ -58,13 +58,51 @@ struct DoubleCabinetPlacement {
     int regZ = 0;
 };
 
-// Hinged metal door separating a 3x4 dead-end room from its corridor
+// Hinged metal door separating a dead-end room or parallel sewer tunnels
 struct RoomDoorPlacement {
     Vec3 hingePos;
     float closedYaw = 0.0f;
     float openSign = 1.0f;
     float width = 1.0f;
     float height = 2.0f;
+    bool locked = false;
+    bool isSewerDoor = false;
+    int regX = 0;
+    int regZ = 0;
+};
+
+// Openable floor hatch in a 3x3 dead-end room leading down into the Sewer biome
+struct HatchPlacement {
+    Vec3 hingePos;
+    float closedYaw = 0.0f;
+    float width = 1.0f;
+    float length = 0.96f;
+    int cellX = 0;
+    int cellZ = 0;
+    int regX = 0;
+    int regZ = 0;
+};
+
+// Vertical 6m steel ladder descending from a 3x3 hatch room into the Sewer biome
+struct LadderPlacement {
+    AABB climbBox;
+    Vec3 wallNormal{0.0f, 0.0f, 1.0f}; // Direction from ladder wall into shaft
+    float bottomY = -5.0f;
+    float topY = 1.0f;
+    int regX = 0;
+    int regZ = 0;
+};
+
+// Sewer biome tunnel segment (width 2..6m, height 2..3m, length 20..60m, 1m-deep drainage channel)
+struct SewerSegment {
+    int x0 = 0, z0 = 0, x1 = 0, z1 = 0;
+    int width = 3;         // 2..6 meters
+    int height = 3;        // 2..3 meters
+    bool alongX = true;
+    int channelOffset = 0; // Local offset 0..width-1 where drainage channel starts
+    int channelWidth = 1;  // 1m at edge if width < 4; 2m in middle if width >= 4
+    bool joinedByParallelDoor = false;
+    bool joinedByTJunction = false;
     int regX = 0;
     int regZ = 0;
 };
@@ -89,12 +127,20 @@ struct MegaResult {
     std::vector<LockerPlacement> lockers;
     std::vector<DoubleCabinetPlacement> cabinets;
     std::vector<RoomDoorPlacement> roomDoors;
+    std::vector<RoomDoorPlacement> hatchRoomDoors;
+    std::vector<RoomDoorPlacement> sewerDoors;
+    std::vector<HatchPlacement> hatches;
+    std::vector<LadderPlacement> ladders;
+    std::vector<SewerSegment> sewerTunnels;
     std::vector<LootSurface> lootSurfaces;
     std::set<std::pair<int, int>> loadedRegions;
     int currentRegX = 0;
     int currentRegZ = 0;
     int ringLoopsCreated = 0;
     int deadEndRoomsCreated = 0;
+    int hatchRoomsCreated = 0;
+    int sewerTJunctionsCreated = 0;
+    int sewerParallelDoorsCreated = 0;
     double generationMs = 0.0;
 
     MegaResult() : world(WorldGrid::createInfinite(BlockType::Concrete)) {}

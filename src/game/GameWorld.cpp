@@ -66,6 +66,22 @@ AABB WorldItem::worldBounds() const {
 }
 
 AABB HingeDoor::worldBounds() const {
+    if (isHatch) {
+        Mat4 m = Mat4::translate(hingePos) * Mat4::rotateY(closedYaw) * Mat4::rotateX(-angle);
+        float halfT = thickness * 0.5f + 0.02f;
+        Vec3 mn{1e9f, 1e9f, 1e9f};
+        Vec3 mx{-1e9f, -1e9f, -1e9f};
+        for (float lx : {0.0f, width}) {
+            for (float ly : {-halfT, halfT}) {
+                for (float lz : {0.0f, height}) {
+                    Vec3 p = m.transformPoint({lx, ly, lz});
+                    mn.x = std::min(mn.x, p.x); mn.y = std::min(mn.y, p.y); mn.z = std::min(mn.z, p.z);
+                    mx.x = std::max(mx.x, p.x); mx.y = std::max(mx.y, p.y); mx.z = std::max(mx.z, p.z);
+                }
+            }
+        }
+        return {mn, mx};
+    }
     float y = currentYaw();
     float c = std::cos(y), s = std::sin(y);
     // Door extends along local +X (width) and local +-Z (thickness/2)
@@ -306,6 +322,87 @@ void GameWorld::syncLockersFromMap() {
         door.regX = rd.regX;
         door.regZ = rd.regZ;
         doors.push_back(door);
+    }
+
+    // 2.6) Hinged Metal Doors on 3x3 Sewer-Hatch Dead-End Rooms
+    for (const auto& rd : map.hatchRoomDoors) {
+        bool exists = false;
+        for (const auto& d : doors) {
+            if (!d.isCabinet && !d.isLocker && !d.isExitDoor && !d.isHatch &&
+                lengthSq(d.hingePos - rd.hingePos) < 0.01f) {
+                exists = true;
+                break;
+            }
+        }
+        if (exists) continue;
+
+        HingeDoor door;
+        door.hingePos = rd.hingePos;
+        door.width = rd.width;
+        door.height = rd.height;
+        door.thickness = 0.08f;
+        door.closedYaw = rd.closedYaw;
+        door.openSign = rd.openSign;
+        door.maxAngle = 1.85f;
+        door.locked = false;
+        door.regX = rd.regX;
+        door.regZ = rd.regZ;
+        doors.push_back(door);
+    }
+
+    // 2.7) Hinged Metal Doors Separating Parallel Sewer Tunnels (10% locked!)
+    for (const auto& rd : map.sewerDoors) {
+        bool exists = false;
+        for (const auto& d : doors) {
+            if (d.isSewerDoor && lengthSq(d.hingePos - rd.hingePos) < 0.01f) {
+                exists = true;
+                break;
+            }
+        }
+        if (exists) continue;
+
+        HingeDoor door;
+        door.hingePos = rd.hingePos;
+        door.width = rd.width;
+        door.height = rd.height;
+        door.thickness = 0.08f;
+        door.closedYaw = rd.closedYaw;
+        door.openSign = rd.openSign;
+        door.maxAngle = 1.85f;
+        door.isSewerDoor = true;
+        door.locked = rd.locked;
+        door.lockSeed = map.seed ^ 0x5E7ED00BULL ^
+                        (static_cast<uint64_t>(std::llround(rd.hingePos.x * 100.0f)) * 19349663ULL) ^
+                        (static_cast<uint64_t>(std::llround(rd.hingePos.z * 100.0f)) * 83492791ULL);
+        door.regX = rd.regX;
+        door.regZ = rd.regZ;
+        doors.push_back(door);
+    }
+
+    // 2.8) Openable Floor Hatches in 3x3 Rooms leading down 6m ladders into Sewer Biome
+    for (const auto& hp : map.hatches) {
+        bool exists = false;
+        for (const auto& d : doors) {
+            if (d.isHatch && lengthSq(d.hingePos - hp.hingePos) < 0.01f) {
+                exists = true;
+                break;
+            }
+        }
+        if (exists) continue;
+
+        HingeDoor hatch;
+        hatch.hingePos = hp.hingePos;
+        hatch.width = hp.width;
+        hatch.height = hp.length; // Leaf span across 1x1 shaft opening
+        hatch.thickness = 0.07f;
+        hatch.closedYaw = hp.closedYaw;
+        hatch.openSign = 1.0f;
+        hatch.maxAngle = 1.72f;   // Swings ~98.5 deg upward cleanly against room back wall
+        hatch.isHatch = true;
+        hatch.locked = false;
+        hatch.regX = hp.regX;
+        hatch.regZ = hp.regZ;
+        doors.push_back(hatch);
     }
 
     // 3) Spawn Loot on Crates, Metal Cabinet Shelves, Shelving Racks & Lockers from configurable LootTables
@@ -703,7 +800,7 @@ void GameWorld::fireWeapon(AudioEngine& audio) {
 }
 
 BiomeType GameWorld::currentBiome() const {
-    return BiomeType::UtilityComplex;
+    return (player.position.y < -1.5f) ? BiomeType::CorrosionSewers : BiomeType::UtilityComplex;
 }
 
 const char* GameWorld::currentBiomeName() const {
@@ -754,13 +851,43 @@ void GameWorld::update(const PlayerInput& input, bool firePressed, float dt, Aud
     }
     bool didJump = modInput.jump && player.grounded && !modInput.noclip;
 
+    // Build active ladder volumes (only active if floor hatch is open OR player is already inside shaft below!)
+    std::vector<AABB> activeLadderVolumes;
+    activeLadderVolumes.reserve(map.ladders.size());
+    for (const auto& lad : map.ladders) {
+        bool blockedByClosedHatch = false;
+        if (player.position.y >= lad.topY - 0.18f) {
+            for (const auto& d : doors) {
+                if (d.isHatch && d.angle < 0.85f) {
+                    AABB hb = d.worldBounds();
+                    if (hb.intersects(lad.climbBox)) {
+                        blockedByClosedHatch = true;
+                        break;
+                    }
+                }
+            }
+        }
+        if (!blockedByClosedHatch) {
+            activeLadderVolumes.push_back(lad.climbBox);
+        }
+    }
+
     Vec3 prevPlayerPos = player.position;
     prevPlayerVelY = player.velocity.y;
     player.update(modInput, map.world, dt, playerDoorColliders,
-                  settings.moveSpeed * godSpeedMult, settings.sprintMult, settings.jumpSpeed);
+                  settings.moveSpeed * godSpeedMult, settings.sprintMult, settings.jumpSpeed,
+                  activeLadderVolumes);
 
-    // Realistic player footsteps on floor & landing (muted while flying in Noclip)
-    if (player.grounded && !modInput.noclip) {
+    // Realistic player footsteps on floor, landing & metallic ladder rungs (muted while flying in Noclip)
+    if (player.onLadder && !modInput.noclip) {
+        float climbDelta = std::abs(player.position.y - prevPlayerPos.y);
+        playerStepDist += climbDelta;
+        if (playerStepDist >= 0.42f) {
+            playerStepDist -= 0.42f;
+            float jitter = std::fmod(std::abs(player.position.y * 11.3f), 1.0f);
+            audio.play(SoundId::PlayerStep, 0.55f, jitter, 0.65f);
+        }
+    } else if (player.grounded && !modInput.noclip) {
         if (!playerWasGrounded && prevPlayerVelY < -2.4f) {
             float landVol = clampf((-prevPlayerVelY - 2.0f) / 7.5f, 0.35f, 1.0f);
             audio.play(SoundId::PlayerStep, landVol, 0.25f, 0.9f);
@@ -821,22 +948,25 @@ void GameWorld::update(const PlayerInput& input, bool firePressed, float dt, Aud
         float nextAngle = clampf(d.angle + d.angularVel * dt, 0.0f, d.maxAngle);
         d.angle = nextAngle;
 
-        // Check if swinging door leaf collides with any solid WorldGrid wall block
+        // Check if swinging vertical door leaf collides with any solid WorldGrid wall block (skip for floor hatches)
         bool hitWall = false;
-        float y = d.currentYaw();
-        Vec3 dir{std::cos(y), 0.0f, -std::sin(y)};
-        Vec3 impactPos = d.hingePos + dir * (d.width * 0.85f) + Vec3{0.0f, d.height * 0.5f, 0.0f};
-        for (float frac : {0.42f, 0.70f, 0.94f}) {
-            Vec3 p = d.hingePos + dir * (d.width * frac);
-            int ix = static_cast<int>(std::floor(p.x));
-            int iz = static_cast<int>(std::floor(p.z));
-            int iyLow = static_cast<int>(std::floor(d.hingePos.y + 0.35f));
-            int iyHigh = static_cast<int>(std::floor(d.hingePos.y + d.height - 0.25f));
-            if (map.world.getCell(ix, iyLow, iz).isSolid() ||
-                map.world.getCell(ix, iyHigh, iz).isSolid()) {
-                hitWall = true;
-                impactPos = p + Vec3{0.0f, d.height * 0.5f, 0.0f};
-                break;
+        Vec3 impactPos = d.hingePos + Vec3{0.0f, 0.25f, 0.0f};
+        if (!d.isHatch) {
+            float y = d.currentYaw();
+            Vec3 dir{std::cos(y), 0.0f, -std::sin(y)};
+            impactPos = d.hingePos + dir * (d.width * 0.85f) + Vec3{0.0f, d.height * 0.5f, 0.0f};
+            for (float frac : {0.42f, 0.70f, 0.94f}) {
+                Vec3 p = d.hingePos + dir * (d.width * frac);
+                int ix = static_cast<int>(std::floor(p.x));
+                int iz = static_cast<int>(std::floor(p.z));
+                int iyLow = static_cast<int>(std::floor(d.hingePos.y + 0.35f));
+                int iyHigh = static_cast<int>(std::floor(d.hingePos.y + d.height - 0.25f));
+                if (map.world.getCell(ix, iyLow, iz).isSolid() ||
+                    map.world.getCell(ix, iyHigh, iz).isSolid()) {
+                    hitWall = true;
+                    impactPos = p + Vec3{0.0f, d.height * 0.5f, 0.0f};
+                    break;
+                }
             }
         }
 
@@ -975,7 +1105,8 @@ void GameWorld::update(const PlayerInput& input, bool firePressed, float dt, Aud
     auto isWalkable = [&](float x, float z) -> bool {
         int ix = static_cast<int>(std::floor(x));
         int iz = static_cast<int>(std::floor(z));
-        return map.world.getBlock(ix, 1, iz) == BlockType::Air &&
+        return map.world.getCell(ix, 0, iz).isSolid() &&
+               map.world.getBlock(ix, 1, iz) == BlockType::Air &&
                map.world.getBlock(ix, 2, iz) == BlockType::Air;
     };
 
@@ -1226,11 +1357,57 @@ void GameWorld::update(const PlayerInput& input, bool firePressed, float dt, Aud
         }
     }
 
+    // Helper lambdas for exact locker door geometry (handle, outward corridor normal, walkable stand point)
+    auto doorHandlePos = [](const HingeDoor& d) -> Vec3 {
+        float y = d.currentYaw();
+        Vec3 leafDir{std::cos(y), 0.0f, -std::sin(y)};
+        float handleX = std::max(0.07f, d.width - 0.08f);
+        return d.hingePos + leafDir * handleX + Vec3{0.0f, d.height * 0.48f, 0.0f};
+    };
+    auto lockerDoorClosedMid = [](const HingeDoor& d) -> Vec3 {
+        Vec3 closedDir{std::cos(d.closedYaw), 0.0f, -std::sin(d.closedYaw)};
+        return d.hingePos + closedDir * (d.width * 0.5f);
+    };
+    auto lockerOutwardNormal = [&](const HingeDoor& d) -> Vec3 {
+        Vec3 lc{
+            0.5f * (d.lockerInterior.min.x + d.lockerInterior.max.x),
+            1.0f,
+            0.5f * (d.lockerInterior.min.z + d.lockerInterior.max.z)
+        };
+        Vec3 dMid = lockerDoorClosedMid(d);
+        Vec3 n{dMid.x - lc.x, 0.0f, dMid.z - lc.z};
+        float len = length(n);
+        return (len > 1e-4f) ? (n / len) : Vec3{0.0f, 0.0f, 1.0f};
+    };
+    auto lockerStandPos = [&](const HingeDoor& d) -> Vec3 {
+        Vec3 dMid = lockerDoorClosedMid(d);
+        Vec3 outN = lockerOutwardNormal(d);
+        for (float distOut : {0.92f, 0.78f, 1.10f, 0.65f}) {
+            Vec3 cand{dMid.x + outN.x * distOut, 1.0f, dMid.z + outN.z * distOut};
+            if (isWalkable(cand.x, cand.z)) return cand;
+        }
+        return Vec3{dMid.x + outN.x * 0.90f, 1.0f, dMid.z + outN.z * 0.90f};
+    };
+
+    // Detect if player is physically inside ANY locker interior (even while door is still closing!)
+    int playerInAnyLockerIdx = -1;
+    {
+        AABB pBox = player.boundingBox();
+        for (size_t di = 0; di < doors.size(); ++di) {
+            if (doors[di].isLocker && doors[di].lockerInterior.intersects(pBox)) {
+                playerInAnyLockerIdx = static_cast<int>(di);
+                break;
+            }
+        }
+    }
+
     Rng aiRng(static_cast<uint64_t>(player.position.x * 100.0f + player.position.z * 37.0f + enemies.size()));
 
     for (size_t eIdx = 0; eIdx < enemies.size(); ++eIdx) {
         auto& e = enemies[eIdx];
         if (!e.alive) continue;
+        e.handIkActive[0] = false;
+        e.handIkActive[1] = false;
         if (e.attackCooldown > 0.0f) e.attackCooldown -= dt;
         if (e.hurtFlash > 0.0f) e.hurtFlash -= dt;
         if (e.decisionCooldown > 0.0f) e.decisionCooldown -= dt;
@@ -1249,7 +1426,6 @@ void GameWorld::update(const PlayerInput& input, bool firePressed, float dt, Aud
         float dist = length(toPlayer);
 
         // Check line-of-sight to player (disabled when God Mode Invisibility is ON!)
-        int hiddenIdx = playerHiddenLockerIdx();
         bool canSeePlayer = false;
         if (!godInvisible && dist <= 30.0f && dist > 0.1f) {
             Vec3 forward{std::sin(e.yaw), 0.0f, std::cos(e.yaw)};
@@ -1281,38 +1457,48 @@ void GameWorld::update(const PlayerInput& input, bool firePressed, float dt, Aud
             e.aiState = EnemyAIState::ReturnToAggro;
             e.alerted = false;
             e.sawPlayerEnterLockerIdx = -1;
+            e.openingDoorIdx = -1;
+            e.doorInteractTimer = 0.0f;
             e.pathTimer = 0.0f;
         }
 
-        // If robot was actively chasing/seeing the player and the player just closed a locker door in front of it,
-        // the robot remembers which locker the player entered!
-        if (!godInvisible && hiddenIdx >= 0 && e.aiState == EnemyAIState::Chase) {
-            Vec3 lockerCenter{
-                0.5f * (doors[hiddenIdx].lockerInterior.min.x + doors[hiddenIdx].lockerInterior.max.x),
-                1.0f,
-                0.5f * (doors[hiddenIdx].lockerInterior.min.z + doors[hiddenIdx].lockerInterior.max.z)
-            };
-            float lDist = length(lockerCenter - eEye);
-            if (lDist <= 28.0f && raycastWorld(eEye, normalize(lockerCenter - eEye), lDist) >= lDist - 1.2f) {
-                e.sawPlayerEnterLockerIdx = hiddenIdx;
-                e.lastSeenPos = lockerCenter;
+        // If robot was actively chasing/seeing the player and the player enters or closes a locker in front of it,
+        // check unobstructed LOS to the FRONT OUTSIDE of the locker door (so locker's own walls don't occlude it!)
+        if (!godInvisible && playerInAnyLockerIdx >= 0 &&
+            (e.aiState == EnemyAIState::Chase || e.aiState == EnemyAIState::InvestigateLastSeen)) {
+            const auto& ld = doors[playerInAnyLockerIdx];
+            Vec3 dMid = lockerDoorClosedMid(ld);
+            Vec3 outN = lockerOutwardNormal(ld);
+            Vec3 doorFrontEye = dMid + outN * 0.55f + Vec3{0.0f, 0.85f, 0.0f};
+            float dFront = length(doorFrontEye - eEye);
+            bool nearLastSeen = length({e.lastSeenPos.x - dMid.x, 0.0f, e.lastSeenPos.z - dMid.z}) < 3.5f;
+            if ((e.aiState == EnemyAIState::Chase || nearLastSeen || e.sawPlayerEnterLockerIdx == playerInAnyLockerIdx) &&
+                dFront <= 28.0f &&
+                (dFront < 0.8f || raycastWorld(eEye, normalize(doorFrontEye - eEye), dFront) >= dFront - 0.35f)) {
+                e.sawPlayerEnterLockerIdx = playerInAnyLockerIdx;
+                e.lastSeenPos = lockerStandPos(ld);
             }
         }
-        if (hiddenIdx < 0 && e.sawPlayerEnterLockerIdx >= 0 && canSeePlayer) {
+        if (playerInAnyLockerIdx < 0 && e.openingDoorIdx < 0 && e.sawPlayerEnterLockerIdx >= 0 && canSeePlayer) {
             e.sawPlayerEnterLockerIdx = -1;
         }
 
-        if (canSeePlayer) {
+        if (canSeePlayer && e.openingDoorIdx < 0) {
             if (e.aiState == EnemyAIState::Patrol || e.aiState == EnemyAIState::ReturnToAggro) {
                 e.aggroOrigin = e.pos;
                 e.alertPulseTimer = 0.0f;
             }
             e.aiState = EnemyAIState::Chase;
             e.alerted = true;
-            e.lastSeenPos = player.position;
-        } else if (e.aiState == EnemyAIState::Chase) {
+            e.lastSeenPos = (e.sawPlayerEnterLockerIdx >= 0 && e.sawPlayerEnterLockerIdx < static_cast<int>(doors.size()))
+                                ? lockerStandPos(doors[e.sawPlayerEnterLockerIdx])
+                                : player.position;
+        } else if (e.aiState == EnemyAIState::Chase && !canSeePlayer) {
             e.aiState = EnemyAIState::InvestigateLastSeen;
             e.pathTimer = 0.0f;
+            if (e.sawPlayerEnterLockerIdx >= 0 && e.sawPlayerEnterLockerIdx < static_cast<int>(doors.size())) {
+                e.lastSeenPos = lockerStandPos(doors[e.sawPlayerEnterLockerIdx]);
+            }
         }
 
         Vec3 prevPos = e.pos;
@@ -1477,22 +1663,91 @@ void GameWorld::update(const PlayerInput& input, bool firePressed, float dt, Aud
 
             Vec3 goalPos = (e.aiState == EnemyAIState::Chase) ? player.position : e.lastSeenPos;
 
-            // If robot saw player enter a locker, walk right up to it and rip the locker door open!
-            if (e.aiState == EnemyAIState::InvestigateLastSeen && e.sawPlayerEnterLockerIdx >= 0 &&
-                e.sawPlayerEnterLockerIdx < static_cast<int>(doors.size())) {
+            // If robot saw player enter a locker, walk up to the walkable spot in front of it,
+            // reach out with its right hand via 2-bone IK to grab the handle, and physically pull the door open!
+            bool handlingLockerDoor = false;
+            if (e.sawPlayerEnterLockerIdx >= 0 && e.sawPlayerEnterLockerIdx < static_cast<int>(doors.size())) {
                 auto& ld = doors[e.sawPlayerEnterLockerIdx];
-                float dToLocker = length({ld.hingePos.x - e.pos.x, 0.0f, ld.hingePos.z - e.pos.z});
-                if (dToLocker < 2.2f) {
-                    ld.angularVel = 5.5f;
-                    ld.angle = std::max(ld.angle, 0.75f);
-                    e.sawPlayerEnterLockerIdx = -1;
-                    e.aiState = EnemyAIState::Chase;
+                Vec3 dMid = lockerDoorClosedMid(ld);
+                Vec3 outN = lockerOutwardNormal(ld);
+                Vec3 standPos = lockerStandPos(ld);
+                if (e.aiState == EnemyAIState::InvestigateLastSeen) {
+                    goalPos = standPos;
+                }
+
+                float dToDoor = length({dMid.x - e.pos.x, 0.0f, dMid.z - e.pos.z});
+                float dToStand = length({standPos.x - e.pos.x, 0.0f, standPos.z - e.pos.z});
+                bool closeEnoughToGrab = (e.openingDoorIdx == e.sawPlayerEnterLockerIdx) ||
+                                         (e.aiState == EnemyAIState::InvestigateLastSeen &&
+                                          (dToDoor < 1.50f || dToStand < 0.72f));
+
+                if (closeEnoughToGrab) {
+                    handlingLockerDoor = true;
+                    e.openingDoorIdx = e.sawPlayerEnterLockerIdx;
+                    e.doorInteractTimer += dt;
+
+                    // Turn smoothly to face the locker door
+                    Vec3 toDoor{dMid.x - e.pos.x, 0.0f, dMid.z - e.pos.z};
+                    if (lengthSq(toDoor) > 1e-4f) {
+                        float desiredYaw = std::atan2(toDoor.x, toDoor.z);
+                        float yDiff = desiredYaw - e.yaw;
+                        while (yDiff > PI) yDiff -= 2.0f * PI;
+                        while (yDiff < -PI) yDiff += 2.0f * PI;
+                        e.yaw += yDiff * std::min(1.0f, dt * 11.0f);
+                    }
+
+                    constexpr float REACH_TIME = 0.28f;
+                    // Position body comfortably in front of handle, stepping slightly back as door swings open
+                    if (e.doorInteractTimer < REACH_TIME && dToDoor > 1.05f) {
+                        Vec3 stepDir = normalize({standPos.x - e.pos.x, 0.0f, standPos.z - e.pos.z});
+                        float nx = e.pos.x + stepDir.x * std::min(chaseSpeed, 1.8f) * dt;
+                        float nz = e.pos.z + stepDir.z * std::min(chaseSpeed, 1.8f) * dt;
+                        if (isFootprintClear(nx, nz, 0.32f, nearProps)) {
+                            e.pos.x = nx;
+                            e.pos.z = nz;
+                        }
+                    } else if (e.doorInteractTimer >= REACH_TIME && dToDoor < 1.28f) {
+                        float nx = e.pos.x + outN.x * 0.55f * dt;
+                        float nz = e.pos.z + outN.z * 0.55f * dt;
+                        if (isFootprintClear(nx, nz, 0.32f, nearProps)) {
+                            e.pos.x = nx;
+                            e.pos.z = nz;
+                        }
+                    }
+
+                    // Procedural right-hand 2-bone IK target: reach smoothly to handle, then track swinging handle!
+                    Vec3 handlePos = doorHandlePos(ld);
+                    Vec3 fwd{std::sin(e.yaw), 0.0f, std::cos(e.yaw)};
+                    Vec3 left{std::cos(e.yaw), 0.0f, -std::sin(e.yaw)};
+                    Vec3 rightHandRest = Vec3{e.pos.x, e.pos.y + 1.95f, e.pos.z} + fwd * 0.26f - left * 0.38f;
+                    float reachT = clampf(e.doorInteractTimer / REACH_TIME, 0.0f, 1.0f);
+                    float smoothT = reachT * reachT * (3.0f - 2.0f * reachT);
+                    e.handIkActive[1] = true;
+                    e.handWorldPos[1] = rightHandRest + (handlePos - rightHandRest) * smoothT;
+
+                    // Phase 2: physically drag/pull the hinged door open via angular velocity!
+                    if (e.doorInteractTimer >= REACH_TIME) {
+                        e.handWorldPos[1] = handlePos;
+                        ld.angularVel = clampf(ld.angularVel + 16.0f * dt, -5.0f, 4.4f);
+                    }
+
+                    // Done once door is swung wide open (or safety timeout)
+                    if (ld.angle >= 1.25f || e.doorInteractTimer >= 1.85f) {
+                        e.handIkActive[1] = false;
+                        e.openingDoorIdx = -1;
+                        e.sawPlayerEnterLockerIdx = -1;
+                        e.doorInteractTimer = 0.0f;
+                        e.aiState = EnemyAIState::Chase;
+                        e.lastSeenPos = player.position;
+                    }
                 }
             }
 
-            if (e.aiState == EnemyAIState::InvestigateLastSeen &&
-                lengthSq({goalPos.x - e.pos.x, 0.0f, goalPos.z - e.pos.z}) < 1.25f * 1.25f) {
-                e.sawPlayerEnterLockerIdx = -1;
+            if (handlingLockerDoor) {
+                // Robot is actively grabbing and pulling the locker door open
+            } else if (e.aiState == EnemyAIState::InvestigateLastSeen &&
+                       e.sawPlayerEnterLockerIdx < 0 &&
+                       lengthSq({goalPos.x - e.pos.x, 0.0f, goalPos.z - e.pos.z}) < 1.25f * 1.25f) {
                 e.aiState = EnemyAIState::ReturnToAggro;
                 e.alerted = false;
                 e.pathTimer = 0.0f;
@@ -1701,10 +1956,13 @@ void GameWorld::update(const PlayerInput& input, bool firePressed, float dt, Aud
             }
         }
 
-        // Spring-damper pelvis bounce & torso lean from real velocity
-        e.pelvisVelY += (-150.0f * e.pelvisOffsetY - 14.0f * e.pelvisVelY) * dt;
-        e.pelvisOffsetY = clampf(e.pelvisOffsetY + e.pelvisVelY * dt, -0.14f, 0.10f);
-        float targetLean = clampf(dot(e.vel, fwdVec) * 0.055f, -0.08f, 0.28f);
+        // Spring-damper pelvis bounce & torso lean from real velocity (or forward hunch when pulling a locker door!)
+        float pelvisTarget = (e.openingDoorIdx >= 0) ? -0.11f : 0.0f;
+        e.pelvisVelY += (-150.0f * (e.pelvisOffsetY - pelvisTarget) - 14.0f * e.pelvisVelY) * dt;
+        e.pelvisOffsetY = clampf(e.pelvisOffsetY + e.pelvisVelY * dt, -0.15f, 0.10f);
+        float targetLean = (e.openingDoorIdx >= 0)
+                               ? 0.46f
+                               : clampf(dot(e.vel, fwdVec) * 0.055f, -0.08f, 0.28f);
         e.torsoLeanX += (targetLean - e.torsoLeanX) * std::min(1.0f, dt * 10.0f);
 
         // Spring-damper arms counter-balancing actual foot positions
@@ -1778,6 +2036,10 @@ void GameWorld::gatherRobots(std::vector<RobotRenderState>& out) const {
         rs.pelvisOffsetY = e.pelvisOffsetY;
         rs.armAngle[0] = e.armAngle[0];
         rs.armAngle[1] = e.armAngle[1];
+        rs.handIkActive[0] = e.handIkActive[0];
+        rs.handIkActive[1] = e.handIkActive[1];
+        rs.handWorldPos[0] = e.handWorldPos[0];
+        rs.handWorldPos[1] = e.handWorldPos[1];
         rs.torsoLeanX = e.torsoLeanX;
         rs.alerted = e.alerted;
         rs.hurt = e.hurtFlash > 0.0f;
@@ -2867,7 +3129,7 @@ void GameWorld::updateHover() {
     updateSurfaceCrafting();
 }
 
-bool GameWorld::beginInteract(AudioEngine& audio) {
+bool GameWorld::beginInteract(AudioEngine& audio, bool quickToggle) {
     updateHover();
     if (hoveredItemIdx >= 0 && hoveredItemIdx < static_cast<int>(worldItems.size())) {
         auto& it = worldItems[hoveredItemIdx];
@@ -2907,8 +3169,8 @@ bool GameWorld::beginInteract(AudioEngine& audio) {
         return true;
     }
     if (hoveredDoorIdx >= 0 && hoveredDoorIdx < static_cast<int>(doors.size())) {
-        const auto& d = doors[hoveredDoorIdx];
-        Vec3 lockPos = d.hingePos + Vec3{0.0f, d.height * 0.5f, 0.0f};
+        auto& d = doors[hoveredDoorIdx];
+        Vec3 lockPos = d.hingePos + Vec3{0.0f, d.isHatch ? 0.05f : d.height * 0.5f, 0.0f};
         if (d.locked) {
             if (inventory.lockpicks <= 0) {
                 audio.play3D(SoundId::DoorImpact, lockPos, 0.35f, d.isCabinet ? 0.0f : 1.0f, 0.35f);
@@ -2920,6 +3182,11 @@ bool GameWorld::beginInteract(AudioEngine& audio) {
             lockpick.open(hoveredDoorIdx, d.lockSeed, bChance, &lockPos);
             return true;
         }
+        if (d.isHatch && quickToggle) {
+            // Press E on a floor hatch -> smoothly swing all the way open or closed!
+            d.angularVel = (d.angle < 0.75f) ? 6.5f : -6.5f;
+            return true;
+        }
         grabbedDoorIdx = hoveredDoorIdx;
         return true;
     }
@@ -2929,6 +3196,12 @@ bool GameWorld::beginInteract(AudioEngine& audio) {
 void GameWorld::dragGrabbedDoor(float mouseDx, float mouseDy) {
     if (grabbedDoorIdx < 0 || grabbedDoorIdx >= static_cast<int>(doors.size())) return;
     auto& d = doors[grabbedDoorIdx];
+    if (d.isHatch) {
+        // Pulling mouse up opens floor hatch upward; pushing down closes it
+        float pull = (-mouseDy) * 0.025f;
+        d.angularVel = clampf(d.angularVel + pull * 8.5f, -5.8f, 5.8f);
+        return;
+    }
     float y = d.currentYaw();
     Vec3 swingDir = Vec3{-std::sin(y), 0.0f, -std::cos(y)} * d.openSign;
     Vec3 mouseWorldMove = player.rightDir() * mouseDx + player.forwardDir() * (-mouseDy);
@@ -3000,7 +3273,9 @@ void GameWorld::gatherInteractables(std::vector<DoorRenderState>& outDoors,
     for (size_t i = 0; i < doors.size(); ++i) {
         const auto& d = doors[i];
         bool hl = (static_cast<int>(i) == hoveredDoorIdx || static_cast<int>(i) == grabbedDoorIdx);
-        outDoors.push_back({d.hingePos, d.width, d.height, d.thickness, d.currentYaw(), d.isCabinet, d.isRareCabinet, hl});
+        outDoors.push_back({d.hingePos, d.width, d.height, d.thickness,
+                            d.isHatch ? d.closedYaw : d.currentYaw(),
+                            d.isCabinet, d.isRareCabinet, hl, d.isHatch, d.angle});
     }
 
     outItems.clear();

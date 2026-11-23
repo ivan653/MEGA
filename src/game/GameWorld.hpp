@@ -50,6 +50,8 @@ struct Enemy {
     float pelvisVelY = 0.0f;
     float armAngle[2] = {0.0f, 0.0f};
     float armVel[2] = {0.0f, 0.0f};
+    bool handIkActive[2] = {false, false};
+    Vec3 handWorldPos[2]{};
     float torsoLeanX = 0.0f;
     float hp = 60.0f;
     float maxHp = 60.0f;
@@ -72,6 +74,8 @@ struct Enemy {
     int regX = 0;
     int regZ = 0;
     int sawPlayerEnterLockerIdx = -1;
+    int openingDoorIdx = -1;
+    float doorInteractTimer = 0.0f;
     // Cooperative robot-vs-robot passing & obstacle bypass state
     int yieldPartnerIdx = -1;
     float yieldLateralDirX = 0.0f;
@@ -141,6 +145,8 @@ struct HingeDoor {
     bool isRareCabinet = false;
     bool isLocker = false;
     bool isExitDoor = false; // Starter 2m heavy steel exit door (0% lockpick break chance)
+    bool isHatch = false;    // Floor hatch swinging upward around horizontal hinge axis
+    bool isSewerDoor = false;// Heavy metal door separating parallel sewer tunnels
     bool locked = false;
     uint64_t lockSeed = 0;
     int linkedDoorIdx = -1;  // Paired leaf index for double-door cabinets sharing 1 lock
@@ -289,7 +295,7 @@ public:
 
     // Amnesia-style grab & drag interaction
     void updateHover();
-    bool beginInteract(AudioEngine& audio);
+    bool beginInteract(AudioEngine& audio, bool quickToggle = false);
     void dragGrabbedDoor(float mouseDx, float mouseDy);
     void endInteract();
     bool useInventoryItem(ItemType type, AudioEngine& audio);

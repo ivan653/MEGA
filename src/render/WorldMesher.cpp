@@ -277,7 +277,8 @@ void WorldMesher::buildPropMesh(const WorldGrid& world, ChunkMesh& outMesh) {
                     v.v = fd.uvs[c][1] * faceH;
                 }
                 v.texLayer = layer;
-                bool nearFloor = (!p.emissive && v.y <= 1.06f && fd.ny == 0);
+                bool nearFloor = (!p.emissive && fd.ny == 0 &&
+                                  (std::abs(v.y - 1.0f) <= 0.06f || std::abs(v.y + 5.0f) <= 0.06f));
                 v.ao = nearFloor ? 0.62f : 0.94f;
                 v.emissive = emissive;
                 verts.push_back(v);

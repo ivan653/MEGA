@@ -130,28 +130,71 @@ TEST(GameWorldTest, RaycastAndStarterRoomSurvivalWork) {
     EXPECT_TRUE(gw.useInventoryItem(ItemType::Water, audio));
     EXPECT_GT(gw.thirst, 85.0f);
 
-    // 4. Test Smart Locker AI: if robot saw player enter a locker, robot opens it!
+    // 4. Test Smart Locker AI: chasing robot sees player hide in locker, does NOT lose player,
+    //    walks up in front of locker, reaches out with procedural right-hand IK, and physically pulls door open!
     int testLockerIdx = -1;
     for (size_t i = 0; i < gw.doors.size(); ++i) {
         if (gw.doors[i].isLocker) { testLockerIdx = static_cast<int>(i); break; }
     }
     ASSERT_GE(testLockerIdx, 0);
     gw.doors[testLockerIdx].angle = 0.05f;
-    gw.player.position = {
+    gw.doors[testLockerIdx].angularVel = 0.0f;
+    Vec3 lockerCenter{
         0.5f * (gw.doors[testLockerIdx].lockerInterior.min.x + gw.doors[testLockerIdx].lockerInterior.max.x),
         1.0f,
         0.5f * (gw.doors[testLockerIdx].lockerInterior.min.z + gw.doors[testLockerIdx].lockerInterior.max.z)
     };
+    Vec3 closedDir{std::cos(gw.doors[testLockerIdx].closedYaw), 0.0f, -std::sin(gw.doors[testLockerIdx].closedYaw)};
+    Vec3 doorMid = gw.doors[testLockerIdx].hingePos + closedDir * (gw.doors[testLockerIdx].width * 0.5f);
+    Vec3 outN = normalize({doorMid.x - lockerCenter.x, 0.0f, doorMid.z - lockerCenter.z});
+
+    gw.player.position = lockerCenter;
+    Vec3 tangent{-outN.z, 0.0f, outN.x};
+    // Pick a clear walkable corridor tile in front of & slightly down the corridor from the locker
+    Vec3 seekerStart = {doorMid.x + outN.x * 1.05f, 1.0f, doorMid.z + outN.z * 1.05f};
+    for (float along : {1.8f, -1.8f, 1.0f, -1.0f, 0.0f}) {
+        Vec3 cand = {doorMid.x + outN.x * 1.05f + tangent.x * along, 1.0f,
+                     doorMid.z + outN.z * 1.05f + tangent.z * along};
+        int cx = static_cast<int>(std::floor(cand.x));
+        int cz = static_cast<int>(std::floor(cand.z));
+        if (!gw.map.world.getCell(cx, 1, cz).isSolid() &&
+            !gw.map.world.getCell(cx, 2, cz).isSolid() &&
+            !gw.map.world.getCell(cx, 3, cz).isSolid()) {
+            seekerStart = cand;
+            break;
+        }
+    }
     Enemy seeker;
-    seeker.pos = {gw.doors[testLockerIdx].hingePos.x, 1.0f, gw.doors[testLockerIdx].hingePos.z};
-    seeker.aiState = EnemyAIState::InvestigateLastSeen;
+    seeker.pos = seekerStart;
+    seeker.regX = gw.doors[testLockerIdx].regX;
+    seeker.regZ = gw.doors[testLockerIdx].regZ;
+    seeker.yaw = std::atan2(doorMid.x - seekerStart.x, doorMid.z - seekerStart.z);
+    seeker.aiState = EnemyAIState::Chase;
     seeker.alerted = true;
-    seeker.sawPlayerEnterLockerIdx = testLockerIdx;
-    seeker.lastSeenPos = gw.player.position;
+    seeker.lastSeenPos = lockerCenter;
     gw.enemies.clear();
     gw.enemies.push_back(seeker);
+
+    // First frame: robot detects player hid in locker and does NOT give up
     gw.update(idle, false, cfg::FIXED_DT, audio);
-    EXPECT_GE(gw.doors[testLockerIdx].angle, 0.70f);
+    ASSERT_GE(gw.enemies.size(), 1u);
+    EXPECT_EQ(gw.enemies[0].sawPlayerEnterLockerIdx, testLockerIdx);
+    EXPECT_NE(gw.enemies[0].aiState, EnemyAIState::ReturnToAggro);
+    // Door must NOT instantaneously teleport open on frame 1!
+    EXPECT_LT(gw.doors[testLockerIdx].angle, 0.20f);
+
+    // Simulate walking up -> procedural right-hand reach -> physical door pull
+    bool sawHandIkActive = false;
+    bool sawPhysicalTorque = false;
+    for (int f = 0; f < 180; ++f) {
+        gw.update(idle, false, cfg::FIXED_DT, audio);
+        if (!gw.enemies.empty() && gw.enemies[0].handIkActive[1]) sawHandIkActive = true;
+        if (gw.doors[testLockerIdx].angularVel > 0.5f) sawPhysicalTorque = true;
+        if (gw.doors[testLockerIdx].angle >= 1.25f) break;
+    }
+    EXPECT_TRUE(sawHandIkActive);
+    EXPECT_TRUE(sawPhysicalTorque);
+    EXPECT_GE(gw.doors[testLockerIdx].angle, 1.20f);
 
     // 5. Safe center vs outer 500m edge robot spawn rule
     for (const auto& e : gw.enemies) {
@@ -1272,4 +1315,163 @@ TEST(RealisticConsumptionAndFixedHandPoseTest, FixedHandGripWaterDrinkingAndFood
     EXPECT_TRUE(sawCrumbBurst);
     EXPECT_FALSE(gw.hasHeldItem); // Ration completely eaten!
     EXPECT_GT(gw.hunger, 55.0f);  // Hunger restored gradually!
+}
+
+TEST(SewerBiomeTest, HatchRoomsLaddersAndSewerTopologyWork) {
+    GameSettings cfg = GameSettings::loadOrCreate("mega.cfg");
+    int totalHatchRooms = 0;
+    int totalSewerTunnels = 0;
+    int totalTJunctions = 0;
+    int totalParallelDoors = 0;
+    int totalSewerDoors = 0;
+    int totalLockedSewerDoors = 0;
+    int narrowEdgeChannels = 0;
+    int wideCenterChannels = 0;
+    bool sawSewerWaterProp = false;
+    bool sawSewerLampProp = false;
+
+    for (uint64_t seed : {101ULL, 202ULL, 303ULL, 404ULL, 505ULL, 606ULL}) {
+        GameWorld gw;
+        gw.settings = cfg;
+        gw.startNewRun(seed);
+
+        totalHatchRooms += gw.map.hatchRoomsCreated;
+        totalSewerTunnels += static_cast<int>(gw.map.sewerTunnels.size());
+        totalTJunctions += gw.map.sewerTJunctionsCreated;
+        totalParallelDoors += gw.map.sewerParallelDoorsCreated;
+
+        // Every 3x3 hatch room has a room door, a floor hatch, and a 6m vertical ladder
+        EXPECT_EQ(gw.map.hatchRoomDoors.size(), static_cast<size_t>(gw.map.hatchRoomsCreated));
+        EXPECT_EQ(gw.map.hatches.size(), static_cast<size_t>(gw.map.hatchRoomsCreated));
+        EXPECT_EQ(gw.map.ladders.size(), static_cast<size_t>(gw.map.hatchRoomsCreated));
+        EXPECT_EQ(gw.map.sewerDoors.size(), static_cast<size_t>(gw.map.sewerParallelDoorsCreated));
+
+        for (const auto& lad : gw.map.ladders) {
+            EXPECT_NEAR(lad.topY - lad.bottomY, 6.0f, 0.01f);
+            EXPECT_NEAR(lad.bottomY, -5.0f, 0.01f);
+            EXPECT_NEAR(lad.topY, 1.0f, 0.01f);
+        }
+
+        for (const auto& hp : gw.map.hatches) {
+            // Vertical 6m shaft (y = -5..0) must be completely open air & land on solid sewer floor at y = -6
+            for (int y = -5; y <= 0; ++y) {
+                EXPECT_EQ(gw.map.world.getBlock(hp.cellX, y, hp.cellZ), BlockType::Air);
+            }
+            EXPECT_TRUE(gw.map.world.getCell(hp.cellX, -6, hp.cellZ).isSolid());
+        }
+
+        // Verify every Sewer tunnel satisfies width 2..6m, height 2..3m, length 20..60m, and drainage channel rules!
+        for (const auto& seg : gw.map.sewerTunnels) {
+            EXPECT_GE(seg.width, 2);
+            EXPECT_LE(seg.width, 6);
+            EXPECT_GE(seg.height, 2);
+            EXPECT_LE(seg.height, 3);
+            int len = seg.alongX ? std::abs(seg.x1 - seg.x0) : std::abs(seg.z1 - seg.z0);
+            EXPECT_GE(len, 20);
+            EXPECT_LE(len, 60);
+
+            int midAlong = seg.alongX ? ((seg.x0 + seg.x1) / 2) : ((seg.z0 + seg.z1) / 2);
+            if (seg.width < 4) {
+                EXPECT_EQ(seg.channelWidth, 1);
+                EXPECT_TRUE(seg.channelOffset == 0 || seg.channelOffset == seg.width - 1);
+                narrowEdgeChannels++;
+                int cx = seg.alongX ? midAlong : (seg.x0 + seg.channelOffset);
+                int cz = seg.alongX ? (seg.z0 + seg.channelOffset) : midAlong;
+                EXPECT_EQ(gw.map.world.getBlock(cx, -6, cz), BlockType::Air);    // 1m deep trench
+                EXPECT_TRUE(gw.map.world.getCell(cx, -7, cz).isSolid());         // Solid trench bed
+            } else {
+                EXPECT_EQ(seg.channelWidth, 2);
+                EXPECT_EQ(seg.channelOffset, (seg.width - 2) / 2);
+                wideCenterChannels++;
+                for (int o = 0; o < 2; ++o) {
+                    int cx = seg.alongX ? midAlong : (seg.x0 + seg.channelOffset + o);
+                    int cz = seg.alongX ? (seg.z0 + seg.channelOffset + o) : midAlong;
+                    EXPECT_EQ(gw.map.world.getBlock(cx, -6, cz), BlockType::Air);
+                    EXPECT_TRUE(gw.map.world.getCell(cx, -7, cz).isSolid());
+                }
+            }
+        }
+
+        for (const auto& sd : gw.map.sewerDoors) {
+            totalSewerDoors++;
+            if (sd.locked) totalLockedSewerDoors++;
+        }
+
+        for (const auto& p : gw.map.world.props()) {
+            if (p.material == BlockType::SewerWater) sawSewerWaterProp = true;
+            if (p.material == BlockType::SewerLamp) sawSewerLampProp = true;
+        }
+    }
+
+    std::printf("[SEWER BIOME] 6 seeds: hatchRooms=%d | sewerTunnels=%d | T-junctions=%d | parallelDoors=%d (locked=%d/%d) | narrowEdge=%d | wideCenter=%d\n",
+                totalHatchRooms, totalSewerTunnels, totalTJunctions, totalParallelDoors,
+                totalLockedSewerDoors, totalSewerDoors, narrowEdgeChannels, wideCenterChannels);
+
+    EXPECT_GT(totalHatchRooms, 0);
+    EXPECT_GT(totalSewerTunnels, 40);
+    EXPECT_GT(totalTJunctions, 0);
+    EXPECT_GT(totalParallelDoors, 0);
+    EXPECT_GT(narrowEdgeChannels, 0);
+    EXPECT_GT(wideCenterChannels, 0);
+    EXPECT_TRUE(sawSewerWaterProp);
+    EXPECT_TRUE(sawSewerLampProp);
+    // 10% locked chance across 6 seeds x 9 regions -> expect locked ratio well within 1%..30%
+    if (totalSewerDoors >= 20) {
+        float lockRatio = static_cast<float>(totalLockedSewerDoors) / static_cast<float>(totalSewerDoors);
+        EXPECT_GT(totalLockedSewerDoors, 0);
+        EXPECT_LT(lockRatio, 0.35f);
+    }
+
+    // Functional test: open hatch, climb down 6m ladder into Sewer biome, and climb back up!
+    GameWorld gw;
+    gw.settings = cfg;
+    gw.startNewRun(101ULL);
+    ASSERT_GT(gw.map.hatches.size(), 0u);
+    int hatchDoorIdx = -1;
+    for (size_t i = 0; i < gw.doors.size(); ++i) {
+        if (gw.doors[i].isHatch) { hatchDoorIdx = static_cast<int>(i); break; }
+    }
+    ASSERT_GE(hatchDoorIdx, 0);
+
+    const auto& hp = gw.map.hatches[0];
+    AudioEngine audio;
+    PlayerInput idle;
+    gw.godMode = true;
+
+    // 1) Standing on closed hatch keeps player at y = 1.0 (solid closed floor hatch!)
+    gw.player.position = {hp.cellX + 0.5f, 1.05f, hp.cellZ + 0.5f};
+    gw.player.velocity = {0.0f, 0.0f, 0.0f};
+    for (int f = 0; f < 30; ++f) gw.update(idle, false, cfg::FIXED_DT, audio);
+    EXPECT_GT(gw.player.position.y, 0.90f);
+    EXPECT_EQ(gw.currentBiome(), BiomeType::UtilityComplex);
+
+    // 2) Open hatch via dragGrabbedDoor -> swings past 0.85 rad!
+    gw.grabbedDoorIdx = hatchDoorIdx;
+    for (int f = 0; f < 25; ++f) {
+        gw.dragGrabbedDoor(0.0f, -18.0f);
+        gw.update(idle, false, cfg::FIXED_DT, audio);
+    }
+    gw.endInteract();
+    EXPECT_GT(gw.doors[hatchDoorIdx].angle, 0.85f);
+
+    // 3) Climb down 6m ladder into Sewer biome (y = -5.0)!
+    PlayerInput climbDown;
+    climbDown.moveUp = -1.0f; // Ctrl/C down on ladder
+    bool wasOnLadder = false;
+    for (int f = 0; f < 180; ++f) {
+        gw.update(climbDown, false, cfg::FIXED_DT, audio);
+        if (gw.player.onLadder) wasOnLadder = true;
+    }
+    EXPECT_TRUE(wasOnLadder);
+    EXPECT_NEAR(gw.player.position.y, -5.0f, 0.15f);
+    EXPECT_EQ(gw.currentBiome(), BiomeType::CorrosionSewers);
+
+    // 4) Climb back UP 6m ladder to Utility Complex (y = 1.0)!
+    PlayerInput climbUp;
+    climbUp.jump = true; // Space climbs up ladder
+    for (int f = 0; f < 180; ++f) {
+        gw.update(climbUp, false, cfg::FIXED_DT, audio);
+    }
+    EXPECT_GT(gw.player.position.y, 0.5f);
+    EXPECT_EQ(gw.currentBiome(), BiomeType::UtilityComplex);
 }

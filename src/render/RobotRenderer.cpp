@@ -236,23 +236,64 @@ void RobotRenderer::render(const Mat4& view, const Mat4& proj, const Vec3& camPo
         drawPart(head * Mat4::translate({0.0f, 0.02f, 0.125f}) * Mat4::scale({0.085f, 0.085f, 0.03f}),
                  {1.0f, 1.0f, 1.0f}, LAYER_BLUE, 1.0f, ledColor);
 
+        // Basis vectors in robot yaw space (+Z = forward, +X = left)
+        Vec3 fwdVec{std::sin(r.yaw), 0.0f, std::cos(r.yaw)};
+        Vec3 leftVec{std::cos(r.yaw), 0.0f, -std::sin(r.yaw)};
+
         // Arms: idx 0 = Left (+X local), idx 1 = Right (-X local)
+        // Supports full 3D 2-bone analytical IK when reaching/pulling doors!
+        constexpr float UPPER_ARM_LEN = 0.34f * H_SCALE; // 0.476m
+        constexpr float FOREARM_LEN   = 0.32f * H_SCALE; // 0.448m
         float elbowBend = r.alerted ? -0.95f : -0.18f;
+        float cosLean = std::cos(r.torsoLeanX);
+        float sinLean = std::sin(r.torsoLeanX);
         for (int idx = 0; idx < 2; ++idx) {
             int localSide = (idx == 0) ? 1 : -1;
             float sx = localSide * 0.29f;
-            Mat4 shoulderJoint = shoulders * Mat4::translate({sx, 0.0f, 0.0f}) * Mat4::rotateX(r.armAngle[idx]);
+            Mat4 shoulderJoint;
+            float curElbowBend = elbowBend;
+
+            if (r.handIkActive[idx]) {
+                Vec3 shoulderWorld = Vec3{r.pos.x, r.pos.y + r.pelvisOffsetY + (0.80f + 0.64f * cosLean) * H_SCALE, r.pos.z}
+                                   + fwdVec * (0.64f * sinLean * H_SCALE)
+                                   + leftVec * (sx * H_SCALE);
+                Vec3 toHand = r.handWorldPos[idx] - shoulderWorld;
+                float fwdDot  = dot(toHand, fwdVec);
+                float leftDot = dot(toHand, leftVec);
+                float downDot = -toHand.y;
+
+                float planeDist = std::hypot(fwdDot, leftDot);
+                float yawOff = (planeDist > 1e-4f) ? std::atan2(leftDot, fwdDot) : 0.0f;
+                float dist3D = std::hypot(planeDist, downDot);
+                float d = clampf(dist3D, 0.14f, UPPER_ARM_LEN + FOREARM_LEN - 0.01f);
+
+                float cosElbow = clampf((UPPER_ARM_LEN * UPPER_ARM_LEN + FOREARM_LEN * FOREARM_LEN - d * d) /
+                                        (2.0f * UPPER_ARM_LEN * FOREARM_LEN), -1.0f, 1.0f);
+                float elbowFlex = 3.14159265f - std::acos(cosElbow);
+                float cosAlpha = clampf((UPPER_ARM_LEN * UPPER_ARM_LEN + d * d - FOREARM_LEN * FOREARM_LEN) /
+                                        (2.0f * UPPER_ARM_LEN * d), -1.0f, 1.0f);
+                float alpha = std::acos(cosAlpha);
+
+                float baseAngle = std::atan2(planeDist, downDot);
+                float shoulderPitch = -(baseAngle - alpha);
+                curElbowBend = -elbowFlex;
+
+                shoulderJoint = shoulders * Mat4::translate({sx, 0.0f, 0.0f})
+                              * Mat4::rotateX(-r.torsoLeanX)
+                              * Mat4::rotateY(yawOff)
+                              * Mat4::rotateX(shoulderPitch);
+            } else {
+                shoulderJoint = shoulders * Mat4::translate({sx, 0.0f, 0.0f}) * Mat4::rotateX(r.armAngle[idx]);
+            }
 
             dp(shoulderJoint * Mat4::translate({0.0f, -0.17f, 0.0f}), {0.13f, 0.34f, 0.13f}, LAYER_BLUE, 0.0f);
 
-            Mat4 elbow = shoulderJoint * Mat4::translate({0.0f, -0.34f, 0.0f}) * Mat4::rotateX(elbowBend);
+            Mat4 elbow = shoulderJoint * Mat4::translate({0.0f, -0.34f, 0.0f}) * Mat4::rotateX(curElbowBend);
             dp(elbow * Mat4::translate({0.0f, -0.15f, 0.0f}), {0.045f, 0.30f, 0.045f}, LAYER_SKEL, 0.0f);
             dp(elbow * Mat4::translate({0.0f, -0.32f, 0.02f}), {0.09f, 0.10f, 0.09f}, LAYER_SKEL, 0.0f);
         }
 
         // Legs solved via 2-Bone Analytical IK: idx 0 = Left (+X local), idx 1 = Right (-X local)
-        Vec3 fwdVec{std::sin(r.yaw), 0.0f, std::cos(r.yaw)};
-        Vec3 leftVec{std::cos(r.yaw), 0.0f, -std::sin(r.yaw)}; // +X in robot local space when facing +Z
 
         for (int idx = 0; idx < 2; ++idx) {
             int localSide = (idx == 0) ? 1 : -1;
@@ -516,8 +557,31 @@ void RobotRenderer::renderInteractables(const Shader& worldShader, const Mat4& v
         }
     };
 
-    // 1) Render hinged doors (2m metal exit door + double-door cabinets + rare cabinets + hideable lockers)
+    // 1) Render hinged doors (2m metal exit door + double-door cabinets + rare cabinets + hideable lockers + floor hatches)
     for (const auto& d : doors) {
+        if (d.isHatch) {
+            Vec3 baseTint{0.78f, 0.84f, 0.72f}; // Weathered industrial sewer hatch steel
+            Vec3 tint = d.highlighted ? (baseTint * 1.38f) : baseTint;
+            Mat4 pivot = Mat4::translate(d.hingePos) * Mat4::rotateY(d.yaw) * Mat4::rotateX(-d.hatchAngle);
+
+            // Hatch steel plate lying in XZ plane (0..width along X, 0..height along Z)
+            Vec3 leafSize{d.width, d.thickness, d.height};
+            Mat4 leafM = pivot * Mat4::translate({d.width * 0.5f, 0.0f, d.height * 0.5f}) * Mat4::scale(leafSize);
+            drawLitPart(leafM, {1.0f, 1.0f, 1.0f}, 12.0f, 0.0f, tint);
+
+            // Recessed pull-handle bar on top & underside near latch edge
+            Vec3 handleSize{0.24f, d.thickness + 0.075f, 0.055f};
+            Mat4 handleM = pivot * Mat4::translate({d.width * 0.5f, 0.0f, d.height - 0.14f}) * Mat4::scale(handleSize);
+            drawLitPart(handleM, handleSize, 4.0f, 0.0f, d.highlighted ? Vec3{1.5f, 1.35f, 0.75f} : Vec3{1.15f, 1.02f, 0.52f});
+
+            // Twin heavy steel hinge knuckles along hinge edge
+            for (float hx : {0.18f, d.width - 0.18f}) {
+                Mat4 hM = pivot * Mat4::translate({hx, 0.01f, 0.02f}) * Mat4::scale({0.10f, 0.06f, 0.06f});
+                drawLitPart(hM, {0.10f, 0.06f, 0.06f}, 10.0f, 0.0f, tint);
+            }
+            continue;
+        }
+
         Vec3 baseTint = d.isRareCabinet ? Vec3{0.62f, 0.70f, 0.82f} : Vec3{1.0f, 1.0f, 1.0f};
         Vec3 tint = d.highlighted ? (baseTint * 1.32f) : baseTint;
         float layer = d.isCabinet ? 11.0f : 12.0f;

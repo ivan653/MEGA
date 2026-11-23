@@ -15,6 +15,8 @@ struct RobotRenderState {
     Vec3 footWorldPos[2];   // World-space anchored/stepping foot positions (Left=0, Right=1)
     float pelvisOffsetY = 0.0f;
     float armAngle[2] = {0.0f, 0.0f};
+    bool handIkActive[2] = {false, false};
+    Vec3 handWorldPos[2]{};
     float torsoLeanX = 0.0f;
     bool alerted = false;   // false = cyan LED, true = red LED
     bool hurt = false;
@@ -25,10 +27,12 @@ struct DoorRenderState {
     float width = 1.0f;
     float height = 2.2f;
     float thickness = 0.08f;
-    float yaw = 0.0f; // closedYaw + openSign * angle
+    float yaw = 0.0f; // closedYaw + openSign * angle (or closedYaw for hatch)
     bool isCabinet = false;
     bool isRareCabinet = false;
     bool highlighted = false;
+    bool isHatch = false;
+    float hatchAngle = 0.0f; // Upward swing angle (0 = flat closed, ~1.72 = open)
 };
 
 struct ItemRenderState {

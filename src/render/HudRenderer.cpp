@@ -322,8 +322,10 @@ void HudRenderer::render(const GameWorld& gw) {
             }
         } else {
             fillRect(cx - 4, cy - 4, 8, 8, rgba(160, 225, 255, 170));
-            const char* label = hd.isCabinet ? "[LMB DRAG] CABINET" : "[LMB DRAG] DOOR";
-            drawText(cx - 72, cy + 16, label, rgba(210, 230, 245, 230), 2);
+            const char* label = hd.isHatch ? "[LMB DRAG / E] HATCH"
+                              : (hd.isCabinet ? "[LMB DRAG] CABINET" : "[LMB DRAG] DOOR");
+            int lw = static_cast<int>(std::strlen(label)) * 4;
+            drawText(cx - lw, cy + 16, label, rgba(210, 230, 245, 230), 2);
         }
     } else if (gw.hoveredItemIdx >= 0) {
         fillRect(cx - 4, cy - 4, 8, 8, rgba(255, 230, 120, 190));
@@ -445,6 +447,21 @@ void HudRenderer::render(const GameWorld& gw) {
 
     if (gw.showMinimap) {
         drawMinimap(gw);
+        const char* bName = gw.currentBiomeName();
+        int bw = static_cast<int>(std::strlen(bName)) * 4;
+        int bxPos = std::max(8, width_ - bw - 8);
+        fillRect(bxPos - 4, 82, bw + 8, 12, rgba(12, 18, 24, 185));
+        uint32_t bCol = (gw.currentBiome() == BiomeType::CorrosionSewers)
+                            ? rgba(160, 235, 120, 235)
+                            : rgba(165, 210, 240, 225);
+        drawText(bxPos, 85, bName, bCol, 1);
+    }
+
+    if (gw.player.onLadder && !gw.lockpick.active) {
+        const char* lHint = "LADDER  [W/S OR SPACE/CTRL] CLIMB";
+        int lw = static_cast<int>(std::strlen(lHint)) * 8;
+        fillRect(cx - lw / 2 - 10, height_ - 72, lw + 20, 22, rgba(12, 20, 22, 210));
+        drawText(cx - lw / 2, height_ - 66, lHint, rgba(160, 235, 185, 240), 2);
     }
 
     // Top-left God Mode status banner

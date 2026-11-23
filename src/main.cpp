@@ -88,6 +88,7 @@ uniform float uFogDensity;
 uniform float uLightTexelSnap;
 uniform float uLightSteps;
 uniform float uLightDitherStrength;
+uniform float uTime;
 
 const int MAX_LIGHTS = 48;
 uniform int uLightCount;
@@ -108,11 +109,19 @@ float bayer2x2(vec2 p) {
 }
 
 void main() {
-    vec4 tex = texture(uAtlas, vUVLayer);
+    int layerId = int(vUVLayer.z + 0.5);
+    vec3 uvLayer = vUVLayer;
+    if (layerId == 15) {
+        // Gentle pixel-snapped sewer water flow animation along channel
+        uvLayer.x += floor(uTime * 10.0) / 32.0;
+        uvLayer.y += floor(uTime * 4.0) / 32.0;
+    }
+    vec4 tex = texture(uAtlas, uvLayer);
     if (tex.a < 0.5) discard;
 
     if (vEmissive > 0.5) {
-        vec3 lampCol = tex.rgb * vec3(1.55, 1.75, 2.05) * uObjectEmissiveScale;
+        vec3 emBoost = (layerId == 16) ? vec3(1.65, 1.80, 1.05) : vec3(1.55, 1.75, 2.05);
+        vec3 lampCol = tex.rgb * emBoost * uObjectEmissiveScale;
         float fog = 1.0 - exp(-max(0.0, vViewDist - 6.0) * uFogDensity);
         FragColor = vec4(mix(lampCol, vec3(0.015, 0.02, 0.028), clamp(fog * 0.65, 0.0, 1.0)), 1.0);
         return;
@@ -135,21 +144,23 @@ void main() {
 
     // Per-texel bump normal relief from 32x32 texture
     float eps = 1.0 / 32.0;
-    vec2 snappedUV = floor(vUVLayer.xy * 32.0) / 32.0 + vec2(0.5 / 32.0);
-    float h0 = texLuma(vec3(snappedUV, vUVLayer.z));
-    float hx = texLuma(vec3(snappedUV + vec2(eps, 0.0), vUVLayer.z)) - h0;
-    float hy = texLuma(vec3(snappedUV + vec2(0.0, eps), vUVLayer.z)) - h0;
+    vec2 snappedUV = floor(uvLayer.xy * 32.0) / 32.0 + vec2(0.5 / 32.0);
+    float h0 = texLuma(vec3(snappedUV, uvLayer.z));
+    float hx = texLuma(vec3(snappedUV + vec2(eps, 0.0), uvLayer.z)) - h0;
+    float hy = texLuma(vec3(snappedUV + vec2(0.0, eps), uvLayer.z)) - h0;
     N = normalize(N - (T * hx + B * hy) * 1.45);
 
-    int layerId = int(vUVLayer.z + 0.5);
     float specStrength = 0.15;
     float shininess = 16.0;
     if (layerId == 2 || layerId == 4) {
         specStrength = 0.65;
         shininess = 32.0;
-    } else if (layerId == 5) {
-        specStrength = 0.42;
-        shininess = 24.0;
+    } else if (layerId == 5 || layerId == 14) {
+        specStrength = 0.48;
+        shininess = 26.0;
+    } else if (layerId == 15) {
+        specStrength = 0.85;
+        shininess = 48.0;
     } else if (layerId == 3) {
         specStrength = 0.12;
         shininess = 12.0;
@@ -351,9 +362,11 @@ int main(int argc, char** argv) {
         gw.lootTables = LootTables::loadOrCreate("loot_tables.cfg");
         audio.applySettings(gw.settings);
         for (auto& l : gw.map.pointLights) {
-            l.color = {gw.settings.lampColorR, gw.settings.lampColorG, gw.settings.lampColorB};
-            l.intensity = gw.settings.lampIntensity;
-            l.radius = gw.settings.lampRadius;
+            if (l.pos.y >= 0.0f) {
+                l.color = {gw.settings.lampColorR, gw.settings.lampColorG, gw.settings.lampColorB};
+                l.intensity = gw.settings.lampIntensity;
+                l.radius = gw.settings.lampRadius;
+            }
         }
         std::cout << "Reloaded mega.cfg & loot_tables.cfg (ambient=" << gw.settings.ambientBrightness
                   << " masterVol=" << gw.settings.masterVolume
@@ -461,7 +474,7 @@ int main(int argc, char** argv) {
                     if (gw.hasHeldItem && gw.hoveredDoorIdx < 0 && gw.hoveredItemIdx < 0) {
                         gw.useHeldItem(audio);
                     } else {
-                        gw.beginInteract(audio);
+                        gw.beginInteract(audio, true);
                         gw.endInteract();
                     }
                 } else if (ev.key.key == SDLK_1) {
@@ -745,6 +758,7 @@ int main(int argc, char** argv) {
         worldShader.setFloat("uLightTexelSnap", gw.settings.lightTexelSnap);
         worldShader.setFloat("uLightSteps", gw.settings.lightSteps);
         worldShader.setFloat("uLightDitherStrength", gw.settings.lightDitherStrength);
+        worldShader.setFloat("uTime", totalTime);
 
         auto sortedLights = gw.map.pointLights;
         gw.gatherRobotLights(sortedLights);

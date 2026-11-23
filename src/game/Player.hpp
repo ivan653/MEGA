@@ -25,12 +25,14 @@ public:
     float yaw   = 0.0f; // Radians (0 = -Z)
     float pitch = 0.0f; // Radians
     bool grounded = false;
+    bool onLadder = false;
 
     void update(const PlayerInput& input, const WorldGrid& world, float dt,
                 const std::vector<AABB>& dynamicColliders = {},
                 float moveSpeed = cfg::MOVE_SPEED,
                 float sprintMult = cfg::SPRINT_MULT,
-                float jumpSpeed = cfg::JUMP_SPEED);
+                float jumpSpeed = cfg::JUMP_SPEED,
+                const std::vector<AABB>& ladderVolumes = {});
 
     Vec3 eyePosition() const {
         return {position.x, position.y + cfg::PLAYER_EYE_Y, position.z};

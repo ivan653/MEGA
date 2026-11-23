@@ -234,6 +234,91 @@ bool TextureAtlas::init() {
     }
     uploadLayer(12);
 
+    // Layer 13: SewerBrick (damp mossy dark masonry/concrete sewer wall with waterline grime)
+    for (int y = 0; y < TEX_SIZE; ++y) {
+        for (int x = 0; x < TEX_SIZE; ++x) {
+            int n = rng.rangeInt(-7, 7);
+            int row = y / 8;
+            int bx = (x + (row % 2) * 8) % 16;
+            int by = y % 8;
+            bool mortar = (bx == 0 || by == 0);
+            int r = 72 + n;
+            int g = 80 + n;
+            int b = 64 + n;
+            if (mortar) { r -= 22; g -= 22; b -= 18; }
+            // Damp mossy staining near lower waterline & vertical seepage streaks
+            float streak = std::sin(x * 0.55f + 1.1f) * 0.5f + 0.5f;
+            if (y > 20 || (streak > 0.72f && y > 10)) {
+                r -= 14;
+                g -= 4;
+                b -= 12;
+            }
+            setPx(pixels, x, y,
+                  static_cast<uint8_t>(std::clamp(r, 18, 145)),
+                  static_cast<uint8_t>(std::clamp(g, 22, 155)),
+                  static_cast<uint8_t>(std::clamp(b, 16, 130)));
+        }
+    }
+    uploadLayer(13);
+
+    // Layer 14: SewerFloor (wet cracked dark concrete walkway & drainage curb)
+    for (int y = 0; y < TEX_SIZE; ++y) {
+        for (int x = 0; x < TEX_SIZE; ++x) {
+            int n = rng.rangeInt(-8, 8);
+            int base = 66 + n;
+            bool seam = (x == 0 || y == 0 || x == 16 || y == 16);
+            if (seam) base -= 18;
+            // Damp puddle patches
+            float puddle = std::sin(x * 0.35f) * std::cos(y * 0.35f);
+            int r = base - 2;
+            int g = base + 4;
+            int b = base - 4;
+            if (puddle > 0.35f) { r -= 10; g -= 4; b -= 6; }
+            setPx(pixels, x, y,
+                  static_cast<uint8_t>(std::clamp(r, 18, 130)),
+                  static_cast<uint8_t>(std::clamp(g, 20, 140)),
+                  static_cast<uint8_t>(std::clamp(b, 16, 125)));
+        }
+    }
+    uploadLayer(14);
+
+    // Layer 15: SewerWater (murky olive-teal wastewater with subtle foam/ripple streaks)
+    for (int y = 0; y < TEX_SIZE; ++y) {
+        for (int x = 0; x < TEX_SIZE; ++x) {
+            int n = rng.rangeInt(-5, 5);
+            float wave = std::sin(x * 0.42f + std::sin(y * 0.3f) * 1.4f);
+            float foam = std::sin((x + y * 2) * 0.38f);
+            int r = 34 + n + static_cast<int>(wave * 8.0f);
+            int g = 68 + n + static_cast<int>(wave * 12.0f);
+            int b = 48 + n + static_cast<int>(wave * 8.0f);
+            if (foam > 0.86f) { r += 22; g += 28; b += 18; }
+            setPx(pixels, x, y,
+                  static_cast<uint8_t>(std::clamp(r, 14, 120)),
+                  static_cast<uint8_t>(std::clamp(g, 26, 150)),
+                  static_cast<uint8_t>(std::clamp(b, 20, 115)));
+        }
+    }
+    uploadLayer(15);
+
+    // Layer 16: SewerLamp (caged industrial amber-green sewer bulb fixture)
+    for (int y = 0; y < TEX_SIZE; ++y) {
+        for (int x = 0; x < TEX_SIZE; ++x) {
+            bool bezel = (x < 3 || x > 28 || y < 3 || y > 28 || x == 15 || x == 16 || y == 15 || y == 16);
+            if (bezel) {
+                setPx(pixels, x, y, 42, 46, 36);
+            } else {
+                float dx = (x - 15.5f) / 13.0f;
+                float dy = (y - 15.5f) / 13.0f;
+                float glow = std::clamp(1.12f - std::sqrt(dx * dx + dy * dy) * 0.45f, 0.55f, 1.0f);
+                setPx(pixels, x, y,
+                      static_cast<uint8_t>(215 * glow),
+                      static_cast<uint8_t>(232 * glow),
+                      static_cast<uint8_t>(118 * glow));
+            }
+        }
+    }
+    uploadLayer(16);
+
     // Crisp pixel-art filtering (no blur!)
     glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
