@@ -27,7 +27,11 @@ enum class SoundId {
     PlayerStep,
     FlashlightClick,
     DoorCreak,
-    DoorImpact
+    DoorImpact,
+    BottleCapTwist,
+    WaterSip,
+    WrapperOpen,
+    FoodBite
 };
 
 struct AcousticParams {

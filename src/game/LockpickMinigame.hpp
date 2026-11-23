@@ -14,6 +14,8 @@ struct LockPin {
     bool pinned = false;
     bool wasStruck = false;
     bool wasTouchingPick = false;
+    float strikeStartPos = 0.0f;
+    bool strikeBreakRolled = false;
     float brokenTimer = 0.0f;
     float kinkDir = 1.0f;
 
@@ -36,9 +38,18 @@ public:
     float pickVelX = 0.0f;
     float pickVelY = 0.0f;
     float accumFrameDy = 0.0f;
-    float breakChance = 0.05f;      // 5% per contact on regular locks, 0% on exit door
+    float breakChance = 0.05f;      // 5% per >=5% spring-lift strike on regular locks, 0% on exit door
     bool unlockedJustNow = false;
     bool pickSnappedJustNow = false;
+    // Visual snap + 1.5s replacement animation
+    bool snapped = false;
+    float snapTimer = 0.0f;
+    float snapFreezeX = 0.5f;
+    float snapFreezeY = -0.05f;
+    float brokenTipX = 0.5f;
+    float brokenTipY = 0.0f;
+    float brokenTipVelY = 0.0f;
+    float brokenTipRot = 0.0f;
     int contactCount = 0;
     Vec3 lockWorldPos{};
     bool hasWorldPos = false;

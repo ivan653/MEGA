@@ -74,6 +74,9 @@ int defaultItemDurability(ItemType type, uint64_t seed) {
         Rng rng(seed ^ 0xB8004A1ULL);
         return rng.rangeInt(1, 3); // Breaks after 1..3 hits -> turns into Stick
     }
+    if (type == ItemType::Water || type == ItemType::Food) {
+        return 100; // 100% remaining fill / ration bar length
+    }
     return 0;
 }
 

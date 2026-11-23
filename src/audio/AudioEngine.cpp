@@ -61,6 +61,10 @@ float durationForSound(SoundId id) {
         case SoundId::FlashlightClick: return 0.055f;
         case SoundId::DoorCreak:       return 0.22f;
         case SoundId::DoorImpact:      return 0.24f;
+        case SoundId::BottleCapTwist:  return 0.16f;
+        case SoundId::WaterSip:        return 0.26f;
+        case SoundId::WrapperOpen:     return 0.22f;
+        case SoundId::FoodBite:        return 0.18f;
     }
     return 0.15f;
 }
@@ -130,7 +134,11 @@ float AudioEngine::soundVolumeScale(SoundId id) const {
         case SoundId::DoorCreak:       return base * settings_.volDoorCreak;
         case SoundId::DoorImpact:      return base * settings_.volDoorImpact;
         case SoundId::FlashlightClick: return base * settings_.volFlashlight;
-        case SoundId::Pickup:          return base * settings_.volPickup;
+        case SoundId::Pickup:
+        case SoundId::BottleCapTwist:
+        case SoundId::WaterSip:
+        case SoundId::WrapperOpen:
+        case SoundId::FoodBite:        return base * settings_.volPickup;
         case SoundId::PlayerHurt:      return base * settings_.volPlayerHurt;
         case SoundId::LockPinSet:      return base * settings_.volLockPinSet;
         case SoundId::LockBreak:       return base * settings_.volLockBreak;
@@ -686,6 +694,47 @@ void AudioEngine::renderSamples(float* outStereo, int frames) {
                     v.phase2 += dt * 116.0f * 2.0f * PI;
                     v.bpState1 += (n - v.bpState1) * 0.08f;
                     s = (std::sin(v.phase) * 0.30f + std::sin(v.phase2) * 0.15f + v.bpState1 * 0.22f) * shape;
+                    break;
+                }
+                case SoundId::BottleCapTwist: {
+                    // Crisp plastic thread ridges clicking as cap unscrews/screws
+                    float pulse = std::pow(std::max(0.0f, std::sin(u * 3.0f * PI)), 6.0f);
+                    v.phase += dt * (1150.0f + 420.0f * u) * 2.0f * PI;
+                    v.bpState1 += (n - v.bpState1) * 0.42f;
+                    s = ((n - v.bpState1) * 0.45f + std::sin(v.phase) * 0.22f) * pulse * std::sin(u * PI);
+                    break;
+                }
+                case SoundId::WaterSip: {
+                    // Bubbly resonant liquid glug + soft water flow hiss
+                    float env = std::sin(u * PI);
+                    float glugF = 340.0f + 290.0f * std::sin(u * 2.5f * PI) + 180.0f * u;
+                    v.phase  += dt * glugF * 2.0f * PI;
+                    v.phase2 += dt * (glugF * 1.62f) * 2.0f * PI;
+                    v.bpState1 += (n - v.bpState1) * 0.20f;
+                    v.bpState2 += (v.bpState1 - v.bpState2) * 0.08f;
+                    float bubbles = (std::sin(v.phase) * 0.24f + std::sin(v.phase2) * 0.12f) *
+                                    (0.55f + 0.45f * std::sin(u * 4.0f * PI));
+                    float flow = (v.bpState1 - v.bpState2) * 0.35f;
+                    s = (bubbles + flow) * env;
+                    break;
+                }
+                case SoundId::WrapperOpen: {
+                    // Crinkly foil/paper ration wrapper peeling open
+                    float env = std::sin(u * PI);
+                    v.bpState1 += (n - v.bpState1) * 0.52f;
+                    float crinkle = (n - v.bpState1) * (0.45f + 0.55f * std::abs(std::sin(u * 7.0f * PI)));
+                    s = crinkle * env * 0.52f;
+                    break;
+                }
+                case SoundId::FoodBite: {
+                    // Dry dense ration bar crunch + short chew rustle
+                    float eCrunch = std::exp(-v.time * 36.0f);
+                    float burst = 0.5f + 0.5f * std::sin(u * 9.0f * PI);
+                    v.bpState1 += (n - v.bpState1) * 0.36f;
+                    v.phase += dt * 420.0f * 2.0f * PI;
+                    float crisp = (n - v.bpState1 * 0.5f) * eCrunch * burst * 0.58f;
+                    float jaw = std::sin(v.phase) * std::exp(-v.time * 48.0f) * 0.16f;
+                    s = crisp + jaw;
                     break;
                 }
             }

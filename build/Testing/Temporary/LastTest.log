@@ -1,10 +1,10 @@
-Start testing: Nov 22 21:16 EET
+Start testing: Nov 23 19:42 EET
 ----------------------------------------------------------
-1/16 Testing: WorldGridTest.BoundsAndBlockPlacement
-1/16 Test: WorldGridTest.BoundsAndBlockPlacement
+1/17 Testing: WorldGridTest.BoundsAndBlockPlacement
+1/17 Test: WorldGridTest.BoundsAndBlockPlacement
 Command: "/home/ivan/ImportantFiles/My Games/MEGA/build/mega_tests" "--gtest_filter=WorldGridTest.BoundsAndBlockPlacement" "--gtest_also_run_disabled_tests"
 Directory: /home/ivan/ImportantFiles/My Games/MEGA/build
-"WorldGridTest.BoundsAndBlockPlacement" start time: Nov 22 21:16 EET
+"WorldGridTest.BoundsAndBlockPlacement" start time: Nov 23 19:42 EET
 Output:
 ----------------------------------------------------------
 Running main() from /usr/src/debug/gtest/googletest-1.18.0/googletest/src/gtest_main.cc
@@ -23,15 +23,15 @@ Note: Google Test filter = WorldGridTest.BoundsAndBlockPlacement
 Test time =   0.00 sec
 ----------------------------------------------------------
 Test Passed.
-"WorldGridTest.BoundsAndBlockPlacement" end time: Nov 22 21:16 EET
+"WorldGridTest.BoundsAndBlockPlacement" end time: Nov 23 19:42 EET
 "WorldGridTest.BoundsAndBlockPlacement" time elapsed: 00:00:00
 ----------------------------------------------------------
 
-2/16 Testing: PlayerPhysicsTest.GravityLandsOnFloorAndStepUpWorks
-2/16 Test: PlayerPhysicsTest.GravityLandsOnFloorAndStepUpWorks
+2/17 Testing: PlayerPhysicsTest.GravityLandsOnFloorAndStepUpWorks
+2/17 Test: PlayerPhysicsTest.GravityLandsOnFloorAndStepUpWorks
 Command: "/home/ivan/ImportantFiles/My Games/MEGA/build/mega_tests" "--gtest_filter=PlayerPhysicsTest.GravityLandsOnFloorAndStepUpWorks" "--gtest_also_run_disabled_tests"
 Directory: /home/ivan/ImportantFiles/My Games/MEGA/build
-"PlayerPhysicsTest.GravityLandsOnFloorAndStepUpWorks" start time: Nov 22 21:16 EET
+"PlayerPhysicsTest.GravityLandsOnFloorAndStepUpWorks" start time: Nov 23 19:42 EET
 Output:
 ----------------------------------------------------------
 Running main() from /usr/src/debug/gtest/googletest-1.18.0/googletest/src/gtest_main.cc
@@ -50,15 +50,15 @@ Note: Google Test filter = PlayerPhysicsTest.GravityLandsOnFloorAndStepUpWorks
 Test time =   0.00 sec
 ----------------------------------------------------------
 Test Passed.
-"PlayerPhysicsTest.GravityLandsOnFloorAndStepUpWorks" end time: Nov 22 21:16 EET
+"PlayerPhysicsTest.GravityLandsOnFloorAndStepUpWorks" end time: Nov 23 19:42 EET
 "PlayerPhysicsTest.GravityLandsOnFloorAndStepUpWorks" time elapsed: 00:00:00
 ----------------------------------------------------------
 
-3/16 Testing: MegaGeneratorTest.GeneratesConnectedMultiBiomeMegastructureQuickly
-3/16 Test: MegaGeneratorTest.GeneratesConnectedMultiBiomeMegastructureQuickly
+3/17 Testing: MegaGeneratorTest.GeneratesConnectedMultiBiomeMegastructureQuickly
+3/17 Test: MegaGeneratorTest.GeneratesConnectedMultiBiomeMegastructureQuickly
 Command: "/home/ivan/ImportantFiles/My Games/MEGA/build/mega_tests" "--gtest_filter=MegaGeneratorTest.GeneratesConnectedMultiBiomeMegastructureQuickly" "--gtest_also_run_disabled_tests"
 Directory: /home/ivan/ImportantFiles/My Games/MEGA/build
-"MegaGeneratorTest.GeneratesConnectedMultiBiomeMegastructureQuickly" start time: Nov 22 21:16 EET
+"MegaGeneratorTest.GeneratesConnectedMultiBiomeMegastructureQuickly" start time: Nov 23 19:42 EET
 Output:
 ----------------------------------------------------------
 Running main() from /usr/src/debug/gtest/googletest-1.18.0/googletest/src/gtest_main.cc
@@ -67,25 +67,25 @@ Note: Google Test filter = MegaGeneratorTest.GeneratesConnectedMultiBiomeMegastr
 [----------] Global test environment set-up.
 [----------] 1 test from MegaGeneratorTest
 [ RUN      ] MegaGeneratorTest.GeneratesConnectedMultiBiomeMegastructureQuickly
-[       OK ] MegaGeneratorTest.GeneratesConnectedMultiBiomeMegastructureQuickly (108 ms)
-[----------] 1 test from MegaGeneratorTest (108 ms total)
+[       OK ] MegaGeneratorTest.GeneratesConnectedMultiBiomeMegastructureQuickly (92 ms)
+[----------] 1 test from MegaGeneratorTest (92 ms total)
 
 [----------] Global test environment tear-down
-[==========] 1 test from 1 test suite ran. (108 ms total)
+[==========] 1 test from 1 test suite ran. (92 ms total)
 [  PASSED  ] 1 test.
 <end of output>
-Test time =   0.11 sec
+Test time =   0.09 sec
 ----------------------------------------------------------
 Test Passed.
-"MegaGeneratorTest.GeneratesConnectedMultiBiomeMegastructureQuickly" end time: Nov 22 21:16 EET
+"MegaGeneratorTest.GeneratesConnectedMultiBiomeMegastructureQuickly" end time: Nov 23 19:42 EET
 "MegaGeneratorTest.GeneratesConnectedMultiBiomeMegastructureQuickly" time elapsed: 00:00:00
 ----------------------------------------------------------
 
-4/16 Testing: GameWorldTest.RaycastAndStarterRoomSurvivalWork
-4/16 Test: GameWorldTest.RaycastAndStarterRoomSurvivalWork
+4/17 Testing: GameWorldTest.RaycastAndStarterRoomSurvivalWork
+4/17 Test: GameWorldTest.RaycastAndStarterRoomSurvivalWork
 Command: "/home/ivan/ImportantFiles/My Games/MEGA/build/mega_tests" "--gtest_filter=GameWorldTest.RaycastAndStarterRoomSurvivalWork" "--gtest_also_run_disabled_tests"
 Directory: /home/ivan/ImportantFiles/My Games/MEGA/build
-"GameWorldTest.RaycastAndStarterRoomSurvivalWork" start time: Nov 22 21:16 EET
+"GameWorldTest.RaycastAndStarterRoomSurvivalWork" start time: Nov 23 19:42 EET
 Output:
 ----------------------------------------------------------
 Running main() from /usr/src/debug/gtest/googletest-1.18.0/googletest/src/gtest_main.cc
@@ -94,25 +94,25 @@ Note: Google Test filter = GameWorldTest.RaycastAndStarterRoomSurvivalWork
 [----------] Global test environment set-up.
 [----------] 1 test from GameWorldTest
 [ RUN      ] GameWorldTest.RaycastAndStarterRoomSurvivalWork
-[       OK ] GameWorldTest.RaycastAndStarterRoomSurvivalWork (94 ms)
-[----------] 1 test from GameWorldTest (94 ms total)
+[       OK ] GameWorldTest.RaycastAndStarterRoomSurvivalWork (95 ms)
+[----------] 1 test from GameWorldTest (95 ms total)
 
 [----------] Global test environment tear-down
-[==========] 1 test from 1 test suite ran. (94 ms total)
+[==========] 1 test from 1 test suite ran. (95 ms total)
 [  PASSED  ] 1 test.
 <end of output>
 Test time =   0.10 sec
 ----------------------------------------------------------
 Test Passed.
-"GameWorldTest.RaycastAndStarterRoomSurvivalWork" end time: Nov 22 21:16 EET
+"GameWorldTest.RaycastAndStarterRoomSurvivalWork" end time: Nov 23 19:42 EET
 "GameWorldTest.RaycastAndStarterRoomSurvivalWork" time elapsed: 00:00:00
 ----------------------------------------------------------
 
-5/16 Testing: LockpickTest.SlowPushOverforceBreakAndGentleTapPhysics
-5/16 Test: LockpickTest.SlowPushOverforceBreakAndGentleTapPhysics
+5/17 Testing: LockpickTest.SlowPushOverforceBreakAndGentleTapPhysics
+5/17 Test: LockpickTest.SlowPushOverforceBreakAndGentleTapPhysics
 Command: "/home/ivan/ImportantFiles/My Games/MEGA/build/mega_tests" "--gtest_filter=LockpickTest.SlowPushOverforceBreakAndGentleTapPhysics" "--gtest_also_run_disabled_tests"
 Directory: /home/ivan/ImportantFiles/My Games/MEGA/build
-"LockpickTest.SlowPushOverforceBreakAndGentleTapPhysics" start time: Nov 22 21:16 EET
+"LockpickTest.SlowPushOverforceBreakAndGentleTapPhysics" start time: Nov 23 19:42 EET
 Output:
 ----------------------------------------------------------
 Running main() from /usr/src/debug/gtest/googletest-1.18.0/googletest/src/gtest_main.cc
@@ -143,25 +143,25 @@ dy=-38px/frame (2280 px/s) | maxH=0.96 | CEILING_BREAK
 dy=-40px/frame (2400 px/s) | maxH=0.98 | CEILING_BREAK
 dy=-42px/frame (2520 px/s) | maxH=0.95 | CEILING_BREAK
 dy=-44px/frame (2640 px/s) | maxH=0.98 | CEILING_BREAK
-[       OK ] LockpickTest.SlowPushOverforceBreakAndGentleTapPhysics (0 ms)
-[----------] 1 test from LockpickTest (0 ms total)
+[       OK ] LockpickTest.SlowPushOverforceBreakAndGentleTapPhysics (1 ms)
+[----------] 1 test from LockpickTest (1 ms total)
 
 [----------] Global test environment tear-down
-[==========] 1 test from 1 test suite ran. (0 ms total)
+[==========] 1 test from 1 test suite ran. (1 ms total)
 [  PASSED  ] 1 test.
 <end of output>
 Test time =   0.00 sec
 ----------------------------------------------------------
 Test Passed.
-"LockpickTest.SlowPushOverforceBreakAndGentleTapPhysics" end time: Nov 22 21:16 EET
+"LockpickTest.SlowPushOverforceBreakAndGentleTapPhysics" end time: Nov 23 19:42 EET
 "LockpickTest.SlowPushOverforceBreakAndGentleTapPhysics" time elapsed: 00:00:00
 ----------------------------------------------------------
 
-6/16 Testing: RobotSimTest.ObservePatrolAndChaseFootKinematics
-6/16 Test: RobotSimTest.ObservePatrolAndChaseFootKinematics
+6/17 Testing: RobotSimTest.ObservePatrolAndChaseFootKinematics
+6/17 Test: RobotSimTest.ObservePatrolAndChaseFootKinematics
 Command: "/home/ivan/ImportantFiles/My Games/MEGA/build/mega_tests" "--gtest_filter=RobotSimTest.ObservePatrolAndChaseFootKinematics" "--gtest_also_run_disabled_tests"
 Directory: /home/ivan/ImportantFiles/My Games/MEGA/build
-"RobotSimTest.ObservePatrolAndChaseFootKinematics" start time: Nov 22 21:16 EET
+"RobotSimTest.ObservePatrolAndChaseFootKinematics" start time: Nov 23 19:42 EET
 Output:
 ----------------------------------------------------------
 Running main() from /usr/src/debug/gtest/googletest-1.18.0/googletest/src/gtest_main.cc
@@ -208,25 +208,25 @@ t=1.27s | alert=1 | bodyZ=78.29 | v=4.40 | L_step=1 y=1.36 d=0.20 | R_step=0 y=1
 t=1.33s | alert=1 | bodyZ=78.58 | v=4.40 | L_step=1 y=1.20 d=0.18 | R_step=0 y=1.00 d=0.36
 t=1.40s | alert=1 | bodyZ=78.87 | v=4.40 | L_step=0 y=1.00 d=0.25 | R_step=1 y=1.36 d=0.20
 t=1.47s | alert=1 | bodyZ=79.17 | v=4.40 | L_step=1 y=1.15 d=0.27 | R_step=1 y=1.20 d=0.18
-[       OK ] RobotSimTest.ObservePatrolAndChaseFootKinematics (46 ms)
-[----------] 1 test from RobotSimTest (46 ms total)
+[       OK ] RobotSimTest.ObservePatrolAndChaseFootKinematics (52 ms)
+[----------] 1 test from RobotSimTest (52 ms total)
 
 [----------] Global test environment tear-down
-[==========] 1 test from 1 test suite ran. (47 ms total)
+[==========] 1 test from 1 test suite ran. (52 ms total)
 [  PASSED  ] 1 test.
 <end of output>
-Test time =   0.05 sec
+Test time =   0.06 sec
 ----------------------------------------------------------
 Test Passed.
-"RobotSimTest.ObservePatrolAndChaseFootKinematics" end time: Nov 22 21:16 EET
+"RobotSimTest.ObservePatrolAndChaseFootKinematics" end time: Nov 23 19:42 EET
 "RobotSimTest.ObservePatrolAndChaseFootKinematics" time elapsed: 00:00:00
 ----------------------------------------------------------
 
-7/16 Testing: RobotSimTest.ObserveMapNavigationPatrolAndChase
-7/16 Test: RobotSimTest.ObserveMapNavigationPatrolAndChase
+7/17 Testing: RobotSimTest.ObserveMapNavigationPatrolAndChase
+7/17 Test: RobotSimTest.ObserveMapNavigationPatrolAndChase
 Command: "/home/ivan/ImportantFiles/My Games/MEGA/build/mega_tests" "--gtest_filter=RobotSimTest.ObserveMapNavigationPatrolAndChase" "--gtest_also_run_disabled_tests"
 Directory: /home/ivan/ImportantFiles/My Games/MEGA/build
-"RobotSimTest.ObserveMapNavigationPatrolAndChase" start time: Nov 22 21:16 EET
+"RobotSimTest.ObserveMapNavigationPatrolAndChase" start time: Nov 23 19:42 EET
 Output:
 ----------------------------------------------------------
 Running main() from /usr/src/debug/gtest/googletest-1.18.0/googletest/src/gtest_main.cc
@@ -265,25 +265,25 @@ Patrol stuck warnings: 0
 [t=24.00s] pos=(72.82, 64.50) state=ReturnToAggro wp=(71.5, 64.5)
 [t=26.00s] pos=(71.94, 64.50) state=ReturnToAggro wp=(70.5, 64.5)
 [t=28.00s] pos=(71.06, 64.50) state=ReturnToAggro wp=(70.5, 64.5)
-[       OK ] RobotSimTest.ObserveMapNavigationPatrolAndChase (210 ms)
-[----------] 1 test from RobotSimTest (210 ms total)
+[       OK ] RobotSimTest.ObserveMapNavigationPatrolAndChase (202 ms)
+[----------] 1 test from RobotSimTest (202 ms total)
 
 [----------] Global test environment tear-down
-[==========] 1 test from 1 test suite ran. (210 ms total)
+[==========] 1 test from 1 test suite ran. (202 ms total)
 [  PASSED  ] 1 test.
 <end of output>
-Test time =   0.21 sec
+Test time =   0.20 sec
 ----------------------------------------------------------
 Test Passed.
-"RobotSimTest.ObserveMapNavigationPatrolAndChase" end time: Nov 22 21:16 EET
+"RobotSimTest.ObserveMapNavigationPatrolAndChase" end time: Nov 23 19:42 EET
 "RobotSimTest.ObserveMapNavigationPatrolAndChase" time elapsed: 00:00:00
 ----------------------------------------------------------
 
-8/16 Testing: Audio3DAcousticsTest.PanningObstacleThicknessAndConditionalEcho
-8/16 Test: Audio3DAcousticsTest.PanningObstacleThicknessAndConditionalEcho
+8/17 Testing: Audio3DAcousticsTest.PanningObstacleThicknessAndConditionalEcho
+8/17 Test: Audio3DAcousticsTest.PanningObstacleThicknessAndConditionalEcho
 Command: "/home/ivan/ImportantFiles/My Games/MEGA/build/mega_tests" "--gtest_filter=Audio3DAcousticsTest.PanningObstacleThicknessAndConditionalEcho" "--gtest_also_run_disabled_tests"
 Directory: /home/ivan/ImportantFiles/My Games/MEGA/build
-"Audio3DAcousticsTest.PanningObstacleThicknessAndConditionalEcho" start time: Nov 22 21:16 EET
+"Audio3DAcousticsTest.PanningObstacleThicknessAndConditionalEcho" start time: Nov 23 19:42 EET
 Output:
 ----------------------------------------------------------
 Running main() from /usr/src/debug/gtest/googletest-1.18.0/googletest/src/gtest_main.cc
@@ -294,25 +294,25 @@ Note: Google Test filter = Audio3DAcousticsTest.PanningObstacleThicknessAndCondi
 [ RUN      ] Audio3DAcousticsTest.PanningObstacleThicknessAndConditionalEcho
 [3D AUDIO RANGE] Straight 80m: dist=80.0m thick=0.00m gain=0.097 lpf=14500Hz
 [3D AUDIO RANGE] Perp Tunnel 50m: dist=49.9m thick=2.56m gain=0.113 lpf=4591Hz
-[       OK ] Audio3DAcousticsTest.PanningObstacleThicknessAndConditionalEcho (0 ms)
-[----------] 1 test from Audio3DAcousticsTest (0 ms total)
+[       OK ] Audio3DAcousticsTest.PanningObstacleThicknessAndConditionalEcho (1 ms)
+[----------] 1 test from Audio3DAcousticsTest (1 ms total)
 
 [----------] Global test environment tear-down
-[==========] 1 test from 1 test suite ran. (0 ms total)
+[==========] 1 test from 1 test suite ran. (1 ms total)
 [  PASSED  ] 1 test.
 <end of output>
 Test time =   0.00 sec
 ----------------------------------------------------------
 Test Passed.
-"Audio3DAcousticsTest.PanningObstacleThicknessAndConditionalEcho" end time: Nov 22 21:16 EET
+"Audio3DAcousticsTest.PanningObstacleThicknessAndConditionalEcho" end time: Nov 23 19:42 EET
 "Audio3DAcousticsTest.PanningObstacleThicknessAndConditionalEcho" time elapsed: 00:00:00
 ----------------------------------------------------------
 
-9/16 Testing: LockpickItemAndExitDoorTest.FivePercentBreakChanceAndSafeExitDoor
-9/16 Test: LockpickItemAndExitDoorTest.FivePercentBreakChanceAndSafeExitDoor
+9/17 Testing: LockpickItemAndExitDoorTest.FivePercentBreakChanceAndSafeExitDoor
+9/17 Test: LockpickItemAndExitDoorTest.FivePercentBreakChanceAndSafeExitDoor
 Command: "/home/ivan/ImportantFiles/My Games/MEGA/build/mega_tests" "--gtest_filter=LockpickItemAndExitDoorTest.FivePercentBreakChanceAndSafeExitDoor" "--gtest_also_run_disabled_tests"
 Directory: /home/ivan/ImportantFiles/My Games/MEGA/build
-"LockpickItemAndExitDoorTest.FivePercentBreakChanceAndSafeExitDoor" start time: Nov 22 21:16 EET
+"LockpickItemAndExitDoorTest.FivePercentBreakChanceAndSafeExitDoor" start time: Nov 23 19:42 EET
 Output:
 ----------------------------------------------------------
 Running main() from /usr/src/debug/gtest/googletest-1.18.0/googletest/src/gtest_main.cc
@@ -321,26 +321,26 @@ Note: Google Test filter = LockpickItemAndExitDoorTest.FivePercentBreakChanceAnd
 [----------] Global test environment set-up.
 [----------] 1 test from LockpickItemAndExitDoorTest
 [ RUN      ] LockpickItemAndExitDoorTest.FivePercentBreakChanceAndSafeExitDoor
-[LOCKPICK BREAK TEST] 5% chance over 2000 contacts -> 108 snaps (5.40%)
-[       OK ] LockpickItemAndExitDoorTest.FivePercentBreakChanceAndSafeExitDoor (28 ms)
-[----------] 1 test from LockpickItemAndExitDoorTest (28 ms total)
+[LOCKPICK BREAK TEST] 5% chance over 2000 >=5% strikes -> 108 snaps (5.40%)
+[       OK ] LockpickItemAndExitDoorTest.FivePercentBreakChanceAndSafeExitDoor (22 ms)
+[----------] 1 test from LockpickItemAndExitDoorTest (22 ms total)
 
 [----------] Global test environment tear-down
-[==========] 1 test from 1 test suite ran. (28 ms total)
+[==========] 1 test from 1 test suite ran. (22 ms total)
 [  PASSED  ] 1 test.
 <end of output>
 Test time =   0.03 sec
 ----------------------------------------------------------
 Test Passed.
-"LockpickItemAndExitDoorTest.FivePercentBreakChanceAndSafeExitDoor" end time: Nov 22 21:16 EET
+"LockpickItemAndExitDoorTest.FivePercentBreakChanceAndSafeExitDoor" end time: Nov 23 19:42 EET
 "LockpickItemAndExitDoorTest.FivePercentBreakChanceAndSafeExitDoor" time elapsed: 00:00:00
 ----------------------------------------------------------
 
-10/16 Testing: ConfigHotReloadTest.ParsesPlayerLightingAndAudioSettings
-10/16 Test: ConfigHotReloadTest.ParsesPlayerLightingAndAudioSettings
+10/17 Testing: ConfigHotReloadTest.ParsesPlayerLightingAndAudioSettings
+10/17 Test: ConfigHotReloadTest.ParsesPlayerLightingAndAudioSettings
 Command: "/home/ivan/ImportantFiles/My Games/MEGA/build/mega_tests" "--gtest_filter=ConfigHotReloadTest.ParsesPlayerLightingAndAudioSettings" "--gtest_also_run_disabled_tests"
 Directory: /home/ivan/ImportantFiles/My Games/MEGA/build
-"ConfigHotReloadTest.ParsesPlayerLightingAndAudioSettings" start time: Nov 22 21:16 EET
+"ConfigHotReloadTest.ParsesPlayerLightingAndAudioSettings" start time: Nov 23 19:42 EET
 Output:
 ----------------------------------------------------------
 Running main() from /usr/src/debug/gtest/googletest-1.18.0/googletest/src/gtest_main.cc
@@ -349,25 +349,25 @@ Note: Google Test filter = ConfigHotReloadTest.ParsesPlayerLightingAndAudioSetti
 [----------] Global test environment set-up.
 [----------] 1 test from ConfigHotReloadTest
 [ RUN      ] ConfigHotReloadTest.ParsesPlayerLightingAndAudioSettings
-[       OK ] ConfigHotReloadTest.ParsesPlayerLightingAndAudioSettings (27 ms)
-[----------] 1 test from ConfigHotReloadTest (27 ms total)
+[       OK ] ConfigHotReloadTest.ParsesPlayerLightingAndAudioSettings (23 ms)
+[----------] 1 test from ConfigHotReloadTest (23 ms total)
 
 [----------] Global test environment tear-down
-[==========] 1 test from 1 test suite ran. (27 ms total)
+[==========] 1 test from 1 test suite ran. (23 ms total)
 [  PASSED  ] 1 test.
 <end of output>
 Test time =   0.03 sec
 ----------------------------------------------------------
 Test Passed.
-"ConfigHotReloadTest.ParsesPlayerLightingAndAudioSettings" end time: Nov 22 21:16 EET
+"ConfigHotReloadTest.ParsesPlayerLightingAndAudioSettings" end time: Nov 23 19:42 EET
 "ConfigHotReloadTest.ParsesPlayerLightingAndAudioSettings" time elapsed: 00:00:00
 ----------------------------------------------------------
 
-11/16 Testing: RobotNavigationTest.CenterlineBypassAndCooperativePassing
-11/16 Test: RobotNavigationTest.CenterlineBypassAndCooperativePassing
+11/17 Testing: RobotNavigationTest.CenterlineBypassAndCooperativePassing
+11/17 Test: RobotNavigationTest.CenterlineBypassAndCooperativePassing
 Command: "/home/ivan/ImportantFiles/My Games/MEGA/build/mega_tests" "--gtest_filter=RobotNavigationTest.CenterlineBypassAndCooperativePassing" "--gtest_also_run_disabled_tests"
 Directory: /home/ivan/ImportantFiles/My Games/MEGA/build
-"RobotNavigationTest.CenterlineBypassAndCooperativePassing" start time: Nov 22 21:16 EET
+"RobotNavigationTest.CenterlineBypassAndCooperativePassing" start time: Nov 23 19:42 EET
 Output:
 ----------------------------------------------------------
 Running main() from /usr/src/debug/gtest/googletest-1.18.0/googletest/src/gtest_main.cc
@@ -378,25 +378,25 @@ Note: Google Test filter = RobotNavigationTest.CenterlineBypassAndCooperativePas
 [ RUN      ] RobotNavigationTest.CenterlineBypassAndCooperativePassing
 [NAV OBSTACLE BYPASS] final=(25.90, 5.50) maxSidestep=0.85m
 [NAV COOP PASS] A=(28.78, 5.50) B=(11.24, 5.50) minDist=1.24m negotiated=1
-[       OK ] RobotNavigationTest.CenterlineBypassAndCooperativePassing (137 ms)
-[----------] 1 test from RobotNavigationTest (137 ms total)
+[       OK ] RobotNavigationTest.CenterlineBypassAndCooperativePassing (131 ms)
+[----------] 1 test from RobotNavigationTest (131 ms total)
 
 [----------] Global test environment tear-down
-[==========] 1 test from 1 test suite ran. (137 ms total)
+[==========] 1 test from 1 test suite ran. (131 ms total)
 [  PASSED  ] 1 test.
 <end of output>
-Test time =   0.14 sec
+Test time =   0.13 sec
 ----------------------------------------------------------
 Test Passed.
-"RobotNavigationTest.CenterlineBypassAndCooperativePassing" end time: Nov 22 21:16 EET
+"RobotNavigationTest.CenterlineBypassAndCooperativePassing" end time: Nov 23 19:42 EET
 "RobotNavigationTest.CenterlineBypassAndCooperativePassing" time elapsed: 00:00:00
 ----------------------------------------------------------
 
-12/16 Testing: GodModeTest.NoclipInvisibilityAndSpeedWork
-12/16 Test: GodModeTest.NoclipInvisibilityAndSpeedWork
+12/17 Testing: GodModeTest.NoclipInvisibilityAndSpeedWork
+12/17 Test: GodModeTest.NoclipInvisibilityAndSpeedWork
 Command: "/home/ivan/ImportantFiles/My Games/MEGA/build/mega_tests" "--gtest_filter=GodModeTest.NoclipInvisibilityAndSpeedWork" "--gtest_also_run_disabled_tests"
 Directory: /home/ivan/ImportantFiles/My Games/MEGA/build
-"GodModeTest.NoclipInvisibilityAndSpeedWork" start time: Nov 22 21:16 EET
+"GodModeTest.NoclipInvisibilityAndSpeedWork" start time: Nov 23 19:42 EET
 Output:
 ----------------------------------------------------------
 Running main() from /usr/src/debug/gtest/googletest-1.18.0/googletest/src/gtest_main.cc
@@ -405,35 +405,8 @@ Note: Google Test filter = GodModeTest.NoclipInvisibilityAndSpeedWork
 [----------] Global test environment set-up.
 [----------] 1 test from GodModeTest
 [ RUN      ] GodModeTest.NoclipInvisibilityAndSpeedWork
-[       OK ] GodModeTest.NoclipInvisibilityAndSpeedWork (28 ms)
-[----------] 1 test from GodModeTest (28 ms total)
-
-[----------] Global test environment tear-down
-[==========] 1 test from 1 test suite ran. (28 ms total)
-[  PASSED  ] 1 test.
-<end of output>
-Test time =   0.03 sec
-----------------------------------------------------------
-Test Passed.
-"GodModeTest.NoclipInvisibilityAndSpeedWork" end time: Nov 22 21:16 EET
-"GodModeTest.NoclipInvisibilityAndSpeedWork" time elapsed: 00:00:00
-----------------------------------------------------------
-
-13/16 Testing: Inventory3DTest.VolumeRotationTopBlockingAndWorldGridPlacement
-13/16 Test: Inventory3DTest.VolumeRotationTopBlockingAndWorldGridPlacement
-Command: "/home/ivan/ImportantFiles/My Games/MEGA/build/mega_tests" "--gtest_filter=Inventory3DTest.VolumeRotationTopBlockingAndWorldGridPlacement" "--gtest_also_run_disabled_tests"
-Directory: /home/ivan/ImportantFiles/My Games/MEGA/build
-"Inventory3DTest.VolumeRotationTopBlockingAndWorldGridPlacement" start time: Nov 22 21:16 EET
-Output:
-----------------------------------------------------------
-Running main() from /usr/src/debug/gtest/googletest-1.18.0/googletest/src/gtest_main.cc
-Note: Google Test filter = Inventory3DTest.VolumeRotationTopBlockingAndWorldGridPlacement
-[==========] Running 1 test from 1 test suite.
-[----------] Global test environment set-up.
-[----------] 1 test from Inventory3DTest
-[ RUN      ] Inventory3DTest.VolumeRotationTopBlockingAndWorldGridPlacement
-[       OK ] Inventory3DTest.VolumeRotationTopBlockingAndWorldGridPlacement (26 ms)
-[----------] 1 test from Inventory3DTest (26 ms total)
+[       OK ] GodModeTest.NoclipInvisibilityAndSpeedWork (25 ms)
+[----------] 1 test from GodModeTest (26 ms total)
 
 [----------] Global test environment tear-down
 [==========] 1 test from 1 test suite ran. (26 ms total)
@@ -442,15 +415,42 @@ Note: Google Test filter = Inventory3DTest.VolumeRotationTopBlockingAndWorldGrid
 Test time =   0.03 sec
 ----------------------------------------------------------
 Test Passed.
-"Inventory3DTest.VolumeRotationTopBlockingAndWorldGridPlacement" end time: Nov 22 21:16 EET
+"GodModeTest.NoclipInvisibilityAndSpeedWork" end time: Nov 23 19:42 EET
+"GodModeTest.NoclipInvisibilityAndSpeedWork" time elapsed: 00:00:00
+----------------------------------------------------------
+
+13/17 Testing: Inventory3DTest.VolumeRotationTopBlockingAndWorldGridPlacement
+13/17 Test: Inventory3DTest.VolumeRotationTopBlockingAndWorldGridPlacement
+Command: "/home/ivan/ImportantFiles/My Games/MEGA/build/mega_tests" "--gtest_filter=Inventory3DTest.VolumeRotationTopBlockingAndWorldGridPlacement" "--gtest_also_run_disabled_tests"
+Directory: /home/ivan/ImportantFiles/My Games/MEGA/build
+"Inventory3DTest.VolumeRotationTopBlockingAndWorldGridPlacement" start time: Nov 23 19:42 EET
+Output:
+----------------------------------------------------------
+Running main() from /usr/src/debug/gtest/googletest-1.18.0/googletest/src/gtest_main.cc
+Note: Google Test filter = Inventory3DTest.VolumeRotationTopBlockingAndWorldGridPlacement
+[==========] Running 1 test from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 1 test from Inventory3DTest
+[ RUN      ] Inventory3DTest.VolumeRotationTopBlockingAndWorldGridPlacement
+[       OK ] Inventory3DTest.VolumeRotationTopBlockingAndWorldGridPlacement (23 ms)
+[----------] 1 test from Inventory3DTest (23 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test suite ran. (23 ms total)
+[  PASSED  ] 1 test.
+<end of output>
+Test time =   0.03 sec
+----------------------------------------------------------
+Test Passed.
+"Inventory3DTest.VolumeRotationTopBlockingAndWorldGridPlacement" end time: Nov 23 19:42 EET
 "Inventory3DTest.VolumeRotationTopBlockingAndWorldGridPlacement" time elapsed: 00:00:00
 ----------------------------------------------------------
 
-14/16 Testing: DoubleDoorAndLootTableTest.Lockers90PercentOpenMetalCabinetsAlwaysLockedAndLootTablesWork
-14/16 Test: DoubleDoorAndLootTableTest.Lockers90PercentOpenMetalCabinetsAlwaysLockedAndLootTablesWork
+14/17 Testing: DoubleDoorAndLootTableTest.Lockers90PercentOpenMetalCabinetsAlwaysLockedAndLootTablesWork
+14/17 Test: DoubleDoorAndLootTableTest.Lockers90PercentOpenMetalCabinetsAlwaysLockedAndLootTablesWork
 Command: "/home/ivan/ImportantFiles/My Games/MEGA/build/mega_tests" "--gtest_filter=DoubleDoorAndLootTableTest.Lockers90PercentOpenMetalCabinetsAlwaysLockedAndLootTablesWork" "--gtest_also_run_disabled_tests"
 Directory: /home/ivan/ImportantFiles/My Games/MEGA/build
-"DoubleDoorAndLootTableTest.Lockers90PercentOpenMetalCabinetsAlwaysLockedAndLootTablesWork" start time: Nov 22 21:16 EET
+"DoubleDoorAndLootTableTest.Lockers90PercentOpenMetalCabinetsAlwaysLockedAndLootTablesWork" start time: Nov 23 19:42 EET
 Output:
 ----------------------------------------------------------
 Running main() from /usr/src/debug/gtest/googletest-1.18.0/googletest/src/gtest_main.cc
@@ -460,25 +460,25 @@ Note: Google Test filter = DoubleDoorAndLootTableTest.Lockers90PercentOpenMetalC
 [----------] 1 test from DoubleDoorAndLootTableTest
 [ RUN      ] DoubleDoorAndLootTableTest.Lockers90PercentOpenMetalCabinetsAlwaysLockedAndLootTablesWork
 [LOCKERS & CABINETS] lockers=44 open=95.5% | metalCabinetLeaves=234 | lootSurfaces=996 | items=1006
-[       OK ] DoubleDoorAndLootTableTest.Lockers90PercentOpenMetalCabinetsAlwaysLockedAndLootTablesWork (27 ms)
-[----------] 1 test from DoubleDoorAndLootTableTest (27 ms total)
+[       OK ] DoubleDoorAndLootTableTest.Lockers90PercentOpenMetalCabinetsAlwaysLockedAndLootTablesWork (25 ms)
+[----------] 1 test from DoubleDoorAndLootTableTest (25 ms total)
 
 [----------] Global test environment tear-down
-[==========] 1 test from 1 test suite ran. (27 ms total)
+[==========] 1 test from 1 test suite ran. (25 ms total)
 [  PASSED  ] 1 test.
 <end of output>
 Test time =   0.03 sec
 ----------------------------------------------------------
 Test Passed.
-"DoubleDoorAndLootTableTest.Lockers90PercentOpenMetalCabinetsAlwaysLockedAndLootTablesWork" end time: Nov 22 21:16 EET
+"DoubleDoorAndLootTableTest.Lockers90PercentOpenMetalCabinetsAlwaysLockedAndLootTablesWork" end time: Nov 23 19:42 EET
 "DoubleDoorAndLootTableTest.Lockers90PercentOpenMetalCabinetsAlwaysLockedAndLootTablesWork" time elapsed: 00:00:00
 ----------------------------------------------------------
 
-15/16 Testing: RingLoopsAndRareRoomsTest.DeadEndsConvertToRingLoopsAndRareCabinetRooms
-15/16 Test: RingLoopsAndRareRoomsTest.DeadEndsConvertToRingLoopsAndRareCabinetRooms
+15/17 Testing: RingLoopsAndRareRoomsTest.DeadEndsConvertToRingLoopsAndRareCabinetRooms
+15/17 Test: RingLoopsAndRareRoomsTest.DeadEndsConvertToRingLoopsAndRareCabinetRooms
 Command: "/home/ivan/ImportantFiles/My Games/MEGA/build/mega_tests" "--gtest_filter=RingLoopsAndRareRoomsTest.DeadEndsConvertToRingLoopsAndRareCabinetRooms" "--gtest_also_run_disabled_tests"
 Directory: /home/ivan/ImportantFiles/My Games/MEGA/build
-"RingLoopsAndRareRoomsTest.DeadEndsConvertToRingLoopsAndRareCabinetRooms" start time: Nov 22 21:16 EET
+"RingLoopsAndRareRoomsTest.DeadEndsConvertToRingLoopsAndRareCabinetRooms" start time: Nov 23 19:42 EET
 Output:
 ----------------------------------------------------------
 Running main() from /usr/src/debug/gtest/googletest-1.18.0/googletest/src/gtest_main.cc
@@ -488,25 +488,25 @@ Note: Google Test filter = RingLoopsAndRareRoomsTest.DeadEndsConvertToRingLoopsA
 [----------] 1 test from RingLoopsAndRareRoomsTest
 [ RUN      ] RingLoopsAndRareRoomsTest.DeadEndsConvertToRingLoopsAndRareCabinetRooms
 [DEAD-END REWRITE] 4 seeds: ringLoops=35 | deadEnd3x4Rooms=25 | roomDoors=25 | rareCabinetLeaves=50 | rareLootSurfaces=100
-[       OK ] RingLoopsAndRareRoomsTest.DeadEndsConvertToRingLoopsAndRareCabinetRooms (112 ms)
-[----------] 1 test from RingLoopsAndRareRoomsTest (112 ms total)
+[       OK ] RingLoopsAndRareRoomsTest.DeadEndsConvertToRingLoopsAndRareCabinetRooms (107 ms)
+[----------] 1 test from RingLoopsAndRareRoomsTest (107 ms total)
 
 [----------] Global test environment tear-down
-[==========] 1 test from 1 test suite ran. (112 ms total)
+[==========] 1 test from 1 test suite ran. (107 ms total)
 [  PASSED  ] 1 test.
 <end of output>
-Test time =   0.12 sec
+Test time =   0.11 sec
 ----------------------------------------------------------
 Test Passed.
-"RingLoopsAndRareRoomsTest.DeadEndsConvertToRingLoopsAndRareCabinetRooms" end time: Nov 22 21:16 EET
+"RingLoopsAndRareRoomsTest.DeadEndsConvertToRingLoopsAndRareCabinetRooms" end time: Nov 23 19:42 EET
 "RingLoopsAndRareRoomsTest.DeadEndsConvertToRingLoopsAndRareCabinetRooms" time elapsed: 00:00:00
 ----------------------------------------------------------
 
-16/16 Testing: BackSlotMeleeAndCraftingTest.RearStrapSlotBreakingWeaponsAndSurfaceSpearCraft
-16/16 Test: BackSlotMeleeAndCraftingTest.RearStrapSlotBreakingWeaponsAndSurfaceSpearCraft
+16/17 Testing: BackSlotMeleeAndCraftingTest.RearStrapSlotBreakingWeaponsAndSurfaceSpearCraft
+16/17 Test: BackSlotMeleeAndCraftingTest.RearStrapSlotBreakingWeaponsAndSurfaceSpearCraft
 Command: "/home/ivan/ImportantFiles/My Games/MEGA/build/mega_tests" "--gtest_filter=BackSlotMeleeAndCraftingTest.RearStrapSlotBreakingWeaponsAndSurfaceSpearCraft" "--gtest_also_run_disabled_tests"
 Directory: /home/ivan/ImportantFiles/My Games/MEGA/build
-"BackSlotMeleeAndCraftingTest.RearStrapSlotBreakingWeaponsAndSurfaceSpearCraft" start time: Nov 22 21:16 EET
+"BackSlotMeleeAndCraftingTest.RearStrapSlotBreakingWeaponsAndSurfaceSpearCraft" start time: Nov 23 19:42 EET
 Output:
 ----------------------------------------------------------
 Running main() from /usr/src/debug/gtest/googletest-1.18.0/googletest/src/gtest_main.cc
@@ -515,18 +515,45 @@ Note: Google Test filter = BackSlotMeleeAndCraftingTest.RearStrapSlotBreakingWea
 [----------] Global test environment set-up.
 [----------] 1 test from BackSlotMeleeAndCraftingTest
 [ RUN      ] BackSlotMeleeAndCraftingTest.RearStrapSlotBreakingWeaponsAndSurfaceSpearCraft
-[       OK ] BackSlotMeleeAndCraftingTest.RearStrapSlotBreakingWeaponsAndSurfaceSpearCraft (20 ms)
-[----------] 1 test from BackSlotMeleeAndCraftingTest (20 ms total)
+[       OK ] BackSlotMeleeAndCraftingTest.RearStrapSlotBreakingWeaponsAndSurfaceSpearCraft (21 ms)
+[----------] 1 test from BackSlotMeleeAndCraftingTest (21 ms total)
 
 [----------] Global test environment tear-down
-[==========] 1 test from 1 test suite ran. (20 ms total)
+[==========] 1 test from 1 test suite ran. (21 ms total)
 [  PASSED  ] 1 test.
 <end of output>
 Test time =   0.02 sec
 ----------------------------------------------------------
 Test Passed.
-"BackSlotMeleeAndCraftingTest.RearStrapSlotBreakingWeaponsAndSurfaceSpearCraft" end time: Nov 22 21:16 EET
+"BackSlotMeleeAndCraftingTest.RearStrapSlotBreakingWeaponsAndSurfaceSpearCraft" end time: Nov 23 19:42 EET
 "BackSlotMeleeAndCraftingTest.RearStrapSlotBreakingWeaponsAndSurfaceSpearCraft" time elapsed: 00:00:00
 ----------------------------------------------------------
 
-End testing: Nov 22 21:16 EET
+17/17 Testing: RealisticConsumptionAndFixedHandPoseTest.FixedHandGripWaterDrinkingAndFoodBitingWork
+17/17 Test: RealisticConsumptionAndFixedHandPoseTest.FixedHandGripWaterDrinkingAndFoodBitingWork
+Command: "/home/ivan/ImportantFiles/My Games/MEGA/build/mega_tests" "--gtest_filter=RealisticConsumptionAndFixedHandPoseTest.FixedHandGripWaterDrinkingAndFoodBitingWork" "--gtest_also_run_disabled_tests"
+Directory: /home/ivan/ImportantFiles/My Games/MEGA/build
+"RealisticConsumptionAndFixedHandPoseTest.FixedHandGripWaterDrinkingAndFoodBitingWork" start time: Nov 23 19:42 EET
+Output:
+----------------------------------------------------------
+Running main() from /usr/src/debug/gtest/googletest-1.18.0/googletest/src/gtest_main.cc
+Note: Google Test filter = RealisticConsumptionAndFixedHandPoseTest.FixedHandGripWaterDrinkingAndFoodBitingWork
+[==========] Running 1 test from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 1 test from RealisticConsumptionAndFixedHandPoseTest
+[ RUN      ] RealisticConsumptionAndFixedHandPoseTest.FixedHandGripWaterDrinkingAndFoodBitingWork
+[       OK ] RealisticConsumptionAndFixedHandPoseTest.FixedHandGripWaterDrinkingAndFoodBitingWork (29 ms)
+[----------] 1 test from RealisticConsumptionAndFixedHandPoseTest (29 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test suite ran. (29 ms total)
+[  PASSED  ] 1 test.
+<end of output>
+Test time =   0.03 sec
+----------------------------------------------------------
+Test Passed.
+"RealisticConsumptionAndFixedHandPoseTest.FixedHandGripWaterDrinkingAndFoodBitingWork" end time: Nov 23 19:42 EET
+"RealisticConsumptionAndFixedHandPoseTest.FixedHandGripWaterDrinkingAndFoodBitingWork" time elapsed: 00:00:00
+----------------------------------------------------------
+
+End testing: Nov 23 19:42 EET

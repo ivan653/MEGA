@@ -24,6 +24,7 @@ constexpr Glyph3x5 FONT[] = {
     {'>', {0b100,0b010,0b001,0b010,0b100}},
     {'(', {0b010,0b100,0b100,0b100,0b010}},
     {')', {0b010,0b001,0b001,0b001,0b010}},
+    {'%', {0b101,0b001,0b010,0b100,0b101}},
     {':', {0b000,0b010,0b000,0b010,0b000}},
     {'/', {0b001,0b001,0b010,0b100,0b100}},
     {'[', {0b110,0b100,0b100,0b100,0b110}},
@@ -368,19 +369,28 @@ void HudRenderer::render(const GameWorld& gw) {
 
     // Bottom-right hand item indicator & backpack count summary
     {
-        char hbuf[112];
+        char hbuf[128];
         if (gw.hasHeldItem) {
             Int3 sz = gw.heldItemOrient.applyToSize(itemBaseGridSize(gw.heldItemType));
             if (isMeleeWeapon(gw.heldItemType)) {
                 if ((gw.heldItemType == ItemType::Broom || gw.heldItemType == ItemType::Mop) && gw.heldItemDurability > 0) {
-                    std::snprintf(hbuf, sizeof(hbuf), "HAND: %s %dX%dX%d (HITS:%d)  [LMB] STRIKE  [RMB] PLACE  [R/T/Y] ROT",
-                                  itemDisplayName(gw.heldItemType), sz.x, sz.y, sz.z, gw.heldItemDurability);
+                    std::snprintf(hbuf, sizeof(hbuf), "HAND: %s (HITS:%d)  [LMB] STRIKE  [RMB] PLACE",
+                                  itemDisplayName(gw.heldItemType), gw.heldItemDurability);
                 } else {
-                    std::snprintf(hbuf, sizeof(hbuf), "HAND: %s %dX%dX%d  [LMB] STRIKE  [RMB] PLACE  [R/T/Y] ROT",
-                                  itemDisplayName(gw.heldItemType), sz.x, sz.y, sz.z);
+                    std::snprintf(hbuf, sizeof(hbuf), "HAND: %s  [LMB] STRIKE  [RMB] PLACE",
+                                  itemDisplayName(gw.heldItemType));
                 }
+            } else if (gw.heldItemType == ItemType::Water) {
+                int pct = std::clamp(static_cast<int>(std::round(gw.consumeRemaining * 100.0f)), 0, 100);
+                std::snprintf(hbuf, sizeof(hbuf), "HAND: WATER (%d%%)  [HOLD LMB] DRINK  [RMB] PLACE", pct);
+            } else if (gw.heldItemType == ItemType::Food) {
+                int pct = std::clamp(static_cast<int>(std::round(gw.consumeRemaining * 100.0f)), 0, 100);
+                std::snprintf(hbuf, sizeof(hbuf), "HAND: FOOD BAR (%d%%)  [HOLD LMB] EAT  [RMB] PLACE", pct);
+            } else if (gw.heldItemType == ItemType::Battery || gw.heldItemType == ItemType::Flashlight) {
+                std::snprintf(hbuf, sizeof(hbuf), "HAND: %s %dX%dX%d  [E] USE  [RMB] PLACE",
+                              itemDisplayName(gw.heldItemType), sz.x, sz.y, sz.z);
             } else {
-                std::snprintf(hbuf, sizeof(hbuf), "HAND: %s %dX%dX%d  [E] USE  [RMB] PLACE  [R/T/Y] ROT",
+                std::snprintf(hbuf, sizeof(hbuf), "HAND: %s %dX%dX%d  [RMB] PLACE",
                               itemDisplayName(gw.heldItemType), sz.x, sz.y, sz.z);
             }
             int hw = static_cast<int>(std::strlen(hbuf)) * 8;
@@ -489,12 +499,14 @@ void HudRenderer::drawLockpickMinigame(const GameWorld& gw) {
     fillRect(bx, by, bw, 2, rgba(105, 145, 180, 240));
     fillRect(bx, by + bh - 2, bw, 2, rgba(105, 145, 180, 240));
     char hdr[64];
-    if (lp.breakChance <= 0.0001f) {
+    if (lp.snapped) {
+        std::snprintf(hdr, sizeof(hdr), "PICK SNAPPED - REPLACING...");
+    } else if (lp.breakChance <= 0.0001f) {
         std::snprintf(hdr, sizeof(hdr), "LOCKPICK  PICKS:%d  SAFE  [ESC]", gw.inventory.lockpicks);
     } else {
         std::snprintf(hdr, sizeof(hdr), "LOCKPICK  PICKS:%d  [ESC EXIT]", gw.inventory.lockpicks);
     }
-    drawText(bx + 18, by + 12, hdr, rgba(185, 225, 250, 240), 2);
+    drawText(bx + 18, by + 12, hdr, lp.snapped ? rgba(255, 115, 95, 250) : rgba(185, 225, 250, 240), 2);
 
     int chLeft = bx + 95;
     int chW = 290;
@@ -560,16 +572,37 @@ void HudRenderer::drawLockpickMinigame(const GameWorld& gw) {
     }
 
     // Rigid L-shaped pick with tip = 20% of spring chamber height (28px of 140px)
+    // When snapped: show fractured shaft + detached tip falling to the bottom of the keyway!
     constexpr int FIXED_TIP_LEN = 28;
-    int tipX = chLeft + 34 + static_cast<int>((lp.pickX - 0.5f) * 92.0f) + 27;
-    int tipY = chamberBot - static_cast<int>(lp.pickY * travelH);
-    int shaftY = tipY + FIXED_TIP_LEN;
     int handleX = bx + 22;
-
     uint32_t pickCol = rgba(220, 230, 240, 255);
-    fillRect(handleX, shaftY - 4, 42, 9, rgba(80, 95, 110, 255));
-    drawLine(handleX + 42, shaftY, tipX, shaftY, pickCol, 3);
-    drawLine(tipX, shaftY, tipX, tipY, pickCol, 3);
+
+    if (lp.snapped) {
+        int stubX = chLeft + 34 + static_cast<int>((lp.snapFreezeX - 0.5f) * 92.0f) + 27;
+        int stubY = chamberBot - static_cast<int>(lp.snapFreezeY * travelH) + FIXED_TIP_LEN;
+        int breakX = stubX - 6;
+        fillRect(handleX, stubY - 4, 42, 9, rgba(80, 95, 110, 255));
+        drawLine(handleX + 42, stubY, breakX, stubY, pickCol, 3);
+        // Jagged crack flash at break point
+        drawLine(breakX, stubY - 4, breakX + 4, stubY + 3, rgba(255, 115, 85, 255), 2);
+
+        // Detached broken L-tip falling down to the bottom of the keyway
+        int tipX = chLeft + 34 + static_cast<int>((lp.brokenTipX - 0.5f) * 92.0f) + 27;
+        int tipY = chamberBot - static_cast<int>(lp.brokenTipY * travelH);
+        tipY = std::min(tipY, chBot - 6);
+        int tipBotY = std::min(chBot - 4, tipY + static_cast<int>(std::cos(lp.brokenTipRot) * FIXED_TIP_LEN * 0.75f));
+        int tipRotX = tipX + static_cast<int>(std::sin(lp.brokenTipRot) * 14.0f);
+        drawLine(tipX - 5, tipBotY, tipRotX, tipBotY, rgba(235, 180, 165, 255), 3);
+        drawLine(tipRotX, tipBotY, tipX, tipY, rgba(235, 180, 165, 255), 3);
+    } else {
+        int tipX = chLeft + 34 + static_cast<int>((lp.pickX - 0.5f) * 92.0f) + 27;
+        int tipY = chamberBot - static_cast<int>(lp.pickY * travelH);
+        int shaftY = tipY + FIXED_TIP_LEN;
+
+        fillRect(handleX, shaftY - 4, 42, 9, rgba(80, 95, 110, 255));
+        drawLine(handleX + 42, shaftY, tipX, shaftY, pickCol, 3);
+        drawLine(tipX, shaftY, tipX, tipY, pickCol, 3);
+    }
 }
 
 } // namespace mega

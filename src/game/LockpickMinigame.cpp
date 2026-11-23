@@ -13,6 +13,14 @@ void LockpickMinigame::open(int doorIdx, uint64_t lockSeed, float pickBreakChanc
     breakChance = clampf(pickBreakChance, 0.0f, 1.0f);
     unlockedJustNow = false;
     pickSnappedJustNow = false;
+    snapped = false;
+    snapTimer = 0.0f;
+    snapFreezeX = 0.5f;
+    snapFreezeY = -0.05f;
+    brokenTipX = 0.5f;
+    brokenTipY = 0.0f;
+    brokenTipVelY = 0.0f;
+    brokenTipRot = 0.0f;
     contactCount = 0;
     mouseTargetX = pickX = 0.5f;
     mouseTargetY = pickY = -0.05f;
@@ -41,7 +49,7 @@ void LockpickMinigame::close() {
 }
 
 void LockpickMinigame::handleMouseMove(float dx, float dy) {
-    if (!active) return;
+    if (!active || snapped) return;
 
     float newX = clampf(pickX + dx * 0.0050f, 0.14f, 2.86f);
     float oldY = pickY;
@@ -101,11 +109,35 @@ void LockpickMinigame::update(float dt, AudioEngine& audio) {
         return static_cast<float>((r >> 40) & 0xFFFFFFu) / static_cast<float>(0x1000000u);
     };
 
+    // Handle 1.5s visual snap & replacement animation
+    if (snapped) {
+        snapTimer = std::max(0.0f, snapTimer - dt);
+        brokenTipVelY -= 1.85f * dt;
+        brokenTipY += brokenTipVelY * dt;
+        if (brokenTipY < -0.15f) {
+            brokenTipY = -0.15f;
+            brokenTipVelY = 0.0f;
+        } else {
+            brokenTipRot = std::min(1.15f, brokenTipRot + 4.8f * dt);
+        }
+        if (snapTimer <= 0.0f) {
+            snapped = false;
+            pickX = mouseTargetX = 0.5f;
+            pickY = mouseTargetY = -0.05f;
+            pickVelX = pickVelY = 0.0f;
+            accumFrameDy = 0.0f;
+            for (auto& p : pins) {
+                p.wasTouchingPick = false;
+                p.strikeBreakRolled = false;
+            }
+        }
+    }
+
     // Convert accumulated frame mouse movement to physical speed (px/s -> pickVelY)
-    float speedPxPerSec = -accumFrameDy / std::max(dt, 0.001f);
+    float speedPxPerSec = snapped ? 0.0f : (-accumFrameDy / std::max(dt, 0.001f));
     accumFrameDy = 0.0f;
     float instVel = clampf(speedPxPerSec * 0.0028f, -12.0f, 12.0f);
-    if (std::abs(instVel) > 0.05f) {
+    if (!snapped && std::abs(instVel) > 0.05f) {
         pickVelY = instVel;
     }
 
@@ -142,21 +174,17 @@ void LockpickMinigame::update(float dt, AudioEngine& audio) {
             }
 
             float chamberCenter = static_cast<float>(i) + 0.5f;
-            bool underPin = (i == activeChamber) && (std::abs(pickX - chamberCenter) < 0.24f);
+            bool underPin = !snapped && (i == activeChamber) && (std::abs(pickX - chamberCenter) < 0.24f);
             bool touchingNow = underPin && (pickY >= pin.pos - 0.015f);
 
-            // Detect each distinct physical contact/knock with the pin (5% pick break chance on regular locks, 0% on exit door)
+            // Detect start of physical contact (records strikeStartPos; break chance ONLY rolls once spring lifts >= 5%!)
             if (touchingNow && !pin.wasTouchingPick) {
                 pin.wasTouchingPick = true;
-                contactCount++;
-                if (breakChance > 0.0f && nextRoll() < breakChance) {
-                    pickSnappedJustNow = true;
-                    pin.vel = -1.2f;
-                    emitLockSound(SoundId::LockpickSnap, 1.0f);
-                    return; // Stop processing this tick so GameWorld deducts the broken lockpick
-                }
-            } else if (!underPin || pickY < pin.pos - 0.028f) {
+                pin.strikeStartPos = pin.pos;
+                pin.strikeBreakRolled = false;
+            } else if (!underPin || (pickY < pin.pos - 0.035f && pin.vel <= 0.05f)) {
                 pin.wasTouchingPick = false;
+                pin.strikeBreakRolled = false;
             }
 
             // Pure rigid-pick to pin contact: non-penetration + direct momentum transfer
@@ -180,6 +208,26 @@ void LockpickMinigame::update(float dt, AudioEngine& audio) {
             float acc = -SPRING_K * (pin.pos + PRELOAD) - GRAVITY - AIR_DAMPING * pin.vel;
             pin.vel += acc * subDt;
             pin.pos += pin.vel * subDt;
+
+            // Break chance ONLY triggers on a strike that lifts the spring by at least 5% (0.05f)!
+            if (!snapped && pin.wasTouchingPick && !pin.strikeBreakRolled &&
+                (pin.pos - pin.strikeStartPos) >= 0.05f) {
+                pin.strikeBreakRolled = true;
+                contactCount++;
+                if (breakChance > 0.0f && nextRoll() < breakChance) {
+                    snapped = true;
+                    snapTimer = 1.5f;
+                    snapFreezeX = pickX;
+                    snapFreezeY = pickY;
+                    brokenTipX = pickX;
+                    brokenTipY = pickY;
+                    brokenTipVelY = -0.28f;
+                    brokenTipRot = 0.0f;
+                    pickSnappedJustNow = true;
+                    pin.vel = -1.2f;
+                    emitLockSound(SoundId::LockpickSnap, 1.0f);
+                }
+            }
 
             // Physical ceiling impact: if kinetic energy carried the pin all the way to the top (0.98),
             // it slams the chamber roof, shatters/deforms the spring visual, and rebounds back down!

@@ -127,6 +127,10 @@ bool BillboardRenderer::init() {
     drawDisc(buf, 11.5f, 11.5f, 2.5f, 255, 220, 110);
     upload(SpriteType::Spark);
 
+    // 10: WaterDrop (crisp square particle tinted blue)
+    drawRect(buf, 7, 7, 16, 16, 255, 255, 255);
+    upload(SpriteType::WaterDrop);
+
     glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);

@@ -97,6 +97,8 @@ struct GameSettings {
     float moveSpeed             = cfg::MOVE_SPEED;
     float sprintMult            = cfg::SPRINT_MULT;
     float jumpSpeed             = cfg::JUMP_SPEED;
+    float enemyPatrolSpeed      = 0.44f;
+    float enemyChaseSpeed       = 4.40f;
     float lockpickBreakChance   = 0.05f;
 
     // --- 3D Audio & Per-Sound Volumes ---
@@ -189,6 +191,8 @@ struct GameSettings {
             << "move_speed = 4.6\n"
             << "sprint_mult = 1.45\n"
             << "jump_speed = 6.8\n"
+            << "enemy_patrol_speed = 0.44\n"
+            << "enemy_chase_speed = 4.40\n"
             << "lockpick_break_chance = 0.05\n\n"
             << "# --- 3D Audio & Volumes ---\n"
             << "master_volume = 1.00\n"
@@ -304,6 +308,8 @@ struct GameSettings {
                 else if (key == "move_speed") s.moveSpeed = std::clamp(std::stof(val), 1.0f, 16.0f);
                 else if (key == "sprint_mult") s.sprintMult = std::clamp(std::stof(val), 1.0f, 3.0f);
                 else if (key == "jump_speed") s.jumpSpeed = std::clamp(std::stof(val), 1.0f, 20.0f);
+                else if (key == "enemy_patrol_speed") s.enemyPatrolSpeed = std::clamp(std::stof(val), 0.1f, 8.0f);
+                else if (key == "enemy_chase_speed") s.enemyChaseSpeed = std::clamp(std::stof(val), 0.5f, 16.0f);
                 else if (key == "lockpick_break_chance") s.lockpickBreakChance = std::clamp(std::stof(val), 0.0f, 1.0f);
 
                 // Audio

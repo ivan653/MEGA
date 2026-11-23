@@ -408,6 +408,7 @@ int main(int argc, char** argv) {
             } else if (ev.type == SDL_EVENT_WINDOW_FOCUS_LOST ||
                        ev.type == SDL_EVENT_WINDOW_MINIMIZED) {
                 mouseCaptured = false;
+                gw.consumeLmbHeld = false;
                 SDL_SetWindowRelativeMouseMode(window, false);
                 std::fill(std::begin(keyDown), std::end(keyDown), false);
             } else if (ev.type == SDL_EVENT_WINDOW_FOCUS_GAINED ||
@@ -508,9 +509,9 @@ int main(int argc, char** argv) {
                 } else if (ev.key.key == SDLK_F5) {
                     reloadConfig();
                 } else if (ev.key.key == SDLK_R) {
-                    if (gw.draggingItem || gw.hasHeldItem) {
+                    if (gw.draggingItem || (gw.hasHeldItem && gw.heldPlaceMode)) {
                         gw.rotateActiveItem(1);
-                    } else {
+                    } else if (!gw.hasHeldItem) {
                         reloadConfig();
                         worldSeed += 1337ULL;
                         gw.startNewRun(worldSeed);
@@ -549,6 +550,7 @@ int main(int argc, char** argv) {
                 }
             } else if (ev.type == SDL_EVENT_MOUSE_BUTTON_UP) {
                 if (ev.button.button == SDL_BUTTON_LEFT) {
+                    gw.consumeLmbHeld = false;
                     gw.endInteract();
                 } else if (ev.button.button == SDL_BUTTON_RIGHT) {
                     if (rmbDownInPack) {
@@ -568,6 +570,7 @@ int main(int argc, char** argv) {
             } else if (ev.type == SDL_EVENT_MOUSE_BUTTON_DOWN) {
                 bool freeCursor = (gw.backpackMode == BackpackMode::InHands || gw.draggingItem);
                 if (freeCursor) {
+                    gw.consumeLmbHeld = false;
                     mouseWinX = ev.button.x;
                     mouseWinY = ev.button.y;
                     Vec3 ro, rd;
@@ -594,10 +597,13 @@ int main(int argc, char** argv) {
                     Vec3 ro, rd;
                     computeCursorRay(ro, rd);
                     if (ev.button.button == SDL_BUTTON_LEFT) {
+                        // Shooting on LMB is disabled; LMB interacts, swings melee, places in placement mode,
+                        // or begins continuous realistic consumption when holding Food/Water!
                         if (!gw.handlePrimaryClick(ro, rd, audio)) {
-                            fireClicked = true;
+                            gw.consumeLmbHeld = true;
                         }
                     } else if (ev.button.button == SDL_BUTTON_RIGHT) {
+                        gw.consumeLmbHeld = false;
                         gw.handleSecondaryClick(ro, rd, audio);
                     }
                 }
@@ -782,10 +788,11 @@ int main(int argc, char** argv) {
 
         gw.gatherInteractables(doorQueue, itemQueue);
         BackpackRenderState bpState = gw.gatherBackpackState();
+        ConsumableVisualState heldCons = gw.gatherHeldConsumableState();
         robotRenderer.renderInteractables(worldShader, view, proj, camPos, doorQueue, itemQueue,
                                           bpState, gw.placementPreview,
                                           gw.hasHeldItem, gw.heldItemType, gw.heldItemOrient,
-                                          gw.heldItemWorldMatrix());
+                                          gw.heldItemWorldMatrix(), heldCons);
 
         gw.gatherBillboards(spriteQueue, totalTime);
         billboards.render(view, proj, camPos, spriteQueue);

@@ -45,6 +45,17 @@ TEST(PlayerPhysicsTest, GravityLandsOnFloorAndStepUpWorks) {
     player.update(jump, grid, cfg::FIXED_DT);
     EXPECT_FALSE(player.grounded);
     EXPECT_GT(player.velocity.y, 0.0f);
+
+    // Walking on flat ground reaches full moveSpeed (100%, not 60%!)
+    player.position = {10.0f, 1.0f, 10.0f};
+    player.velocity = {0.0f, 0.0f, 0.0f};
+    player.grounded = true;
+    PlayerInput walkFwd;
+    walkFwd.moveForward = 1.0f;
+    for (int i = 0; i < 60; ++i) {
+        player.update(walkFwd, grid, cfg::FIXED_DT, {}, 4.6f, 1.45f, 6.8f);
+    }
+    EXPECT_NEAR(std::hypot(player.velocity.x, player.velocity.z), 4.6f, 0.05f);
 }
 
 TEST(MegaGeneratorTest, GeneratesConnectedMultiBiomeMegastructureQuickly) {
@@ -561,26 +572,62 @@ TEST(LockpickItemAndExitDoorTest, FivePercentBreakChanceAndSafeExitDoor) {
         EXPECT_FALSE(gw.lockpick.pickSnappedJustNow);
     }
 
-    // 2000 pin contacts on a regular lock (5% break chance) -> ~5% snaps (within 2.5%..8%)
+    // 500 gentle contacts (< 5% lift) on regular 5%-break lock -> ZERO snaps!
+    LockpickMinigame gentleLock;
+    gentleLock.open(1, 55555ULL, 0.05f);
+    for (int k = 0; k < 500; ++k) {
+        gentleLock.pickX = 0.5f;
+        gentleLock.pickY = 0.02f; // Lifts pin by only 2% (< 5%)
+        gentleLock.pins[0].pos = 0.0f;
+        gentleLock.pins[0].vel = 0.0f;
+        gentleLock.pins[0].pinned = false;
+        gentleLock.pins[0].wasTouchingPick = false;
+        gentleLock.pins[0].strikeBreakRolled = false;
+        gentleLock.update(cfg::FIXED_DT, audio);
+        EXPECT_FALSE(gentleLock.pickSnappedJustNow);
+        EXPECT_FALSE(gentleLock.snapped);
+    }
+
+    // 2000 pin strikes lifting >= 5% on a regular lock (5% break chance) -> ~5% snaps (within 2.5%..8%)
     LockpickMinigame regLock;
     regLock.open(1, 99999ULL, 0.05f);
     int snaps = 0;
     for (int k = 0; k < 2000; ++k) {
         regLock.pickSnappedJustNow = false;
+        regLock.snapped = false;
+        regLock.snapTimer = 0.0f;
         regLock.pickX = 0.5f;
         regLock.pickY = -0.05f;
         regLock.pins[0].pos = 0.0f;
         regLock.pins[0].vel = 0.0f;
         regLock.pins[0].pinned = false;
         regLock.pins[0].wasTouchingPick = false;
-        regLock.handleMouseMove(0.0f, -12.0f);
+        regLock.pins[0].strikeBreakRolled = false;
+        regLock.handleMouseMove(0.0f, -15.0f);
+        regLock.update(cfg::FIXED_DT, audio);
         regLock.update(cfg::FIXED_DT, audio);
         if (regLock.pickSnappedJustNow) snaps++;
     }
     EXPECT_GT(snaps, 50);
     EXPECT_LT(snaps, 160);
-    std::printf("[LOCKPICK BREAK TEST] 5%% chance over 2000 contacts -> %d snaps (%.2f%%)\n",
+    std::printf("[LOCKPICK BREAK TEST] 5%% chance over 2000 >=5%% strikes -> %d snaps (%.2f%%)\n",
                 snaps, (snaps * 100.0f) / 2000.0f);
+
+    // Visual snap & 1.5s replacement check: force 100% break chance -> snapped=true, tip falls, replaced after 1.5s!
+    LockpickMinigame snapAnim;
+    snapAnim.open(1, 77777ULL, 1.0f);
+    snapAnim.pickX = 0.5f;
+    snapAnim.pickY = -0.05f;
+    snapAnim.handleMouseMove(0.0f, -15.0f);
+    snapAnim.update(cfg::FIXED_DT, audio);
+    snapAnim.update(cfg::FIXED_DT, audio);
+    ASSERT_TRUE(snapAnim.snapped);
+    float tipStart = snapAnim.brokenTipY;
+    for (int f = 0; f < 30; ++f) snapAnim.update(cfg::FIXED_DT, audio); // 0.5s
+    EXPECT_TRUE(snapAnim.snapped);
+    EXPECT_LT(snapAnim.brokenTipY, tipStart); // Detached tip fell downward
+    for (int f = 0; f < 65; ++f) snapAnim.update(cfg::FIXED_DT, audio); // > 1.5s total
+    EXPECT_FALSE(snapAnim.snapped); // Automatically replaced by new lockpick!
 }
 
 TEST(ConfigHotReloadTest, ParsesPlayerLightingAndAudioSettings) {
@@ -594,6 +641,8 @@ TEST(ConfigHotReloadTest, ParsesPlayerLightingAndAudioSettings) {
             << "vol_door_creak = 0.42\n"
             << "vol_player_step = 0.61\n"
             << "echo_strength = 0.77\n"
+            << "enemy_patrol_speed = 0.85\n"
+            << "enemy_chase_speed = 6.25\n"
             << "lockpick_break_chance = 0.08\n";
     }
     GameSettings s = GameSettings::loadOrCreate(tmpPath);
@@ -604,6 +653,8 @@ TEST(ConfigHotReloadTest, ParsesPlayerLightingAndAudioSettings) {
     EXPECT_FLOAT_EQ(s.volDoorCreak, 0.42f);
     EXPECT_FLOAT_EQ(s.volPlayerStep, 0.61f);
     EXPECT_FLOAT_EQ(s.echoStrength, 0.77f);
+    EXPECT_FLOAT_EQ(s.enemyPatrolSpeed, 0.85f);
+    EXPECT_FLOAT_EQ(s.enemyChaseSpeed, 6.25f);
     EXPECT_FLOAT_EQ(s.lockpickBreakChance, 0.08f);
 
     GameWorld gw;
@@ -1132,4 +1183,93 @@ TEST(BackSlotMeleeAndCraftingTest, RearStrapSlotBreakingWeaponsAndSurfaceSpearCr
     EXPECT_FALSE(gw.hasHeldItem);
     EXPECT_FALSE(gw.heldPlaceMode);
     EXPECT_FALSE(gw.placementPreview.active);
+}
+
+TEST(RealisticConsumptionAndFixedHandPoseTest, FixedHandGripWaterDrinkingAndFoodBitingWork) {
+    AudioEngine audio;
+    GameWorld gw;
+    gw.startNewRun(4242ULL);
+    gw.player.position = {58.0f, 1.0f, 58.0f};
+    gw.player.yaw = 0.0f;
+    gw.player.pitch = 0.0f;
+    gw.worldItems.clear();
+    gw.doors.clear();
+    PlayerInput idle;
+
+    // 1. Rotating placement orientation NEVER rotates the organic fixed grip in the player's hand!
+    gw.hasHeldItem = true;
+    gw.heldItemType = ItemType::Flashlight;
+    gw.heldItemOrient = {};
+    gw.heldPlaceMode = false;
+    Mat4 handBefore = gw.heldItemWorldMatrix();
+    gw.rotateActiveItem(1); // Ignored when !heldPlaceMode
+    EXPECT_EQ(gw.heldItemOrient.rotY, 0);
+
+    gw.heldPlaceMode = true;
+    gw.rotateActiveItem(1); // Rotates placement ghost orient, NOT hand pose!
+    EXPECT_EQ(gw.heldItemOrient.rotY, 1);
+    Mat4 handAfter = gw.heldItemWorldMatrix();
+    for (int i = 0; i < 16; ++i) {
+        EXPECT_NEAR(handBefore.m[i], handAfter.m[i], 1e-5f);
+    }
+    gw.heldPlaceMode = false;
+
+    // 2. Water Bottle: Hold LMB -> cap unscrews, bottle tilts, pours water droplets, drains fill & restores thirst slowly!
+    gw.hasHeldItem = true;
+    gw.heldItemType = ItemType::Water;
+    gw.heldItemDurability = 100;
+    gw.resetHeldConsumableState(true);
+    gw.thirst = 30.0f;
+    gw.particles.clear();
+    gw.consumeLmbHeld = true;
+
+    bool sawCapUnscrew = false;
+    bool sawPouringAndDroplets = false;
+    for (int f = 0; f < 100; ++f) { // ~1.67s -> unscrews + drinks ~35% of bottle
+        gw.update(idle, false, cfg::FIXED_DT, audio);
+        if (gw.consumeOpenProgress > 0.5f && gw.consumeCapSpin > 4.0f) sawCapUnscrew = true;
+        if (gw.consumePouring && !gw.particles.empty()) sawPouringAndDroplets = true;
+    }
+    EXPECT_TRUE(sawCapUnscrew);
+    EXPECT_TRUE(sawPouringAndDroplets);
+    EXPECT_TRUE(gw.hasHeldItem); // Still partially full!
+    EXPECT_LT(gw.consumeRemaining, 0.85f);
+    EXPECT_GT(gw.consumeRemaining, 0.25f);
+    EXPECT_GT(gw.thirst, 35.0f); // Gradually restored thirst!
+
+    // Release LMB midway -> bottle stops pouring, returns upright, cap screws back on, partial fill preserved!
+    gw.consumeLmbHeld = false;
+    for (int f = 0; f < 90; ++f) {
+        gw.update(idle, false, cfg::FIXED_DT, audio);
+    }
+    EXPECT_FALSE(gw.consumePouring);
+    EXPECT_NEAR(gw.consumeTilt, 0.0f, 0.05f);
+    EXPECT_NEAR(gw.consumeOpenProgress, 0.0f, 0.05f);
+    EXPECT_LT(gw.heldItemDurability, 95);
+    EXPECT_GT(gw.heldItemDurability, 20);
+
+    // 3. Ration Bar (Food): Hold LMB -> wrapper peels open, discrete bites spawn crumbs & gradually restore hunger!
+    gw.hasHeldItem = true;
+    gw.heldItemType = ItemType::Food;
+    gw.heldItemDurability = 100;
+    gw.resetHeldConsumableState(true);
+    gw.hunger = 30.0f;
+    gw.particles.clear();
+    gw.consumeLmbHeld = true;
+
+    bool sawWrapperOpen = false;
+    bool sawCrumbBurst = false;
+    for (int f = 0; f < 260; ++f) { // ~4.3s -> peels wrapper + finishes all 5 bites!
+        gw.update(idle, false, cfg::FIXED_DT, audio);
+        if (gw.consumeOpenProgress > 0.8f) sawWrapperOpen = true;
+        if (!gw.particles.empty()) sawCrumbBurst = true;
+        if (!gw.hasHeldItem) break;
+    }
+    // Let residual chew recovery finish smoothly
+    for (int f = 0; f < 40; ++f) gw.update(idle, false, cfg::FIXED_DT, audio);
+
+    EXPECT_TRUE(sawWrapperOpen);
+    EXPECT_TRUE(sawCrumbBurst);
+    EXPECT_FALSE(gw.hasHeldItem); // Ration completely eaten!
+    EXPECT_GT(gw.hunger, 55.0f);  // Hunger restored gradually!
 }

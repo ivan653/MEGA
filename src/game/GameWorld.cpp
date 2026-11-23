@@ -99,6 +99,9 @@ void GameWorld::startNewRun(uint64_t seed) {
     heldItemDurability = 0;
     meleeSwingTimer = 0.0f;
     meleeCooldown = 0.0f;
+    consumeLmbHeld = false;
+    consumePendingRestore = 0.0f;
+    resetHeldConsumableState(false);
     draggingItem = false;
     dragItemDurability = 0;
     dragOriginBackpackId = -1;
@@ -190,11 +193,11 @@ void GameWorld::generateLevel(uint64_t seed) {
     worldItems.push_back({{55.76f, 1.84f, 57.94f}, ItemType::Lockpick, false, 0, 0, {}});
     worldItems.push_back({{55.58f, 1.84f, 58.08f}, ItemType::Lockpick, false, 0, 0, {}});
 
-    // 4) Starter Room Items inside North Cabinet (Food on y=2.16, Water on y=1.64)
-    worldItems.push_back({{57.78f, 2.16f, 55.55f}, ItemType::Food, false, 0, 0, {}});
-    worldItems.push_back({{58.22f, 2.16f, 55.55f}, ItemType::Food, false, 0, 0, {}});
-    worldItems.push_back({{57.78f, 1.64f, 55.55f}, ItemType::Water, false, 0, 0, {}});
-    worldItems.push_back({{58.22f, 1.64f, 55.55f}, ItemType::Water, false, 0, 0, {}});
+    // 4) Starter Room Items inside North Cabinet (Food on y=2.16, Water on y=1.64, full 100% remaining!)
+    worldItems.push_back({{57.78f, 2.16f, 55.55f}, ItemType::Food, false, 0, 0, {}, 100});
+    worldItems.push_back({{58.22f, 2.16f, 55.55f}, ItemType::Food, false, 0, 0, {}, 100});
+    worldItems.push_back({{57.78f, 1.64f, 55.55f}, ItemType::Water, false, 0, 0, {}, 100});
+    worldItems.push_back({{58.22f, 1.64f, 55.55f}, ItemType::Water, false, 0, 0, {}, 100});
 
     syncLockersFromMap();
     spawnRobotsInLoadedRegions();
@@ -898,8 +901,8 @@ void GameWorld::update(const PlayerInput& input, bool firePressed, float dt, Aud
                 hudNoticeTimer = 2.2f;
                 lockpick.close();
             } else {
-                hudNoticeText = "LOCKPICK SNAPPED";
-                hudNoticeTimer = 1.6f;
+                hudNoticeText = "LOCKPICK SNAPPED - REPLACING";
+                hudNoticeTimer = 1.5f;
             }
         } else if (lockpick.unlockedJustNow) {
             if (lockpick.targetDoorIdx >= 0 && lockpick.targetDoorIdx < static_cast<int>(doors.size())) {
@@ -917,8 +920,9 @@ void GameWorld::update(const PlayerInput& input, bool firePressed, float dt, Aud
         }
     }
 
-    // Update hovered interactable object
+    // Update hovered interactable object & realistic held food/water consumption
     updateHover();
+    updateHeldConsumption(dt, audio);
     if (grabbedDoorIdx >= 0 && grabbedDoorIdx < static_cast<int>(doors.size())) {
         if (length(doors[grabbedDoorIdx].hingePos - player.eyePosition()) > 3.2f) {
             grabbedDoorIdx = -1;
@@ -1330,8 +1334,8 @@ void GameWorld::update(const PlayerInput& input, bool firePressed, float dt, Aud
                     e.yaw = targetYaw;
                 }
             } else {
-                // Constant steady patrol velocity calibrated so a 1.12m wide stride = 1 step per 1.50 seconds!
-                constexpr float PATROL_SPEED = 0.44f;
+                // Steady patrol velocity from GameSettings (default 0.44 m/s -> 1 step per 1.50s)
+                const float PATROL_SPEED = settings.enemyPatrolSpeed;
                 int perpX = -e.dirZ, perpZ = e.dirX;
 
                 // Measure corridor centerline & half-width
@@ -1463,7 +1467,7 @@ void GameWorld::update(const PlayerInput& input, bool firePressed, float dt, Aud
                 }
             }
         } else if (e.aiState == EnemyAIState::Chase || e.aiState == EnemyAIState::InvestigateLastSeen) {
-            float chaseSpeed = 4.4f;
+            float chaseSpeed = settings.enemyChaseSpeed;
             e.alerted = true;
             e.alertPulseTimer -= dt;
             if (e.alertPulseTimer <= 0.0f) {
@@ -1554,7 +1558,7 @@ void GameWorld::update(const PlayerInput& input, bool firePressed, float dt, Aud
                     e.nextWaypoint = findNextStepAStar(e.pos, e.aggroOrigin);
                     e.hasWaypoint = true;
                 }
-                constexpr float RETURN_SPEED = 0.44f;
+                const float RETURN_SPEED = settings.enemyPatrolSpeed;
                 Vec3 moveTarget = e.nextWaypoint;
                 if (e.yieldTimer > 0.0f) {
                     moveTarget.x += e.yieldLateralDirX * 0.55f;
@@ -1740,7 +1744,7 @@ void GameWorld::update(const PlayerInput& input, bool firePressed, float dt, Aud
     // Particles
     for (auto& pt : particles) {
         pt.life -= dt;
-        pt.vel.y -= 10.0f * dt;
+        pt.vel.y -= pt.gravity * dt;
         pt.pos += pt.vel * dt;
     }
     particles.erase(
@@ -1757,7 +1761,7 @@ void GameWorld::update(const PlayerInput& input, bool firePressed, float dt, Aud
 void GameWorld::gatherBillboards(std::vector<BillboardInstance>& out, float timeSec) const {
     out.clear();
     for (const auto& pt : particles) {
-        out.push_back({pt.pos, 0.12f, 0.12f, SpriteType::Spark, pt.color});
+        out.push_back({pt.pos, pt.size, pt.size, pt.sprite, pt.color});
     }
     (void)timeSec;
 }
@@ -1863,22 +1867,293 @@ Mat4 GameWorld::heldItemWorldMatrix() const {
     Vec3 right = player.rightDir();
     Vec3 up = normalize(cross(right, fwd));
 
-    bool longWeapon = (heldItemType == ItemType::Broom || heldItemType == ItemType::Mop ||
-                       heldItemType == ItemType::Stick || heldItemType == ItemType::Spear);
+    // Exact right-handed camera-aligned basis: +X = right, +Y = up, +Z = -fwd (toward player)
+    Mat4 camRot = Mat4::identity();
+    camRot.m[0] = right.x; camRot.m[1] = right.y; camRot.m[2]  = right.z;
+    camRot.m[4] = up.x;    camRot.m[5] = up.y;    camRot.m[6]  = up.z;
+    camRot.m[8] = -fwd.x;  camRot.m[9] = -fwd.y;  camRot.m[10] = -fwd.z;
+
+    // Organic fixed first-person pose per ItemType (NEVER affected by placement orientation!)
+    Vec3 localOff{0.20f, -0.15f, -0.37f}; // (-Z = forward away from camera)
+    Mat4 poseRot = Mat4::identity();
     float swingS = (meleeSwingTimer > 0.0f) ? std::sin((meleeSwingTimer / 0.28f) * PI) : 0.0f;
 
-    Vec3 pos = longWeapon
-                   ? (eye + fwd * (0.56f + swingS * 0.28f) + right * (0.24f - swingS * 0.14f) - up * (0.28f + swingS * 0.08f))
-                   : (eye + fwd * (0.42f + swingS * 0.22f) + right * (0.22f - swingS * 0.10f) - up * 0.16f);
-
-    Mat4 swingM = Mat4::identity();
-    if (longWeapon) {
-        // Pitch pole slightly forward in resting guard; thrust/strike forward on swing!
-        swingM = Mat4::rotateX(-0.24f - swingS * 0.95f) * Mat4::rotateZ(swingS * 0.35f);
-    } else if (meleeSwingTimer > 0.0f) {
-        swingM = Mat4::rotateX(-swingS * 1.10f) * Mat4::rotateZ(swingS * 0.45f);
+    switch (heldItemType) {
+        case ItemType::Flashlight:
+            // Lens (+Z in model) points cleanly forward (-Z in camera)
+            localOff = {0.21f, -0.15f, -0.38f};
+            poseRot = Mat4::rotateY(PI - 0.10f) * Mat4::rotateX(0.06f);
+            break;
+        case ItemType::Battery:
+            localOff = {0.19f, -0.14f, -0.35f};
+            poseRot = Mat4::rotateY(-0.35f) * Mat4::rotateZ(0.14f) * Mat4::rotateX(-0.15f);
+            break;
+        case ItemType::Food: {
+            // Ration bar angled sideways so player clearly sees the wrapper peeling back & bites shortening the bar!
+            float lift = clampf(consumeTilt, 0.0f, 1.0f);
+            float openL = clampf(consumeOpenProgress, 0.0f, 1.0f);
+            float biteDip = std::sin(consumeBiteImpulse * PI);
+            float chewBob = (lift > 0.6f) ? std::sin(consumeBiteTimer * 18.0f) * 0.006f : 0.0f;
+            float bring = std::max(openL * 0.35f, lift);
+            localOff = {
+                0.18f * (1.0f - bring) + 0.065f * bring,
+                -0.14f * (1.0f - bring) + (-0.070f + biteDip * 0.018f + chewBob) * bring,
+                -0.35f * (1.0f - bring) + (-0.25f + biteDip * 0.032f) * bring
+            };
+            // Sideways profile (~55 deg yaw + slight roll) makes length reduction & wrapper flaps clearly visible!
+            float rx = -0.18f * (1.0f - bring) + (0.22f + biteDip * 0.18f) * bring;
+            float ry = -0.96f * (1.0f - bring) + (-0.78f) * bring;
+            float rz = 0.24f * (1.0f - bring) + (0.18f) * bring;
+            poseRot = Mat4::rotateY(ry) * Mat4::rotateX(rx) * Mat4::rotateZ(rz);
+            break;
+        }
+        case ItemType::Water: {
+            // Bottle sits upright in right hand; lifts when unscrewing, then tilts toward mouth to pour!
+            float openL = clampf(consumeOpenProgress, 0.0f, 1.0f);
+            float tiltT = clampf(consumeTilt / 1.35f, 0.0f, 1.0f);
+            float glugBob = consumePouring ? std::sin(consumeSoundTimer * 15.0f) * 0.008f : 0.0f;
+            float lift = std::max(openL * 0.40f, tiltT);
+            localOff = {
+                0.20f * (1.0f - lift) + 0.035f * lift,
+                -0.15f * (1.0f - lift) + (-0.065f + tiltT * 0.025f + glugBob) * lift,
+                -0.37f * (1.0f - lift) + (-0.26f + tiltT * 0.03f) * lift
+            };
+            // Positive rotateX tilts bottle top (+Y) toward camera/mouth (+Z)!
+            float rx = -0.06f * (1.0f - tiltT) + consumeTilt;
+            float ry = -0.22f * (1.0f - lift) - 0.06f * lift;
+            float rz = 0.08f * (1.0f - lift) + 0.05f * tiltT;
+            poseRot = Mat4::rotateY(ry) * Mat4::rotateX(rx) * Mat4::rotateZ(rz);
+            break;
+        }
+        case ItemType::Lockpick:
+            localOff = {0.17f, -0.13f, -0.35f};
+            poseRot = Mat4::rotateY(PI - 0.22f) * Mat4::rotateX(-0.12f) * Mat4::rotateZ(-0.18f);
+            break;
+        case ItemType::Broom:
+        case ItemType::Mop:
+        case ItemType::Stick:
+        case ItemType::Spear:
+            localOff = {
+                0.24f - swingS * 0.14f,
+                -0.28f - swingS * 0.08f,
+                -(0.56f + swingS * 0.28f)
+            };
+            poseRot = Mat4::rotateX(-0.24f - swingS * 0.95f) * Mat4::rotateZ(0.10f + swingS * 0.35f);
+            break;
+        case ItemType::Tape:
+            localOff = {0.19f, -0.14f, -0.36f};
+            poseRot = Mat4::rotateX(0.45f) * Mat4::rotateY(-0.25f) * Mat4::rotateZ(0.15f);
+            break;
+        case ItemType::Knife:
+            localOff = {
+                0.21f - swingS * 0.12f,
+                -0.14f + swingS * 0.04f,
+                -(0.38f + swingS * 0.24f)
+            };
+            poseRot = Mat4::rotateY(-0.35f) * Mat4::rotateX(-0.30f - swingS * 1.05f) * Mat4::rotateZ(0.12f + swingS * 0.42f);
+            break;
     }
-    return Mat4::translate(pos) * Mat4::rotateY(-player.yaw) * swingM * heldItemOrient.toMatrix();
+
+    Vec3 worldPos = eye + right * localOff.x + up * localOff.y - fwd * localOff.z;
+    return Mat4::translate(worldPos) * camRot * poseRot;
+}
+
+void GameWorld::resetHeldConsumableState(bool initializeFromDurability) {
+    consumeCapSpin = 0.0f;
+    consumeTilt = 0.0f;
+    consumeBiteTimer = 0.0f;
+    consumeBiteImpulse = 0.0f;
+    consumeDropletTimer = 0.0f;
+    consumeSoundTimer = 0.0f;
+    consumePouring = false;
+    consumePlayedOpenSfx = false;
+    if (initializeFromDurability && hasHeldItem &&
+        (heldItemType == ItemType::Water || heldItemType == ItemType::Food)) {
+        if (heldItemDurability <= 0) heldItemDurability = 100;
+        consumeRemaining = clampf(static_cast<float>(heldItemDurability) / 100.0f, 0.02f, 1.0f);
+        consumeOpenProgress = (heldItemType == ItemType::Food && consumeRemaining < 0.99f) ? 0.75f : 0.0f;
+    } else {
+        consumeRemaining = 1.0f;
+        consumeOpenProgress = 0.0f;
+    }
+}
+
+ConsumableVisualState GameWorld::gatherHeldConsumableState() const {
+    ConsumableVisualState st;
+    if (hasHeldItem && (heldItemType == ItemType::Water || heldItemType == ItemType::Food)) {
+        st.fill = consumeRemaining;
+        st.openProgress = consumeOpenProgress;
+        st.capSpin = consumeCapSpin;
+        st.tiltRad = consumeTilt;
+        st.biteImpulse = consumeBiteImpulse;
+        st.pouring = consumePouring;
+    }
+    return st;
+}
+
+void GameWorld::updateHeldConsumption(float dt, AudioEngine& audio) {
+    // Always flush gradual pending hunger recovery smoothly even after swallowing the final bite
+    if (consumePendingRestore > 0.0f) {
+        float rate = std::max(8.0f, settings.foodRestore * 0.38f);
+        float delta = std::min(consumePendingRestore, rate * dt);
+        hunger = std::min(settings.maxHunger, hunger + delta);
+        consumePendingRestore -= delta;
+    }
+
+    if (!hasHeldItem || (heldItemType != ItemType::Water && heldItemType != ItemType::Food)) {
+        consumePouring = false;
+        return;
+    }
+
+    bool canConsume = !heldPlaceMode && backpackMode != BackpackMode::InHands &&
+                      !draggingItem && !lockpick.active && grabbedDoorIdx < 0 &&
+                      hoveredDoorIdx < 0 && hoveredItemIdx < 0;
+    bool active = canConsume && consumeLmbHeld;
+
+    if (heldItemType == ItemType::Water) {
+        if (active) {
+            if (consumeOpenProgress < 1.0f) {
+                if (!consumePlayedOpenSfx) {
+                    audio.play(SoundId::BottleCapTwist, 0.85f);
+                    consumePlayedOpenSfx = true;
+                }
+                consumeOpenProgress = std::min(1.0f, consumeOpenProgress + dt * 1.85f);
+                consumeCapSpin += dt * 24.0f;
+            }
+            if (consumeOpenProgress >= 0.90f) {
+                // Fuller bottle pours at moderate tilt (~68 deg); emptier bottle tilts steeper (~115 deg)!
+                float targetTilt = 1.18f + (1.0f - consumeRemaining) * 0.82f;
+                consumeTilt += (targetTilt - consumeTilt) * std::min(1.0f, dt * 6.5f);
+                float pourThresh = 0.72f + (1.0f - consumeRemaining) * 0.36f;
+                consumePouring = (consumeTilt >= pourThresh && consumeRemaining > 0.001f);
+
+                if (consumePouring) {
+                    float drain = std::min(consumeRemaining, dt * 0.30f);
+                    consumeRemaining -= drain;
+                    heldItemDurability = std::max(1, static_cast<int>(std::round(consumeRemaining * 100.0f)));
+                    thirst = std::min(settings.maxThirst, thirst + settings.waterRestore * drain);
+                    energy = std::min(settings.maxEnergy, energy + 6.0f * drain);
+
+                    // Emit blue square water droplets streaming downward from the bottle mouth!
+                    consumeDropletTimer -= dt;
+                    if (consumeDropletTimer <= 0.0f) {
+                        consumeDropletTimer = 0.022f;
+                        Mat4 hm = heldItemWorldMatrix();
+                        Vec3 mouthPos = hm.transformPoint({0.0f, 0.072f, 0.010f});
+                        Vec3 fwdHoriz = normalize({player.forwardDir().x, 0.0f, player.forwardDir().z});
+                        Rng pRng(baseSeed ^ static_cast<uint64_t>(particles.size() * 7919 + static_cast<int>(consumeRemaining * 10000.0f)));
+                        for (int k = 0; k < 2; ++k) {
+                            Vec3 vel{
+                                -fwdHoriz.x * (0.08f + pRng.nextFloat() * 0.08f) + (pRng.nextFloat() - 0.5f) * 0.10f,
+                                -(0.55f + pRng.nextFloat() * 0.35f),
+                                -fwdHoriz.z * (0.08f + pRng.nextFloat() * 0.08f) + (pRng.nextFloat() - 0.5f) * 0.10f
+                            };
+                            particles.push_back({
+                                mouthPos,
+                                vel,
+                                0.24f + pRng.nextFloat() * 0.12f,
+                                {0.20f, 0.66f, 1.0f},
+                                0.022f,
+                                9.8f,
+                                SpriteType::WaterDrop
+                            });
+                        }
+                    }
+
+                    // Rhythmic bubbling water sip sound
+                    consumeSoundTimer -= dt;
+                    if (consumeSoundTimer <= 0.0f) {
+                        consumeSoundTimer = 0.40f;
+                        audio.play(SoundId::WaterSip, 0.85f);
+                    }
+
+                    if (consumeRemaining <= 0.001f) {
+                        hasHeldItem = false;
+                        heldPlaceMode = false;
+                        heldItemDurability = 0;
+                        consumeLmbHeld = false;
+                        resetHeldConsumableState(false);
+                        hudNoticeText = "BOTTLE EMPTY";
+                        hudNoticeTimer = 1.6f;
+                        syncInventoryCounts();
+                    }
+                }
+            }
+        } else {
+            consumePouring = false;
+            consumeTilt = std::max(0.0f, consumeTilt - dt * 5.2f);
+            if (consumeTilt < 0.18f && consumeOpenProgress > 0.0f) {
+                consumeOpenProgress = std::max(0.0f, consumeOpenProgress - dt * 2.2f);
+                consumeCapSpin -= dt * 24.0f;
+                if (consumeOpenProgress <= 0.0f && consumePlayedOpenSfx) {
+                    audio.play(SoundId::BottleCapTwist, 0.55f);
+                    consumePlayedOpenSfx = false;
+                }
+            }
+        }
+    } else if (heldItemType == ItemType::Food) {
+        consumeBiteImpulse = std::max(0.0f, consumeBiteImpulse - dt * 3.4f);
+        if (active) {
+            if (consumeOpenProgress < 1.0f) {
+                if (!consumePlayedOpenSfx) {
+                    audio.play(SoundId::WrapperOpen, 0.85f);
+                    consumePlayedOpenSfx = true;
+                }
+                consumeOpenProgress = std::min(1.0f, consumeOpenProgress + dt * 2.1f);
+                consumeTilt = std::min(1.0f, consumeTilt + dt * 2.8f);
+            } else {
+                consumeTilt = std::min(1.0f, consumeTilt + dt * 4.5f);
+                consumeBiteTimer -= dt;
+                if (consumeBiteTimer <= 0.0f && consumeRemaining > 0.001f) {
+                    float biteAmt = std::min(consumeRemaining, 0.20f);
+                    consumeRemaining -= biteAmt;
+                    heldItemDurability = std::max(1, static_cast<int>(std::round(consumeRemaining * 100.0f)));
+                    consumePendingRestore += settings.foodRestore * biteAmt;
+                    consumeBiteImpulse = 1.0f;
+                    consumeBiteTimer = 0.62f;
+                    audio.play(SoundId::FoodBite, 0.90f);
+
+                    // Burst fine ration bar crumbs from the bitten front tip!
+                    Mat4 hm = heldItemWorldMatrix();
+                    float barL = itemBaseGridSize(ItemType::Food).z * Backpack3D::CELL_SIZE * 0.88f;
+                    float tipZ = -barL * 0.48f + barL * (0.18f + 0.80f * consumeRemaining);
+                    Vec3 bitePos = hm.transformPoint({0.0f, 0.0f, tipZ});
+                    Rng pRng(baseSeed ^ static_cast<uint64_t>(particles.size() * 6151 + static_cast<int>(consumeRemaining * 10000.0f)));
+                    for (int k = 0; k < 6; ++k) {
+                        Vec3 vel{(pRng.nextFloat() - 0.5f) * 0.55f,
+                                 0.15f + pRng.nextFloat() * 0.35f,
+                                 (pRng.nextFloat() - 0.5f) * 0.55f};
+                        particles.push_back({
+                            bitePos,
+                            vel,
+                            0.32f + pRng.nextFloat() * 0.20f,
+                            {0.88f, 0.65f, 0.34f},
+                            0.020f,
+                            7.5f
+                        });
+                    }
+
+                    if (consumeRemaining <= 0.001f) {
+                        hasHeldItem = false;
+                        heldPlaceMode = false;
+                        heldItemDurability = 0;
+                        consumeLmbHeld = false;
+                        resetHeldConsumableState(false);
+                        hudNoticeText = "RATION FINISHED";
+                        hudNoticeTimer = 1.6f;
+                        syncInventoryCounts();
+                    }
+                }
+            }
+        } else {
+            consumeTilt = std::max(0.0f, consumeTilt - dt * 4.5f);
+            consumeBiteTimer = std::min(consumeBiteTimer, 0.14f);
+            if (consumeRemaining >= 0.999f && consumeOpenProgress > 0.0f) {
+                consumeOpenProgress = std::max(0.0f, consumeOpenProgress - dt * 2.0f);
+                if (consumeOpenProgress <= 0.0f) consumePlayedOpenSfx = false;
+            }
+        }
+    }
 }
 
 void GameWorld::rotateBackpackView(float dx, float dy) {
@@ -2146,7 +2421,7 @@ void GameWorld::updateCursorHover(const Vec3& rayOrig, const Vec3& rayDir) {
 void GameWorld::rotateActiveItem(int axis) {
     ItemOrientation* targetOri = nullptr;
     if (draggingItem) targetOri = &dragItemOrient;
-    else if (hasHeldItem) targetOri = &heldItemOrient;
+    else if (hasHeldItem && heldPlaceMode) targetOri = &heldItemOrient; // Only rotate placement ghost, NEVER casual held item!
     if (!targetOri) return;
     if (axis == 0) targetOri->rotateX();
     else if (axis == 1) targetOri->rotateY();
@@ -2426,9 +2701,11 @@ bool GameWorld::handlePrimaryClick(const Vec3& rayOrig, const Vec3& rayDir, Audi
                 }
             }
             hasHeldItem = true;
+            heldPlaceMode = false;
             heldItemType = removed.type;
             heldItemOrient = removed.orient;
             heldItemDurability = removed.durability;
+            resetHeldConsumableState(true);
             hoveredBackpackItemId = -1;
             // Automatically put backpack back on back when taking an item into hand!
             if (backpackMode == BackpackMode::InHands) {
@@ -2455,6 +2732,8 @@ bool GameWorld::handlePrimaryClick(const Vec3& rayOrig, const Vec3& rayDir, Audi
         hasHeldItem = false;
         heldPlaceMode = false;
         heldItemDurability = 0;
+        consumeLmbHeld = false;
+        resetHeldConsumableState(false);
         placementPreview = GhostPreviewState{};
         syncInventoryCounts();
         audio.play(SoundId::Pickup, 0.8f);
@@ -2472,6 +2751,8 @@ bool GameWorld::handlePrimaryClick(const Vec3& rayOrig, const Vec3& rayDir, Audi
                 hasHeldItem = false;
                 heldPlaceMode = false;
                 heldItemDurability = 0;
+                consumeLmbHeld = false;
+                resetHeldConsumableState(false);
                 placementPreview = GhostPreviewState{};
                 syncInventoryCounts();
                 audio.play3D(SoundId::Pickup, worldItems.back().pos, 0.8f);
@@ -2502,9 +2783,11 @@ bool GameWorld::handleSecondaryClick(const Vec3& rayOrig, const Vec3& rayDir, Au
         // Cancel drag: restore item into backpack or hand
         if (backpack.tryAutoAdd(dragItemType, dragItemDurability) < 0 && !hasHeldItem) {
             hasHeldItem = true;
+            heldPlaceMode = false;
             heldItemType = dragItemType;
             heldItemOrient = dragItemOrient;
             heldItemDurability = dragItemDurability;
+            resetHeldConsumableState(true);
         }
         draggingItem = false;
         dragItemDurability = 0;
@@ -2604,9 +2887,11 @@ bool GameWorld::beginInteract(AudioEngine& audio) {
         if (!hasHeldItem) {
             it.pickedUp = true;
             hasHeldItem = true;
+            heldPlaceMode = false;
             heldItemType = it.type;
             heldItemOrient = it.orient;
             heldItemDurability = it.durability;
+            resetHeldConsumableState(true);
             if (it.type == ItemType::Flashlight && !inventory.hasFlashlight) {
                 inventory.flashlightBattery = settings.maxBattery;
             }
@@ -2722,7 +3007,12 @@ void GameWorld::gatherInteractables(std::vector<DoorRenderState>& outDoors,
     for (size_t i = 0; i < worldItems.size(); ++i) {
         if (worldItems[i].pickedUp) continue;
         bool hl = (static_cast<int>(i) == hoveredItemIdx);
-        outItems.push_back({worldItems[i].pos, static_cast<int>(worldItems[i].type), worldItems[i].orient, hl});
+        float fill = 1.0f;
+        if ((worldItems[i].type == ItemType::Water || worldItems[i].type == ItemType::Food) &&
+            worldItems[i].durability > 0) {
+            fill = clampf(static_cast<float>(worldItems[i].durability) / 100.0f, 0.02f, 1.0f);
+        }
+        outItems.push_back({worldItems[i].pos, static_cast<int>(worldItems[i].type), worldItems[i].orient, hl, fill});
     }
 }
 

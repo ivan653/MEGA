@@ -101,6 +101,9 @@ struct Particle {
     Vec3 vel;
     float life = 0.3f;
     Vec3 color{1.0f, 0.8f, 0.3f};
+    float size = 0.12f;
+    float gravity = 10.0f;
+    SpriteType sprite = SpriteType::Spark;
 };
 
 struct WorldItem {
@@ -211,6 +214,19 @@ public:
     int heldItemDurability = 0;
     float meleeSwingTimer = 0.0f;
     float meleeCooldown = 0.0f;
+    // Procedural realistic consumption state (Hold LMB with Water or Food in hand)
+    bool consumeLmbHeld = false;
+    float consumeOpenProgress = 0.0f;  // 0..1 cap unscrewed / wrapper peeled back
+    float consumeCapSpin = 0.0f;       // radians of bottle cap twist
+    float consumeTilt = 0.0f;          // bottle tilt angle (Water) or mouth lift progress (Food)
+    float consumeRemaining = 1.0f;     // 0..1 remaining water/bar while held
+    float consumeBiteTimer = 0.0f;     // time until next discrete bite (Food)
+    float consumeBiteImpulse = 0.0f;   // 0..1 bite chew feedback pulse
+    float consumePendingRestore = 0.0f;// smooth gradual hunger recovery spread across chew cycle
+    float consumeDropletTimer = 0.0f;  // water droplet particle spawn cadence
+    float consumeSoundTimer = 0.0f;    // gulp/sip audio cadence
+    bool consumePouring = false;       // true while water stream exits bottle neck
+    bool consumePlayedOpenSfx = false;
     bool draggingItem = false;        // True when RMB-dragging an item with paused camera + free mouse cursor
     ItemType dragItemType = ItemType::Food;
     ItemOrientation dragItemOrient{};
@@ -261,6 +277,9 @@ public:
     void rotateActiveItem(int axis); // 0=X, 1=Y, 2=Z
     void rotateBackpackView(float dx, float dy);
     bool useHeldItem(AudioEngine& audio);
+    void resetHeldConsumableState(bool initializeFromDurability = false);
+    void updateHeldConsumption(float dt, AudioEngine& audio);
+    ConsumableVisualState gatherHeldConsumableState() const;
     bool performMeleeAttack(AudioEngine& audio);
     void updateSurfaceCrafting();
     bool performCraft(int optionIdx, AudioEngine& audio);

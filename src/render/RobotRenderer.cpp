@@ -312,7 +312,8 @@ void RobotRenderer::renderInteractables(const Shader& worldShader, const Mat4& v
                                         bool hasHeldItem,
                                         ItemType heldType,
                                         const ItemOrientation& heldOrient,
-                                        const Mat4& heldMatrix) {
+                                        const Mat4& heldMatrix,
+                                        const ConsumableVisualState& heldConsumable) {
     if (doors.empty() && items.empty() && !backpackState.visible && !ghost.active && !hasHeldItem) return;
     (void)view; (void)proj; (void)camPos; (void)heldOrient;
 
@@ -331,7 +332,8 @@ void RobotRenderer::renderInteractables(const Shader& worldShader, const Mat4& v
     };
 
     // Unified 3D item geometry matching exact (X, Y, Z) * CELL_SIZE grid dimensions!
-    auto drawItemCentered = [&](const Mat4& centerM, ItemType type, const Vec3& tint, float forceEmissive = 0.0f) {
+    auto drawItemCentered = [&](const Mat4& centerM, ItemType type, const Vec3& tint,
+                                float forceEmissive = 0.0f, const ConsumableVisualState* cons = nullptr) {
         constexpr float C = Backpack3D::CELL_SIZE;
         Int3 bsz = itemBaseGridSize(type);
         float sx = bsz.x * C;
@@ -348,14 +350,124 @@ void RobotRenderer::renderInteractables(const Shader& worldShader, const Mat4& v
                         {sx * 0.82f, sy * 0.84f, sz * 0.82f}, 3.0f, forceEmissive, Vec3{1.25f, 1.02f, 0.35f} * tint.x);
             drawLitPart(centerM * Mat4::translate({0.0f, sy * 0.44f, 0.0f}) * Mat4::scale({sx * 0.48f, sy * 0.14f, sz * 0.48f}),
                         {sx * 0.48f, sy * 0.14f, sz * 0.48f}, 4.0f, forceEmissive, tint);
-        } else if (type == ItemType::Food) { // 1 x 1 x 2 ration bar
-            drawLitPart(centerM * Mat4::scale({sx * 0.88f, sy * 0.78f, sz * 0.92f}),
-                        {sx * 0.88f, sy * 0.78f, sz * 0.92f}, 3.0f, forceEmissive, Vec3{1.05f, 0.72f, 0.42f} * tint.x);
-        } else if (type == ItemType::Water) { // 2 x 3 x 2 bottle
-            drawLitPart(centerM * Mat4::translate({0.0f, -0.012f, 0.0f}) * Mat4::scale({sx * 0.78f, sy * 0.82f, sz * 0.78f}),
-                        {sx * 0.78f, sy * 0.82f, sz * 0.78f}, 9.0f, forceEmissive, Vec3{0.55f, 0.98f, 1.38f} * tint.x);
-            drawLitPart(centerM * Mat4::translate({0.0f, sy * 0.43f, 0.0f}) * Mat4::scale({sx * 0.42f, sy * 0.16f, sz * 0.42f}),
-                        {sx * 0.42f, sy * 0.16f, sz * 0.42f}, 1.0f, forceEmissive, tint);
+        } else if (type == ItemType::Food) { // 1 x 1 x 2 ration bar with peelable wrapper & discrete bitten bar!
+            float fill = cons ? clampf(cons->fill, 0.0f, 1.0f) : 1.0f;
+            float openP = cons ? clampf(cons->openProgress, 0.0f, 1.0f) : 0.0f;
+            float barW = sx * 0.80f;
+            float barH = sy * 0.66f;
+            float barL = sz * 0.88f;
+
+            // Lower tactical foil wrapper sleeve (stays around base half -Z..0)
+            float sleeveL = barL * (0.58f - 0.14f * openP);
+            float sleeveZ = -barL * 0.5f + sleeveL * 0.5f;
+            Vec3 wrapTint = Vec3{0.82f, 0.64f, 0.34f} * tint.x;
+            Vec3 foilTint = Vec3{1.15f, 1.18f, 1.24f} * tint.x;
+            drawLitPart(centerM * Mat4::translate({0.0f, 0.0f, sleeveZ}) * Mat4::scale({barW * 1.08f, barH * 1.12f, sleeveL}),
+                        {barW, barH, sleeveL}, 4.0f, forceEmissive, wrapTint);
+
+            // Upper wrapper flaps: sealed when openP==0, peel back & fold outward along +Y/-Y as openP -> 1!
+            float flapL = barL * 0.44f;
+            float hingeZ = -barL * 0.5f + sleeveL;
+            float peelAngle = openP * 2.15f; // Folds cleanly back ~123 degrees!
+            for (int side : {1, -1}) {
+                Mat4 flapPivot = centerM
+                               * Mat4::translate({0.0f, side * barH * 0.52f, hingeZ})
+                               * Mat4::rotateX(-side * peelAngle);
+                drawLitPart(flapPivot * Mat4::translate({0.0f, 0.0f, flapL * 0.5f}) * Mat4::scale({barW * 1.06f, 0.005f, flapL}),
+                            {barW, 0.005f, flapL}, 4.0f, forceEmissive, (openP > 0.35f) ? foilTint : wrapTint);
+            }
+
+            // Remaining edible oat/chocolate ration bar (shortens from +Z tip as bites are taken!)
+            if (fill > 0.02f) {
+                float remL = barL * (0.18f + 0.80f * fill);
+                float remZ = -barL * 0.48f + remL * 0.5f;
+                drawLitPart(centerM * Mat4::translate({0.0f, 0.0f, remZ}) * Mat4::scale({barW * 0.94f, barH * 0.94f, remL}),
+                            {barW, barH, remL}, 3.0f, forceEmissive, Vec3{0.68f, 0.44f, 0.24f} * tint.x);
+                // Lighter bitten cross-section texture on exposed front end when partially eaten
+                if (fill < 0.98f || openP > 0.3f) {
+                    float tipZ = -barL * 0.48f + remL;
+                    drawLitPart(centerM * Mat4::translate({0.0f, 0.0f, tipZ}) * Mat4::scale({barW * 0.86f, barH * 0.84f, 0.006f}),
+                                {barW, barH, 0.006f}, 3.0f, forceEmissive, Vec3{0.92f, 0.72f, 0.42f} * tint.x);
+                }
+            }
+        } else if (type == ItemType::Water) { // 2 x 3 x 2 bottle with visible draining sloshing water + unscrewing cap!
+            float fill = cons ? clampf(cons->fill, 0.0f, 1.0f) : 1.0f;
+            float openP = cons ? clampf(cons->openProgress, 0.0f, 1.0f) : 0.0f;
+            float capSpin = cons ? cons->capSpin : 0.0f;
+            float tiltRad = cons ? cons->tiltRad : 0.0f;
+
+            float bw = sx * 0.78f;
+            float bh = sy * 0.74f;
+            float bd = sz * 0.78f;
+            float bodyBotY = -sy * 0.46f;
+            float bodyTopY = bodyBotY + bh;
+            Vec3 plasticTint = Vec3{0.78f, 0.90f, 0.98f} * tint.x;
+
+            // Bottle base plate & 4 translucent-style corner ribs so player clearly sees water level inside!
+            drawLitPart(centerM * Mat4::translate({0.0f, bodyBotY + 0.006f, 0.0f}) * Mat4::scale({bw, 0.012f, bd}),
+                        {bw, 0.012f, bd}, 4.0f, forceEmissive, plasticTint);
+            drawLitPart(centerM * Mat4::translate({0.0f, bodyTopY + 0.006f, 0.0f}) * Mat4::scale({bw * 0.74f, 0.014f, bd * 0.74f}),
+                        {bw * 0.74f, 0.014f, bd * 0.74f}, 4.0f, forceEmissive, plasticTint);
+            // Narrow cylindrical-style neck
+            float neckH = sy * 0.14f;
+            float neckY = bodyTopY + 0.012f + neckH * 0.5f;
+            drawLitPart(centerM * Mat4::translate({0.0f, neckY, 0.0f}) * Mat4::scale({sx * 0.36f, neckH, sz * 0.36f}),
+                        {sx * 0.36f, neckH, sz * 0.36f}, 4.0f, forceEmissive, plasticTint);
+
+            // 4 corner structural ribs (leaves clear viewing windows on all 4 sides to see the water!)
+            float ribT = 0.010f;
+            for (float rx : {-0.46f, 0.46f}) {
+                for (float rz : {-0.46f, 0.46f}) {
+                    drawLitPart(centerM * Mat4::translate({rx * bw, bodyBotY + bh * 0.5f, rz * bd})
+                                        * Mat4::scale({ribT, bh, ribT}),
+                                {ribT, bh, ribT}, 4.0f, forceEmissive, plasticTint);
+                }
+            }
+            // Mid-body label band on lower-middle ring
+            drawLitPart(centerM * Mat4::translate({0.0f, bodyBotY + bh * 0.22f, 0.0f}) * Mat4::scale({bw * 1.02f, bh * 0.14f, bd * 1.02f}),
+                        {bw, bh * 0.14f, bd}, 1.0f, forceEmissive, Vec3{0.22f, 0.58f, 0.88f} * tint.x);
+
+            // Dynamic interior WATER volume — drains smoothly with `fill` & shifts/slants with bottle `tiltRad`!
+            if (fill > 0.015f) {
+                float usableH = bh - 0.022f;
+                float waterH = usableH * fill;
+                float tiltFactor = clampf(std::abs(tiltRad) / 1.4f, 0.0f, 1.0f);
+                // As bottle tilts toward the player (+Z local), water slides up along the +Z wall toward neck!
+                float slideUp = tiltFactor * (usableH - waterH) * 0.72f;
+                float slideZ  = tiltFactor * (bd * 0.18f);
+                float waterY  = bodyBotY + 0.012f + waterH * 0.5f + slideUp;
+                float sloshRotX = -tiltRad * 0.38f * (1.0f - 0.45f * fill);
+
+                Mat4 waterM = centerM
+                            * Mat4::translate({0.0f, waterY, slideZ})
+                            * Mat4::rotateX(sloshRotX)
+                            * Mat4::scale({bw * 0.84f, waterH, bd * (0.84f - 0.14f * tiltFactor)});
+                drawLitPart(waterM, {bw * 0.84f, waterH, bd * 0.84f}, 9.0f,
+                            std::max(forceEmissive, 0.35f), Vec3{0.38f, 0.86f, 1.32f} * tint.x);
+
+                // Brighter water meniscus shimmer line on top surface
+                Mat4 surfM = centerM
+                           * Mat4::translate({0.0f, waterY + waterH * 0.48f, slideZ})
+                           * Mat4::rotateX(sloshRotX)
+                           * Mat4::scale({bw * 0.82f, 0.006f, bd * 0.78f});
+                drawLitPart(surfM, {bw * 0.82f, 0.006f, bd * 0.78f}, 6.0f, 1.0f, {0.65f, 0.96f, 1.25f});
+            }
+
+            // Animated screw cap: spins around Y & lifts off neck as openP: 0 -> 1, then moves aside while drinking!
+            float capBaseY = bodyTopY + 0.012f + neckH + 0.008f;
+            float liftPhase = clampf(openP * 1.45f, 0.0f, 1.0f);
+            float asidePhase = clampf((openP - 0.55f) / 0.45f, 0.0f, 1.0f);
+            Vec3 capPos{
+                -asidePhase * sx * 0.75f,
+                capBaseY + liftPhase * 0.032f - asidePhase * 0.025f,
+                -asidePhase * sz * 0.25f
+            };
+            Mat4 capM = centerM
+                      * Mat4::translate(capPos)
+                      * Mat4::rotateY(capSpin)
+                      * Mat4::rotateZ(asidePhase * 0.55f)
+                      * Mat4::scale({sx * 0.42f, sy * 0.13f, sz * 0.42f});
+            drawLitPart(capM, {sx * 0.42f, sy * 0.13f, sz * 0.42f}, 1.0f, forceEmissive, Vec3{0.26f, 0.62f, 1.05f} * tint.x);
         } else if (type == ItemType::Lockpick) { // 1 x 1 x 3 L-shaped steel pick
             drawLitPart(centerM * Mat4::translate({0.0f, 0.0f, -sz * 0.30f}) * Mat4::scale({sx * 0.40f, sy * 0.35f, sz * 0.38f}),
                         {sx * 0.40f, sy * 0.35f, sz * 0.38f}, 10.0f, forceEmissive, Vec3{0.55f, 0.68f, 0.85f} * tint.x);
@@ -437,7 +549,10 @@ void RobotRenderer::renderInteractables(const Shader& worldShader, const Mat4& v
         Int3 osz = it.orient.applyToSize(itemBaseGridSize(t));
         float cy = osz.y * Backpack3D::CELL_SIZE * 0.5f;
         Mat4 centerM = Mat4::translate({it.pos.x, it.pos.y + cy, it.pos.z}) * it.orient.toMatrix();
-        drawItemCentered(centerM, t, tint, 0.0f);
+        ConsumableVisualState wCons;
+        wCons.fill = it.fill;
+        if (t == ItemType::Food && it.fill < 0.99f) wCons.openProgress = 0.75f;
+        drawItemCentered(centerM, t, tint, 0.0f, &wCons);
     }
 
     // 3) Render Diegetic 3D Backpack (6 x 8 x 4 cavity + rear 2 x 30 x 6 dual-strap slot!)
@@ -510,7 +625,12 @@ void RobotRenderer::renderInteractables(const Shader& worldShader, const Mat4& v
                 em = 1.0f;
             }
             Mat4 itemM = B * Mat4::translate(localCenter) * pi.orient.toMatrix();
-            drawItemCentered(itemM, pi.type, tint, em);
+            ConsumableVisualState pCons;
+            if ((pi.type == ItemType::Water || pi.type == ItemType::Food) && pi.durability > 0) {
+                pCons.fill = clampf(static_cast<float>(pi.durability) / 100.0f, 0.02f, 1.0f);
+                if (pi.type == ItemType::Food && pCons.fill < 0.99f) pCons.openProgress = 0.75f;
+            }
+            drawItemCentered(itemM, pi.type, tint, em, &pCons);
         }
     }
 
@@ -533,9 +653,9 @@ void RobotRenderer::renderInteractables(const Shader& worldShader, const Mat4& v
         drawItemCentered(gCenterM * ghost.orient.toMatrix(), ghost.type, gCol, 1.0f);
     }
 
-    // 5) Render Item Currently Held in Player's Right Hand
+    // 5) Render Item Currently Held in Player's Right Hand (organic fixed pose + procedural consumption animation!)
     if (hasHeldItem) {
-        drawItemCentered(heldMatrix, heldType, {1.15f, 1.15f, 1.15f}, 0.0f);
+        drawItemCentered(heldMatrix, heldType, {1.15f, 1.15f, 1.15f}, 0.0f, &heldConsumable);
     }
 
     // Reset worldShader overrides for next frame's chunks

@@ -95,8 +95,9 @@ void Player::update(const PlayerInput& input, const WorldGrid& world, float dt,
     }
 
     float maxSpeed = moveSpeed * (input.sprint ? sprintMult : 1.0f);
+    bool hasWish = lengthSq(wish) > 1e-5f;
 
-    if (grounded) {
+    if (grounded && !hasWish) {
         Vec3 horiz{velocity.x, 0.0f, velocity.z};
         float speed = length(horiz);
         if (speed > 0.001f) {
@@ -108,6 +109,7 @@ void Player::update(const PlayerInput& input, const WorldGrid& world, float dt,
     }
 
     float accel = grounded ? cfg::GROUND_ACCEL : cfg::AIR_ACCEL;
+    if (!grounded && !hasWish) accel = 0.0f;
     Vec3 targetVel = wish * maxSpeed;
     velocity.x += (targetVel.x - velocity.x) * std::min(1.0f, accel * dt);
     velocity.z += (targetVel.z - velocity.z) * std::min(1.0f, accel * dt);

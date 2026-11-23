@@ -17,6 +17,7 @@ enum class SpriteType : int {
     ExitBeacon   = 7,
     Projectile   = 8,
     Spark        = 9,
+    WaterDrop    = 10,
     COUNT
 };
 

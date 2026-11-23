@@ -36,6 +36,16 @@ struct ItemRenderState {
     int itemKind = 0;       // ItemType index (0..Count-1)
     ItemOrientation orient{};
     bool highlighted = false;
+    float fill = 1.0f;      // 0..1 remaining fill for Water/Food
+};
+
+struct ConsumableVisualState {
+    float fill = 1.0f;         // 0..1 remaining water in bottle or ration bar length
+    float openProgress = 0.0f; // 0 = sealed, 1 = cap unscrewed / wrapper peeled back
+    float capSpin = 0.0f;      // radians of cap rotation during unscrew
+    float tiltRad = 0.0f;      // bottle tilt angle (drives liquid meniscus shift!)
+    float biteImpulse = 0.0f;  // 0..1 bite feedback pulse
+    bool pouring = false;      // true while water stream exits bottle neck
 };
 
 struct GhostPreviewState {
@@ -75,7 +85,8 @@ public:
                              bool hasHeldItem = false,
                              ItemType heldType = ItemType::Food,
                              const ItemOrientation& heldOrient = {},
-                             const Mat4& heldMatrix = Mat4::identity());
+                             const Mat4& heldMatrix = Mat4::identity(),
+                             const ConsumableVisualState& heldConsumable = {});
 
 private:
     GLuint vao_ = 0;
