@@ -5,6 +5,7 @@
 #include "render/BillboardRenderer.hpp"
 #include "render/Framebuffer.hpp"
 #include "render/HudRenderer.hpp"
+#include "render/ModelRenderer.hpp"
 #include "render/RobotRenderer.hpp"
 #include "render/Shader.hpp"
 #include "render/TextureAtlas.hpp"
@@ -170,8 +171,12 @@ void main() {
     vec3 totalDiffuse = vec3(0.82, 0.90, 1.0) * uAmbientBrightness * vAO;
     vec3 totalSpec = vec3(0.0);
 
+    bool fragUpper = (samplePos.y > 0.25);
     for (int i = 0; i < uLightCount; ++i) {
         vec3 lPos = uLightPosRadius[i].xyz;
+        // Strict floor slab light separation: sewer lamps (y <= 0.25) NEVER bleed through solid concrete floors into Utility Complex rooms!
+        bool lightUpper = (lPos.y > 0.25);
+        if (fragUpper != lightUpper) continue;
         float radius = uLightPosRadius[i].w;
         vec3 toLight = lPos - samplePos;
         float distSq = dot(toLight, toLight);
@@ -297,6 +302,17 @@ int main(int argc, char** argv) {
     RobotRenderer robotRenderer;
     if (!robotRenderer.init()) return 1;
 
+    ModelRenderer creatureModel;
+    if (!creatureModel.init()) return 1;
+    if (!creatureModel.loadModel("assets/models/horned_rat.obj")) {
+        std::cerr << "Warning: failed to load assets/models/horned_rat.obj\n";
+    } else {
+        Vec3 sz = creatureModel.data().size();
+        std::cout << "Loaded 3D model assets/models/horned_rat.obj ("
+                  << creatureModel.data().triangleCount() << " tris | size="
+                  << sz.x << "x" << sz.y << "x" << sz.z << " m)\n";
+    }
+
     HudRenderer hud;
     if (!hud.init(cfg::RETRO_WIDTH, cfg::RETRO_HEIGHT)) return 1;
 
@@ -307,7 +323,10 @@ int main(int argc, char** argv) {
     gw.settings = GameSettings::loadOrCreate("mega.cfg");
     gw.lootTables = LootTables::loadOrCreate("loot_tables.cfg");
     audio.applySettings(gw.settings);
-    uint64_t worldSeed = 0x4D4547410001ULL;
+    if (gw.settings.fullscreen) {
+        SDL_SetWindowFullscreen(window, true);
+    }
+    uint64_t worldSeed = gw.nextRunSeed();
     gw.startNewRun(worldSeed);
     std::cout << "Loaded mega.cfg | Generated Infinite Utility Complex seed=" << worldSeed
               << " activeRegions=" << gw.map.loadedRegions.size()
@@ -356,6 +375,9 @@ int main(int argc, char** argv) {
     std::vector<RobotRenderState> robotQueue;
     std::vector<DoorRenderState> doorQueue;
     std::vector<ItemRenderState> itemQueue;
+    std::vector<MossRenderState> mossQueue;
+    std::vector<Mat4> creatureMats;
+    std::vector<ModelRenderInstance> creatureQueue;
 
     auto reloadConfig = [&]() {
         gw.settings = GameSettings::loadOrCreate("mega.cfg");
@@ -378,10 +400,65 @@ int main(int argc, char** argv) {
     bool prevFreeCursor = false;
     bool rmbDownInPack = false;
     bool rmbRotatedPack = false;
+    bool draggingSettingsSlider = false;
     float rmbPressX = 0.0f;
     float rmbPressY = 0.0f;
     float rmbLastX = 0.0f;
     float rmbLastY = 0.0f;
+
+    auto applySettingsSliderOrClick = [&](float winX, float winY, bool isDrag) {
+        float hx = winX * (static_cast<float>(cfg::RETRO_WIDTH) / std::max(1, winW));
+        float hy = winY * (static_cast<float>(cfg::RETRO_HEIGHT) / std::max(1, winH));
+        // Panel bounds: x=[390..890], rows 0..5 at y = 215 + row * 52, height 40
+        if (hx < 390.0f || hx > 890.0f) return;
+        for (int row = 0; row < 6; ++row) {
+            float ry0 = 215.0f + row * 52.0f;
+            float ry1 = ry0 + 40.0f;
+            if (hy >= ry0 && hy <= ry1) {
+                gw.settingsSelectedRow = row;
+                if (row == 0) {
+                    // Master Volume slider x=[640..855] -> 0.0..2.0
+                    float t = clampf((hx - 640.0f) / 215.0f, 0.0f, 1.0f);
+                    if (hx >= 620.0f) {
+                        gw.settings.masterVolume = std::round(t * 20.0f) * 0.10f;
+                        audio.applySettings(gw.settings);
+                        draggingSettingsSlider = true;
+                        if (!isDrag) gw.settings.saveUserPreferences("mega.cfg");
+                    }
+                } else if (row == 1) {
+                    // Mouse Sensitivity slider x=[640..855] -> 0.0004..0.0060
+                    float t = clampf((hx - 640.0f) / 215.0f, 0.0f, 1.0f);
+                    if (hx >= 620.0f) {
+                        gw.settings.mouseSensitivity = 0.0004f + t * (0.0060f - 0.0004f);
+                        draggingSettingsSlider = true;
+                        if (!isDrag) gw.settings.saveUserPreferences("mega.cfg");
+                    }
+                } else if (!isDrag && row == 2) {
+                    gw.settings.fullscreen = !gw.settings.fullscreen;
+                    SDL_SetWindowFullscreen(window, gw.settings.fullscreen);
+                    gw.settings.saveUserPreferences("mega.cfg");
+                } else if (!isDrag && row == 3) {
+                    gw.settings.useRandomSeed = !gw.settings.useRandomSeed;
+                    gw.settings.saveUserPreferences("mega.cfg");
+                } else if (!isDrag && row == 4) {
+                    gw.settings.saveUserPreferences("mega.cfg");
+                    worldSeed = gw.nextRunSeed();
+                    gw.settingsMenuOpen = false;
+                    gw.startNewRun(worldSeed);
+                    mesher.syncWorld(gw.map.world);
+                    gw.worldStreamChanged = false;
+                    mouseCaptured = true;
+                    SDL_SetWindowRelativeMouseMode(window, true);
+                } else if (!isDrag && row == 5) {
+                    gw.settings.saveUserPreferences("mega.cfg");
+                    gw.settingsMenuOpen = false;
+                    mouseCaptured = true;
+                    SDL_SetWindowRelativeMouseMode(window, true);
+                }
+                break;
+            }
+        }
+    };
 
     auto computeCursorRay = [&](Vec3& outOrig, Vec3& outDir) {
         outOrig = gw.player.eyePosition();
@@ -438,8 +515,15 @@ int main(int argc, char** argv) {
                     keyDown[ev.key.scancode] = true;
                 }
                 if (ev.key.key == SDLK_ESCAPE) {
-                    if (gw.lockpick.active) {
+                    if (gw.settingsMenuOpen) {
+                        gw.settings.saveUserPreferences("mega.cfg");
+                        gw.settingsMenuOpen = false;
+                        mouseCaptured = true;
+                        SDL_SetWindowRelativeMouseMode(window, true);
+                    } else if (gw.lockpick.active) {
                         gw.lockpick.close();
+                    } else if (gw.mossMinigame.active) {
+                        gw.mossMinigame.close();
                     } else if (gw.draggingItem) {
                         Vec3 ro, rd;
                         computeCursorRay(ro, rd);
@@ -450,8 +534,65 @@ int main(int argc, char** argv) {
                     } else if (gw.backpackMode == BackpackMode::InHands) {
                         gw.toggleBackpackInHands();
                     } else {
-                        mouseCaptured = !mouseCaptured;
-                        SDL_SetWindowRelativeMouseMode(window, mouseCaptured);
+                        gw.settingsMenuOpen = true;
+                        gw.consumeLmbHeld = false;
+                        mouseCaptured = false;
+                        SDL_SetWindowRelativeMouseMode(window, false);
+                    }
+                } else if (gw.settingsMenuOpen) {
+                    if (ev.key.key == SDLK_UP || ev.key.key == SDLK_W) {
+                        gw.settingsSelectedRow = (gw.settingsSelectedRow + 5) % 6;
+                    } else if (ev.key.key == SDLK_DOWN || ev.key.key == SDLK_S) {
+                        gw.settingsSelectedRow = (gw.settingsSelectedRow + 1) % 6;
+                    } else if (ev.key.key == SDLK_LEFT || ev.key.key == SDLK_A) {
+                        if (gw.settingsSelectedRow == 0) {
+                            gw.settings.masterVolume = std::max(0.0f, gw.settings.masterVolume - 0.10f);
+                            audio.applySettings(gw.settings);
+                        } else if (gw.settingsSelectedRow == 1) {
+                            gw.settings.mouseSensitivity = std::max(0.0004f, gw.settings.mouseSensitivity - 0.0002f);
+                        } else if (gw.settingsSelectedRow == 2) {
+                            gw.settings.fullscreen = !gw.settings.fullscreen;
+                            SDL_SetWindowFullscreen(window, gw.settings.fullscreen);
+                        } else if (gw.settingsSelectedRow == 3) {
+                            gw.settings.useRandomSeed = !gw.settings.useRandomSeed;
+                        }
+                        gw.settings.saveUserPreferences("mega.cfg");
+                    } else if (ev.key.key == SDLK_RIGHT || ev.key.key == SDLK_D) {
+                        if (gw.settingsSelectedRow == 0) {
+                            gw.settings.masterVolume = std::min(2.0f, gw.settings.masterVolume + 0.10f);
+                            audio.applySettings(gw.settings);
+                        } else if (gw.settingsSelectedRow == 1) {
+                            gw.settings.mouseSensitivity = std::min(0.0060f, gw.settings.mouseSensitivity + 0.0002f);
+                        } else if (gw.settingsSelectedRow == 2) {
+                            gw.settings.fullscreen = !gw.settings.fullscreen;
+                            SDL_SetWindowFullscreen(window, gw.settings.fullscreen);
+                        } else if (gw.settingsSelectedRow == 3) {
+                            gw.settings.useRandomSeed = !gw.settings.useRandomSeed;
+                        }
+                        gw.settings.saveUserPreferences("mega.cfg");
+                    } else if (ev.key.key == SDLK_RETURN || ev.key.key == SDLK_SPACE) {
+                        if (gw.settingsSelectedRow == 2) {
+                            gw.settings.fullscreen = !gw.settings.fullscreen;
+                            SDL_SetWindowFullscreen(window, gw.settings.fullscreen);
+                            gw.settings.saveUserPreferences("mega.cfg");
+                        } else if (gw.settingsSelectedRow == 3) {
+                            gw.settings.useRandomSeed = !gw.settings.useRandomSeed;
+                            gw.settings.saveUserPreferences("mega.cfg");
+                        } else if (gw.settingsSelectedRow == 4) {
+                            gw.settings.saveUserPreferences("mega.cfg");
+                            worldSeed = gw.nextRunSeed();
+                            gw.settingsMenuOpen = false;
+                            gw.startNewRun(worldSeed);
+                            mesher.syncWorld(gw.map.world);
+                            gw.worldStreamChanged = false;
+                            mouseCaptured = true;
+                            SDL_SetWindowRelativeMouseMode(window, true);
+                        } else if (gw.settingsSelectedRow == 5) {
+                            gw.settings.saveUserPreferences("mega.cfg");
+                            gw.settingsMenuOpen = false;
+                            mouseCaptured = true;
+                            SDL_SetWindowRelativeMouseMode(window, true);
+                        }
                     }
                 } else if (ev.key.key == SDLK_TAB || ev.key.key == SDLK_I) {
                     gw.toggleBackpackInHands();
@@ -461,7 +602,7 @@ int main(int argc, char** argv) {
                     gw.rotateActiveItem(0);
                 } else if (ev.key.key == SDLK_Y) {
                     gw.rotateActiveItem(2);
-                } else if (ev.key.key == SDLK_F) {
+                } else if (ev.key.key == SDLK_L) {
                     if (gw.inventory.hasFlashlight) {
                         if (gw.inventory.flashlightBattery > 0.0f) {
                             gw.flashlightOn = !gw.flashlightOn;
@@ -470,7 +611,7 @@ int main(int argc, char** argv) {
                             audio.play(SoundId::FlashlightClick, 0.45f);
                         }
                     }
-                } else if (ev.key.key == SDLK_E && gw.backpackMode != BackpackMode::InHands) {
+                } else if (ev.key.key == SDLK_F && gw.backpackMode != BackpackMode::InHands) {
                     if (gw.hasHeldItem && gw.hoveredDoorIdx < 0 && gw.hoveredItemIdx < 0) {
                         gw.useHeldItem(audio);
                     } else {
@@ -479,13 +620,17 @@ int main(int argc, char** argv) {
                     }
                 } else if (ev.key.key == SDLK_1) {
                     if (!gw.availableCrafts.empty()) gw.performCraft(0, audio);
-                    else gw.useInventoryItem(ItemType::Battery, audio);
+                    else gw.equipWeaponHotkey(0, audio);
                 } else if (ev.key.key == SDLK_2) {
                     if (gw.availableCrafts.size() >= 2) gw.performCraft(1, audio);
-                    else gw.useInventoryItem(ItemType::Food, audio);
+                    else gw.equipWeaponHotkey(1, audio);
                 } else if (ev.key.key == SDLK_3) {
                     if (gw.availableCrafts.size() >= 3) gw.performCraft(2, audio);
-                    else gw.useInventoryItem(ItemType::Water, audio);
+                    else gw.equipWeaponHotkey(2, audio);
+                } else if (ev.key.key == SDLK_4) {
+                    gw.equipWeaponHotkey(3, audio);
+                } else if (ev.key.key == SDLK_5) {
+                    gw.equipWeaponHotkey(4, audio);
                 } else if (ev.key.key == SDLK_M) {
                     gw.showMinimap = !gw.showMinimap;
                 } else if (ev.key.key == SDLK_G) {
@@ -526,7 +671,7 @@ int main(int argc, char** argv) {
                         gw.rotateActiveItem(1);
                     } else if (!gw.hasHeldItem) {
                         reloadConfig();
-                        worldSeed += 1337ULL;
+                        worldSeed = gw.nextRunSeed();
                         gw.startNewRun(worldSeed);
                         mesher.syncWorld(gw.map.world);
                         gw.worldStreamChanged = false;
@@ -535,34 +680,49 @@ int main(int argc, char** argv) {
                     running = false;
                 }
             } else if (ev.type == SDL_EVENT_MOUSE_MOTION) {
-                bool freeCursor = (gw.backpackMode == BackpackMode::InHands || gw.draggingItem);
-                if (freeCursor) {
+                if (gw.settingsMenuOpen) {
                     mouseWinX = ev.motion.x;
                     mouseWinY = ev.motion.y;
-                    if (rmbDownInPack && gw.backpackMode == BackpackMode::InHands && !gw.draggingItem) {
-                        float dx = mouseWinX - rmbLastX;
-                        float dy = mouseWinY - rmbLastY;
-                        rmbLastX = mouseWinX;
-                        rmbLastY = mouseWinY;
-                        if (std::hypot(mouseWinX - rmbPressX, mouseWinY - rmbPressY) > 5.0f) {
-                            rmbRotatedPack = true;
-                        }
-                        if (rmbRotatedPack) {
-                            gw.rotateBackpackView(dx, dy);
-                        }
+                    if (draggingSettingsSlider) {
+                        applySettingsSliderOrClick(mouseWinX, mouseWinY, true);
                     }
-                } else if (mouseCaptured) {
-                    if (gw.lockpick.active) {
-                        gw.lockpick.handleMouseMove(ev.motion.xrel, ev.motion.yrel);
-                    } else if (gw.grabbedDoorIdx >= 0) {
-                        gw.dragGrabbedDoor(ev.motion.xrel, ev.motion.yrel);
-                    } else {
-                        yawDelta += ev.motion.xrel * cfg::MOUSE_SENS;
-                        pitchDelta -= ev.motion.yrel * cfg::MOUSE_SENS;
+                } else {
+                    bool freeCursor = (gw.backpackMode == BackpackMode::InHands || gw.draggingItem);
+                    if (freeCursor) {
+                        mouseWinX = ev.motion.x;
+                        mouseWinY = ev.motion.y;
+                        if (rmbDownInPack && gw.backpackMode == BackpackMode::InHands && !gw.draggingItem) {
+                            float dx = mouseWinX - rmbLastX;
+                            float dy = mouseWinY - rmbLastY;
+                            rmbLastX = mouseWinX;
+                            rmbLastY = mouseWinY;
+                            if (std::hypot(mouseWinX - rmbPressX, mouseWinY - rmbPressY) > 5.0f) {
+                                rmbRotatedPack = true;
+                            }
+                            if (rmbRotatedPack) {
+                                gw.rotateBackpackView(dx, dy);
+                            }
+                        }
+                    } else if (mouseCaptured) {
+                        if (gw.lockpick.active) {
+                            gw.lockpick.handleMouseMove(ev.motion.xrel, ev.motion.yrel);
+                        } else if (gw.mossMinigame.active) {
+                            gw.mossMinigame.handleMouseMove(ev.motion.xrel, ev.motion.yrel);
+                        } else if (gw.grabbedDoorIdx >= 0) {
+                            gw.dragGrabbedDoor(ev.motion.xrel, ev.motion.yrel);
+                        } else {
+                            yawDelta += ev.motion.xrel * gw.settings.mouseSensitivity;
+                            pitchDelta -= ev.motion.yrel * gw.settings.mouseSensitivity;
+                        }
                     }
                 }
             } else if (ev.type == SDL_EVENT_MOUSE_BUTTON_UP) {
                 if (ev.button.button == SDL_BUTTON_LEFT) {
+                    if (draggingSettingsSlider && gw.settingsMenuOpen) {
+                        gw.settings.saveUserPreferences("mega.cfg");
+                    }
+                    draggingSettingsSlider = false;
+                    gw.mossMinigame.scrapingHeld = false;
                     gw.consumeLmbHeld = false;
                     gw.endInteract();
                 } else if (ev.button.button == SDL_BUTTON_RIGHT) {
@@ -581,50 +741,65 @@ int main(int argc, char** argv) {
                     }
                 }
             } else if (ev.type == SDL_EVENT_MOUSE_BUTTON_DOWN) {
-                bool freeCursor = (gw.backpackMode == BackpackMode::InHands || gw.draggingItem);
-                if (freeCursor) {
-                    gw.consumeLmbHeld = false;
-                    mouseWinX = ev.button.x;
-                    mouseWinY = ev.button.y;
-                    Vec3 ro, rd;
-                    computeCursorRay(ro, rd);
+                if (gw.settingsMenuOpen) {
                     if (ev.button.button == SDL_BUTTON_LEFT) {
-                        gw.handlePrimaryClick(ro, rd, audio);
-                    } else if (ev.button.button == SDL_BUTTON_RIGHT) {
-                        if (gw.backpackMode == BackpackMode::InHands && !gw.draggingItem) {
-                            // Hold RMB + move mouse to spin 3D backpack; release quickly to drag item!
-                            rmbDownInPack = true;
-                            rmbRotatedPack = false;
-                            rmbPressX = mouseWinX;
-                            rmbPressY = mouseWinY;
-                            rmbLastX = mouseWinX;
-                            rmbLastY = mouseWinY;
-                        } else {
-                            gw.handleSecondaryClick(ro, rd, audio);
-                        }
+                        applySettingsSliderOrClick(ev.button.x, ev.button.y, false);
                     }
-                } else if (!mouseCaptured) {
-                    mouseCaptured = true;
-                    SDL_SetWindowRelativeMouseMode(window, true);
                 } else {
-                    Vec3 ro, rd;
-                    computeCursorRay(ro, rd);
-                    if (ev.button.button == SDL_BUTTON_LEFT) {
-                        // Shooting on LMB is disabled; LMB interacts, swings melee, places in placement mode,
-                        // or begins continuous realistic consumption when holding Food/Water!
-                        if (!gw.handlePrimaryClick(ro, rd, audio)) {
-                            gw.consumeLmbHeld = true;
-                        }
-                    } else if (ev.button.button == SDL_BUTTON_RIGHT) {
+                    bool freeCursor = (gw.backpackMode == BackpackMode::InHands || gw.draggingItem);
+                    if (freeCursor) {
                         gw.consumeLmbHeld = false;
-                        gw.handleSecondaryClick(ro, rd, audio);
+                        mouseWinX = ev.button.x;
+                        mouseWinY = ev.button.y;
+                        Vec3 ro, rd;
+                        computeCursorRay(ro, rd);
+                        if (ev.button.button == SDL_BUTTON_LEFT) {
+                            gw.handlePrimaryClick(ro, rd, audio);
+                        } else if (ev.button.button == SDL_BUTTON_RIGHT) {
+                            if (gw.backpackMode == BackpackMode::InHands && !gw.draggingItem) {
+                                // Hold RMB + move mouse to spin 3D backpack; release quickly to drag item!
+                                rmbDownInPack = true;
+                                rmbRotatedPack = false;
+                                rmbPressX = mouseWinX;
+                                rmbPressY = mouseWinY;
+                                rmbLastX = mouseWinX;
+                                rmbLastY = mouseWinY;
+                            } else {
+                                gw.handleSecondaryClick(ro, rd, audio);
+                            }
+                        }
+                    } else if (!mouseCaptured) {
+                        mouseCaptured = true;
+                        SDL_SetWindowRelativeMouseMode(window, true);
+                    } else {
+                        if (gw.mossMinigame.active) {
+                            if (ev.button.button == SDL_BUTTON_LEFT) {
+                                gw.mossMinigame.scrapingHeld = true;
+                            }
+                        } else {
+                            Vec3 ro, rd;
+                            computeCursorRay(ro, rd);
+                            if (ev.button.button == SDL_BUTTON_LEFT) {
+                                // Shooting on LMB is disabled; LMB interacts (including starting moss scraping!),
+                                // swings melee, recharges with Battery, places in placement mode,
+                                // or begins continuous realistic consumption when holding Food/Water!
+                                if (!gw.handlePrimaryClick(ro, rd, audio)) {
+                                    gw.consumeLmbHeld = true;
+                                } else if (gw.mossMinigame.active) {
+                                    gw.mossMinigame.scrapingHeld = true;
+                                }
+                            } else if (ev.button.button == SDL_BUTTON_RIGHT) {
+                                gw.consumeLmbHeld = false;
+                                gw.handleSecondaryClick(ro, rd, audio);
+                            }
+                        }
                     }
                 }
             }
         }
 
-        // Automatically unlock mouse cursor & pause camera whenever backpack is in hands or RMB-dragging an item
-        bool wantFreeCursor = (gw.backpackMode == BackpackMode::InHands || gw.draggingItem);
+        // Automatically unlock mouse cursor & pause camera whenever settings menu, backpack in hands, or RMB-dragging is active
+        bool wantFreeCursor = (gw.settingsMenuOpen || gw.backpackMode == BackpackMode::InHands || gw.draggingItem);
         if (wantFreeCursor != prevFreeCursor) {
             prevFreeCursor = wantFreeCursor;
             SDL_SetWindowRelativeMouseMode(window, !wantFreeCursor && mouseCaptured && !visualTest);
@@ -640,17 +815,24 @@ int main(int argc, char** argv) {
         };
 
         PlayerInput input;
-        if (isHeld(SDL_SCANCODE_W)) input.moveForward += 1.0f;
-        if (isHeld(SDL_SCANCODE_S)) input.moveForward -= 1.0f;
-        if (isHeld(SDL_SCANCODE_D)) input.moveRight += 1.0f;
-        if (isHeld(SDL_SCANCODE_A)) input.moveRight -= 1.0f;
-        if (isHeld(SDL_SCANCODE_SPACE)) input.moveUp += 1.0f;
-        if (isHeld(SDL_SCANCODE_LCTRL) || isHeld(SDL_SCANCODE_C)) input.moveUp -= 1.0f;
-        input.jump = isHeld(SDL_SCANCODE_SPACE);
-        input.sprint = isHeld(SDL_SCANCODE_LSHIFT);
-        input.noclip = gw.godNoclip;
-        input.yawDelta = yawDelta;
-        input.pitchDelta = pitchDelta;
+        if (!gw.settingsMenuOpen && !gw.lockpick.active && !gw.mossMinigame.active) {
+            if (isHeld(SDL_SCANCODE_W)) input.moveForward += 1.0f;
+            if (isHeld(SDL_SCANCODE_S)) input.moveForward -= 1.0f;
+            if (isHeld(SDL_SCANCODE_D)) input.moveRight += 1.0f;
+            if (isHeld(SDL_SCANCODE_A)) input.moveRight -= 1.0f;
+            if (isHeld(SDL_SCANCODE_SPACE)) input.moveUp += 1.0f;
+            if (isHeld(SDL_SCANCODE_LCTRL) || isHeld(SDL_SCANCODE_C)) {
+                input.moveUp -= 1.0f;
+                input.crouch = true;
+            }
+            if (isHeld(SDL_SCANCODE_Q) && !isHeld(SDL_SCANCODE_LCTRL)) input.leanInput -= 1.0f;
+            if (isHeld(SDL_SCANCODE_E)) input.leanInput += 1.0f;
+            input.jump = isHeld(SDL_SCANCODE_SPACE);
+            input.sprint = isHeld(SDL_SCANCODE_LSHIFT);
+            input.noclip = gw.godNoclip;
+            input.yawDelta = yawDelta;
+            input.pitchDelta = pitchDelta;
+        }
 
         int simSteps = 0;
         while (accumulator >= cfg::FIXED_DT && simSteps < 16) {
@@ -712,7 +894,9 @@ int main(int argc, char** argv) {
                 }
             }
 
-            gw.update(input, fireClicked, cfg::FIXED_DT, audio);
+            if (!gw.settingsMenuOpen) {
+                gw.update(input, fireClicked, cfg::FIXED_DT, audio);
+            }
             fireClicked = false;
             input.yawDelta = 0.0f;
             input.pitchDelta = 0.0f;
@@ -762,9 +946,16 @@ int main(int argc, char** argv) {
 
         auto sortedLights = gw.map.pointLights;
         gw.gatherRobotLights(sortedLights);
+        bool camUpper = (camPos.y > 0.25f);
         std::sort(sortedLights.begin(), sortedLights.end(),
                   [&](const PointLight3D& a, const PointLight3D& b) {
-                      return lengthSq(a.pos - camPos) < lengthSq(b.pos - camPos);
+                      auto score = [&](const PointLight3D& l) {
+                          float d2 = lengthSq(l.pos - camPos);
+                          bool lUpper = (l.pos.y > 0.25f);
+                          if (lUpper != camUpper && d2 > 64.0f) d2 += 100000.0f;
+                          return d2;
+                      };
+                      return score(a) < score(b);
                   });
 
         int count = std::min(48, static_cast<int>(sortedLights.size()));
@@ -793,6 +984,15 @@ int main(int argc, char** argv) {
         gw.gatherRobots(robotQueue);
         robotRenderer.render(view, proj, camPos, robotQueue, gw.settings);
 
+        gw.gatherCreatureTransforms(creatureMats);
+        creatureQueue.clear();
+        creatureQueue.reserve(creatureMats.size());
+        for (const auto& cm : creatureMats) {
+            creatureQueue.push_back({cm, {1.0f, 1.0f, 1.0f}});
+        }
+        creatureModel.renderInstances(view, proj, camPos, camDir, gw.flashlightOn,
+                                      gw.settings, sortedLights, creatureQueue);
+
         // Update 3D cursor ray hover for diegetic backpack & 3D world-grid placement preview
         {
             Vec3 ro, rd;
@@ -800,13 +1000,13 @@ int main(int argc, char** argv) {
             gw.updateCursorHover(ro, rd);
         }
 
-        gw.gatherInteractables(doorQueue, itemQueue);
+        gw.gatherInteractables(doorQueue, itemQueue, &mossQueue);
         BackpackRenderState bpState = gw.gatherBackpackState();
         ConsumableVisualState heldCons = gw.gatherHeldConsumableState();
         robotRenderer.renderInteractables(worldShader, view, proj, camPos, doorQueue, itemQueue,
                                           bpState, gw.placementPreview,
                                           gw.hasHeldItem, gw.heldItemType, gw.heldItemOrient,
-                                          gw.heldItemWorldMatrix(), heldCons);
+                                          gw.heldItemWorldMatrix(), heldCons, mossQueue);
 
         gw.gatherBillboards(spriteQueue, totalTime);
         billboards.render(view, proj, camPos, spriteQueue);

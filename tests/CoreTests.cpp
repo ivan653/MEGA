@@ -4,6 +4,7 @@
 #include "game/Player.hpp"
 #include "game/GameWorld.hpp"
 #include "game/LockpickMinigame.hpp"
+#include "core/ObjLoader.hpp"
 #include <queue>
 #include <set>
 
@@ -1474,4 +1475,364 @@ TEST(SewerBiomeTest, HatchRoomsLaddersAndSewerTopologyWork) {
     }
     EXPECT_GT(gw.player.position.y, 0.5f);
     EXPECT_EQ(gw.currentBiome(), BiomeType::UtilityComplex);
+}
+
+TEST(GameplayUpgradesTest, ColumnPackingWorldDragBatteryLmbWeaponHotkeysAndSafePeekWork) {
+    // 1. Column-first backpack packing: same item types stack vertically so EVERY type stays accessible!
+    {
+        Backpack3D bp;
+        for (int i = 0; i < 3; ++i) EXPECT_GE(bp.tryAutoAdd(ItemType::Food, 100), 0);
+        for (int i = 0; i < 3; ++i) EXPECT_GE(bp.tryAutoAdd(ItemType::Battery, 0), 0);
+        for (int i = 0; i < 2; ++i) EXPECT_GE(bp.tryAutoAdd(ItemType::Water, 100), 0);
+        for (int i = 0; i < 3; ++i) EXPECT_GE(bp.tryAutoAdd(ItemType::Lockpick, 0), 0);
+
+        EXPECT_GE(bp.findFirstAccessible(ItemType::Food), 0);
+        EXPECT_GE(bp.findFirstAccessible(ItemType::Battery), 0);
+        EXPECT_GE(bp.findFirstAccessible(ItemType::Water), 0);
+        EXPECT_GE(bp.findFirstAccessible(ItemType::Lockpick), 0);
+
+        // Verify stacked Food items share the same (gx, gz) column!
+        std::vector<const PackedItem*> foods;
+        for (const auto& it : bp.items) {
+            if (it.type == ItemType::Food) foods.push_back(&it);
+        }
+        ASSERT_EQ(foods.size(), 3u);
+        EXPECT_EQ(foods[0]->gx, foods[1]->gx);
+        EXPECT_EQ(foods[0]->gz, foods[1]->gz);
+        EXPECT_EQ(foods[0]->gx, foods[2]->gx);
+        EXPECT_EQ(foods[0]->gz, foods[2]->gz);
+    }
+
+    // 2. Fixed vs Random seed switching & Config settings
+    {
+        GameWorld gw;
+        gw.settings.fixedSeed = 0x12345678ULL;
+        gw.settings.useRandomSeed = false;
+        EXPECT_EQ(gw.nextRunSeed(), 0x12345678ULL);
+        EXPECT_EQ(gw.nextRunSeed(), 0x12345678ULL);
+
+        gw.settings.useRandomSeed = true;
+        uint64_t r1 = gw.nextRunSeed();
+        uint64_t r2 = gw.nextRunSeed();
+        EXPECT_NE(r1, r2);
+    }
+
+    // 3. LMB Battery recharge, Accessible Weapon Hotkeys, and RMB World-Item Dragging
+    {
+        GameWorld gw;
+        gw.startNewRun(42ULL);
+        AudioEngine audio;
+
+        // LMB uses Battery when held in hand
+        gw.inventory.hasFlashlight = true;
+        gw.inventory.flashlightBattery = 35.0f;
+        gw.hasHeldItem = true;
+        gw.heldItemType = ItemType::Battery;
+        gw.heldPlaceMode = false;
+        // Aim South (+Z, blank wall, not hovering North cabinet doors or West table items!)
+        gw.player.yaw = PI;
+        gw.player.pitch = 0.0f;
+        gw.player.position = {58.0f, 1.0f, 58.0f};
+        Vec3 ro = gw.player.eyePosition();
+        Vec3 rd = gw.player.forwardDir();
+        gw.updateHover();
+        EXPECT_TRUE(gw.handlePrimaryClick(ro, rd, audio));
+        EXPECT_FALSE(gw.hasHeldItem);
+        EXPECT_GT(gw.inventory.flashlightBattery, 75.0f);
+
+        // Accessible weapon hotkeys: unblocked Knife equips on slot 0; blocked Knife is NOT accessible!
+        gw.backpack.clear();
+        int knifeId = gw.backpack.placeAt(0, 0, 0, ItemType::Knife, {0, 0, 0});
+        ASSERT_GE(knifeId, 0);
+        auto slots = gw.getAccessibleWeaponSlots();
+        ASSERT_EQ(slots.size(), 1u);
+        EXPECT_EQ(slots[0], ItemType::Knife);
+        EXPECT_TRUE(gw.equipWeaponHotkey(0, audio));
+        EXPECT_TRUE(gw.hasHeldItem);
+        EXPECT_EQ(gw.heldItemType, ItemType::Knife);
+        // Pressing hotkey again stows Knife back into backpack
+        EXPECT_TRUE(gw.equipWeaponHotkey(0, audio));
+        EXPECT_FALSE(gw.hasHeldItem);
+
+        // Place an item directly on top of the Knife so it is blocked from above -> hotkey must NOT expose it!
+        gw.backpack.clear();
+        ASSERT_GE(gw.backpack.placeAt(0, 0, 0, ItemType::Knife, {0, 0, 0}), 0);
+        ASSERT_GE(gw.backpack.placeAt(0, 6, 0, ItemType::Food, {0, 0, 0}), 0);
+        EXPECT_TRUE(gw.getAccessibleWeaponSlots().empty());
+        EXPECT_FALSE(gw.equipWeaponHotkey(0, audio));
+
+        // RMB dragging a grounded world item across the 3D grid!
+        gw.worldItems.clear();
+        Vec3 origPos{58.0f, 1.0f, 57.0f};
+        gw.worldItems.push_back({origPos, ItemType::Tape, false, 0, 0, {}, 0});
+        gw.player.position = {58.0f, 1.0f, 58.0f};
+        gw.player.yaw = 0.0f;   // Facing -Z toward (58, 1, 57)
+        gw.player.pitch = -0.95f;
+        gw.updateHover();
+        ASSERT_EQ(gw.hoveredItemIdx, 0);
+        EXPECT_TRUE(gw.handleSecondaryClick(gw.player.eyePosition(), gw.player.forwardDir(), audio));
+        EXPECT_TRUE(gw.draggingItem);
+        EXPECT_TRUE(gw.dragFromWorld);
+        EXPECT_EQ(gw.dragItemType, ItemType::Tape);
+        // Rotate & place on a shifted grid spot with LMB
+        gw.rotateActiveItem(1);
+        Vec3 newDir = normalize(Vec3{0.25f, -0.75f, -0.62f});
+        EXPECT_TRUE(gw.handlePrimaryClick(gw.player.eyePosition(), newDir, audio));
+        EXPECT_FALSE(gw.draggingItem);
+        EXPECT_FALSE(gw.dragFromWorld);
+        // Verify new placed Tape exists in worldItems at a shifted position
+        bool foundMoved = false;
+        for (const auto& wi : gw.worldItems) {
+            if (!wi.pickedUp && wi.type == ItemType::Tape && length(wi.pos - origPos) > 0.05f) {
+                foundMoved = true;
+                break;
+            }
+        }
+        EXPECT_TRUE(foundMoved);
+    }
+
+    // 4. Crouch & Q/E Corner Peek: camera shifts around corner, detectionEyePosition stays behind cover,
+    //    so enemy around the corner does NOT get triggered!
+    {
+        GameWorld gw;
+        gw.startNewRun(42ULL);
+        AudioEngine audio;
+
+        // Place player inside starter room just west of the open doorway wall corner (x=60.35, z=56.6)
+        // Wall at x=61..62 is SOLID at z=56..57, doorway is at z=58!
+        // Facing North (-Z, yaw=0) or East (+X, yaw=+PI/2):
+        // Let's stand at (60.4, 1.0, 56.9) facing East (+X, yaw=+PI/2) so rightDir = +Z (toward open doorway z=58)!
+        gw.doors[0].locked = false;
+        gw.doors[0].angle = 1.6f; // Open starter exit door cleanly
+        gw.player.position = {60.45f, 1.0f, 57.55f};
+        gw.player.yaw = PI * 0.5f; // Looking East (+X); rightDir = (0, 0, +1) toward open doorway z=58.5!
+        gw.player.pitch = 0.0f;
+
+        // Place a patrolling robot in the corridor outside at (64.5, 1.0, 58.5) facing West toward doorway!
+        gw.enemies.clear();
+        Enemy bot;
+        bot.pos = {64.5f, 1.0f, 58.5f};
+        bot.dirX = 0; bot.dirZ = 1;
+        bot.pendingDirX = 0; bot.pendingDirZ = 1;
+        bot.yaw = -PI * 0.5f;
+        bot.aiState = EnemyAIState::Patrol;
+        bot.alerted = false;
+        bot.regX = 0; bot.regZ = 0;
+        gw.enemies.push_back(bot);
+
+        // Hold E (leanInput = +1.0 -> lean right toward z=58.05) + crouch!
+        PlayerInput peekCrouch;
+        peekCrouch.leanInput = 1.0f;
+        peekCrouch.crouch = true;
+
+        Vec3 startPos = gw.player.position;
+        for (int f = 0; f < 45; ++f) {
+            gw.update(peekCrouch, false, cfg::FIXED_DT, audio);
+        }
+
+        // Verify crouch lowered height & eye Y
+        EXPECT_TRUE(gw.player.crouched);
+        EXPECT_NEAR(gw.player.currentHeight, cfg::PLAYER_CROUCH_HEIGHT, 0.02f);
+        EXPECT_LT(gw.player.currentEyeY, 1.05f);
+
+        // Verify camera eye shifted sideways (+Z) while body position & detectionEyePosition did NOT move laterally!
+        EXPECT_GT(gw.player.eyePosition().z - gw.player.position.z, 0.35f);
+        EXPECT_NEAR(gw.player.position.x, startPos.x, 0.01f);
+        EXPECT_NEAR(gw.player.position.z, startPos.z, 0.01f);
+        EXPECT_NEAR(gw.player.detectionEyePosition().x, gw.player.position.x, 1e-4f);
+        EXPECT_NEAR(gw.player.detectionEyePosition().z, gw.player.position.z, 1e-4f);
+
+        // Enemy must NOT trigger on the peeking player because detection collider stayed behind cover!
+        ASSERT_GE(gw.enemies.size(), 1u);
+        EXPECT_FALSE(gw.enemies[0].alerted);
+        EXPECT_EQ(gw.enemies[0].aiState, EnemyAIState::Patrol);
+    }
+
+    // 5. Room-in-corridor overlap regression check across 6 seeds:
+    //    Verify NO room door or hatch cell sits inside a non-parent corridor!
+    {
+        GameSettings cfg = GameSettings::loadOrCreate("mega.cfg");
+        for (uint64_t seed : {101ULL, 202ULL, 303ULL, 404ULL, 505ULL, 606ULL}) {
+            MegaResult res = MegaGenerator::generate(seed, cfg);
+            for (const auto& hp : res.hatches) {
+                // Every hatch cell is inside a 3x3 room, NEVER inside any corridor segment!
+                for (const auto& c : res.corridors) {
+                    int cMinX = c.alongX ? std::min(c.x0, c.x1) : c.x0;
+                    int cMaxX = c.alongX ? std::max(c.x0, c.x1) : (c.x0 + c.width - 1);
+                    int cMinZ = c.alongX ? c.z0 : std::min(c.z0, c.z1);
+                    int cMaxZ = c.alongX ? (c.z0 + c.width - 1) : std::max(c.z0, c.z1);
+                    bool insideCorridor = (hp.cellX >= cMinX && hp.cellX <= cMaxX &&
+                                           hp.cellZ >= cMinZ && hp.cellZ <= cMaxZ);
+                    EXPECT_FALSE(insideCorridor);
+                }
+            }
+        }
+    }
+}
+
+TEST(SewerMossAndSettingsSaveTest, SettingsPersistConfigurableMossSpawnAndKnifeScrapingWork) {
+    // 1. Settings persistence across restarts (preserves custom keys & comments while updating saved preferences!)
+    {
+        const std::string tmpCfg = "/tmp/mega_test_persist_prefs.cfg";
+        {
+            std::ofstream out(tmpCfg, std::ios::trunc);
+            out << "# Custom user config\n"
+                << "lamp_intensity = 2.15 # keep me\n"
+                << "master_volume = 1.00\n"
+                << "mouse_sensitivity = 0.0020\n"
+                << "fullscreen = 0\n";
+        }
+        GameSettings s = GameSettings::loadOrCreate(tmpCfg);
+        EXPECT_NEAR(s.lampIntensity, 2.15f, 0.001f);
+
+        s.masterVolume = 0.60f;
+        s.mouseSensitivity = 0.0036f;
+        s.fullscreen = true;
+        s.useRandomSeed = true;
+        s.fixedSeed = 987654321ULL;
+        s.sewerMossSpawnChance = 0.72f;
+        EXPECT_TRUE(s.saveUserPreferences(tmpCfg));
+
+        GameSettings reloaded = GameSettings::loadOrCreate(tmpCfg);
+        EXPECT_NEAR(reloaded.lampIntensity, 2.15f, 0.001f); // Custom untouched key preserved!
+        EXPECT_NEAR(reloaded.masterVolume, 0.60f, 0.01f);
+        EXPECT_NEAR(reloaded.mouseSensitivity, 0.0036f, 0.0001f);
+        EXPECT_TRUE(reloaded.fullscreen);
+        EXPECT_TRUE(reloaded.useRandomSeed);
+        EXPECT_EQ(reloaded.fixedSeed, 987654321ULL);
+        EXPECT_NEAR(reloaded.sewerMossSpawnChance, 0.72f, 0.01f);
+        std::remove(tmpCfg.c_str());
+    }
+
+    // 2. Configurable Sewer Wall Moss spawn frequency (0% vs 25% vs 100%)
+    {
+        GameSettings sZero;
+        sZero.sewerMossSpawnChance = 0.0f;
+        MegaResult rZero = MegaGenerator::generate(303ULL, sZero);
+        EXPECT_EQ(rZero.mossPatches.size(), 0u);
+
+        GameSettings sLow;
+        sLow.sewerMossSpawnChance = 0.25f;
+        MegaResult rLow = MegaGenerator::generate(303ULL, sLow);
+        EXPECT_GT(rLow.mossPatches.size(), 0u);
+
+        GameSettings sFull;
+        sFull.sewerMossSpawnChance = 1.0f;
+        MegaResult rFull = MegaGenerator::generate(303ULL, sFull);
+        EXPECT_GT(rFull.mossPatches.size(), rLow.mossPatches.size());
+    }
+
+    // 3. ItemType::Moss is 2x1x2, requires a Knife to scrape, spawns falling chunks & 3D particles on Hold-LMB,
+    //    and adds 2x1x2 Moss into the backpack when fully scraped!
+    {
+        Int3 mossSz = itemBaseGridSize(ItemType::Moss);
+        EXPECT_EQ(mossSz.x, 2);
+        EXPECT_EQ(mossSz.y, 1);
+        EXPECT_EQ(mossSz.z, 2);
+
+        GameWorld gw;
+        gw.settings.sewerMossSpawnChance = 0.85f;
+        gw.startNewRun(303ULL);
+        ASSERT_GT(gw.mossPatches.size(), 0u);
+        AudioEngine audio;
+        PlayerInput idle;
+
+        // Stand in front of the first sewer moss patch looking straight at it
+        const auto& mp = gw.mossPatches[0];
+        Vec3 outN{static_cast<float>(mp.normalX), 0.0f, static_cast<float>(mp.normalZ)};
+        gw.player.position = {
+            mp.pos.x + outN.x * 1.15f,
+            mp.pos.y - cfg::PLAYER_EYE_Y,
+            mp.pos.z + outN.z * 1.15f
+        };
+        gw.player.yaw = std::atan2(-outN.x, outN.z);
+        gw.player.pitch = 0.0f;
+        gw.backpack.clear();
+        gw.hasHeldItem = false;
+
+        // Without a Knife -> cannot open MossMinigame!
+        gw.updateHover();
+        ASSERT_EQ(gw.hoveredMossIdx, 0);
+        EXPECT_TRUE(gw.beginInteract(audio));
+        EXPECT_FALSE(gw.mossMinigame.active);
+
+        // Equip a Knife in hand -> interacting opens MossMinigame!
+        gw.hasHeldItem = true;
+        gw.heldItemType = ItemType::Knife;
+        EXPECT_TRUE(gw.beginInteract(audio));
+        ASSERT_TRUE(gw.mossMinigame.active);
+        int initCells = gw.mossMinigame.remainingMossCells;
+        ASSERT_GT(initCells, 200);
+
+        // Moving mouse WITHOUT holding LMB does NOT scrape any moss!
+        gw.mossMinigame.scrapingHeld = false;
+        gw.mossMinigame.handleMouseMove(-120.0f, -80.0f);
+        for (int f = 0; f < 15; ++f) gw.update(idle, false, cfg::FIXED_DT, audio);
+        EXPECT_EQ(gw.mossMinigame.remainingMossCells, initCells);
+
+        // Hold LMB and sweep the knife methodically in horizontal passes across [0.05..0.95] x [0.05..0.95]
+        gw.mossMinigame.scrapingHeld = true;
+        gw.particles.clear();
+        bool saw2DChunks = false;
+        bool saw3DParticles = false;
+
+        for (int row = 0; row <= 8 && gw.mossMinigame.active; ++row) {
+            float ty = 0.08f + row * 0.105f;
+            float txStart = (row % 2 == 0) ? 0.05f : 0.95f;
+            float txEnd   = (row % 2 == 0) ? 0.95f : 0.05f;
+            gw.mossMinigame.targetX = txStart;
+            gw.mossMinigame.targetY = ty;
+            for (int f = 0; f < 25 && gw.mossMinigame.active; ++f) {
+                gw.update(idle, false, cfg::FIXED_DT, audio);
+                if (!gw.mossMinigame.chunks.empty()) saw2DChunks = true;
+                if (!gw.particles.empty()) saw3DParticles = true;
+            }
+            gw.mossMinigame.targetX = txEnd;
+            gw.mossMinigame.targetY = ty;
+            for (int f = 0; f < 45 && gw.mossMinigame.active; ++f) {
+                gw.update(idle, false, cfg::FIXED_DT, audio);
+                if (!gw.mossMinigame.chunks.empty()) saw2DChunks = true;
+                if (!gw.particles.empty()) saw3DParticles = true;
+            }
+        }
+        // Allow brief finishing crumble timer (0.28s) to complete
+        for (int f = 0; f < 30 && gw.mossMinigame.active; ++f) {
+            gw.update(idle, false, cfg::FIXED_DT, audio);
+        }
+
+        EXPECT_TRUE(saw2DChunks);
+        EXPECT_TRUE(saw3DParticles);
+        EXPECT_FALSE(gw.mossMinigame.active);
+        EXPECT_TRUE(gw.mossPatches[0].scraped);
+        EXPECT_EQ(gw.backpack.countType(ItemType::Moss), 1);
+    }
+}
+
+TEST(ObjModelAndCreatureScaleTest, LoadsHornedCreatureObjAtExactFiveCmPerGridCellScale) {
+    ObjModelData model;
+    ASSERT_TRUE(ObjLoader::loadFromFile("assets/models/horned_rat.obj", model));
+
+    // High-detail sculpted mesh (> 8,000 triangles with materials, normals & UVs)
+    EXPECT_GT(model.triangleCount(), 8000u);
+    EXPECT_GT(model.vertices.size(), 15000u);
+
+    // Verify 1 notebook grid square = 5 cm (0.05 m) scale:
+    // - Paws sit cleanly on y = 0.00 m
+    // - Height to antler tips (~9.2..9.7 squares) = ~0.46..0.49 m
+    // - Total nose+whiskers to curled tail tip (~21.6 squares) = ~1.05..1.12 m
+    // - Lateral span across ears/haunches (~5..6 squares) = ~0.22..0.34 m
+    Vec3 sz = model.size();
+    EXPECT_NEAR(model.bounds.min.y, 0.0f, 0.005f);
+    EXPECT_NEAR(sz.y, 0.48f, 0.04f);
+    EXPECT_NEAR(sz.z, 1.08f, 0.08f);
+    EXPECT_GT(sz.x, 0.20f);
+    EXPECT_LT(sz.x, 0.36f);
+
+    // Verify GameWorld spawns observable creature in Starter Room + Sewer walkways
+    GameWorld gw;
+    gw.startNewRun(303ULL);
+    EXPECT_GE(gw.creatures.size(), 2u);
+    std::vector<Mat4> mats;
+    gw.gatherCreatureTransforms(mats);
+    EXPECT_EQ(mats.size(), gw.creatures.size());
 }

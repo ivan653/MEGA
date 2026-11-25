@@ -1,8 +1,10 @@
 #include "game/GameWorld.hpp"
 #include "core/Rng.hpp"
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <queue>
+#include <random>
 #include <unordered_map>
 
 namespace mega {
@@ -65,6 +67,17 @@ AABB WorldItem::worldBounds() const {
     };
 }
 
+AABB WorldMossPatch::worldBounds() const {
+    float hw = width * 0.5f;
+    float hh = height * 0.5f;
+    if (normalX != 0) {
+        return {{pos.x - 0.06f, pos.y - hh, pos.z - hw},
+                {pos.x + 0.06f, pos.y + hh, pos.z + hw}};
+    }
+    return {{pos.x - hw, pos.y - hh, pos.z - 0.06f},
+            {pos.x + hw, pos.y + hh, pos.z + 0.06f}};
+}
+
 AABB HingeDoor::worldBounds() const {
     if (isHatch) {
         Mat4 m = Mat4::translate(hingePos) * Mat4::rotateY(closedYaw) * Mat4::rotateX(-angle);
@@ -121,16 +134,19 @@ void GameWorld::startNewRun(uint64_t seed) {
     draggingItem = false;
     dragItemDurability = 0;
     dragOriginBackpackId = -1;
+    dragFromWorld = false;
     hoveredBackpackItemId = -1;
     hoveredBackpackBlocked = false;
     hoveredGroundedBackpack = false;
     placementPreview = GhostPreviewState{};
     availableCrafts.clear();
     lockpick.close();
+    mossMinigame.close();
     flashlightOn = false;
     inventoryOpen = false;
     hoveredDoorIdx = -1;
     hoveredItemIdx = -1;
+    hoveredMossIdx = -1;
     grabbedDoorIdx = -1;
     playerStepDist = 0.0f;
     playerWasGrounded = true;
@@ -149,12 +165,22 @@ void GameWorld::generateLevel(uint64_t seed) {
     player.velocity = {0.0f, 0.0f, 0.0f};
     player.yaw = -PI * 0.5f; // Face West toward the table with Flashlight, Batteries & Lockpicks
     player.pitch = 0.0f;
+    player.crouched = false;
+    player.currentHeight = cfg::PLAYER_HEIGHT;
+    player.currentEyeY = cfg::PLAYER_EYE_Y;
+    player.leanAmount = 0.0f;
+    player.currentLeanOffset = 0.0f;
     worldStreamChanged = true;
 
     enemies.clear();
     doors.clear();
     worldItems.clear();
+    mossPatches.clear();
+    creatures.clear();
     pickups.clear();
+
+    // Starter Room specimen of the 3D Horned Sewer Creature (1 grid square = 5cm scale!) in SW corner for immediate inspection!
+    creatures.push_back({{56.45f, 1.0f, 59.55f}, 2.35f, 0.0f, 0, 0});
     projectiles.clear();
     particles.clear();
 
@@ -403,6 +429,33 @@ void GameWorld::syncLockersFromMap() {
         hatch.regX = hp.regX;
         hatch.regZ = hp.regZ;
         doors.push_back(hatch);
+    }
+
+    // 2.9) Scrapeable Sewer Wall Moss Patches
+    for (const auto& mp : map.mossPatches) {
+        bool exists = false;
+        for (const auto& existing : mossPatches) {
+            if (lengthSq(existing.pos - mp.centerPos) < 0.01f) {
+                exists = true;
+                break;
+            }
+        }
+        if (exists) continue;
+        mossPatches.push_back({mp.centerPos, mp.normalX, mp.normalZ, mp.width, mp.height, mp.patchSeed, false, mp.regX, mp.regZ});
+    }
+
+    // 2.10) Sewer Walkway Horned Creatures
+    for (const auto& cs : map.creatureSpawns) {
+        bool exists = false;
+        for (const auto& existing : creatures) {
+            if (lengthSq(existing.pos - cs.pos) < 0.04f) {
+                exists = true;
+                break;
+            }
+        }
+        if (exists) continue;
+        float phase = std::fmod(std::abs(cs.pos.x * 3.7f + cs.pos.z * 5.3f), 6.28f);
+        creatures.push_back({cs.pos, cs.yaw, phase, cs.regX, cs.regZ});
     }
 
     // 3) Spawn Loot on Crates, Metal Cabinet Shelves, Shelving Racks & Lockers from configurable LootTables
@@ -839,6 +892,7 @@ void GameWorld::update(const PlayerInput& input, bool firePressed, float dt, Aud
     // Stamina/Energy & Thirst gating for sprint & jump (bypassed in God Mode / Noclip)
     PlayerInput modInput = input;
     if (godNoclip) modInput.noclip = true;
+    if (modInput.crouch || player.crouched) modInput.sprint = false;
     bool tryingSprint = modInput.sprint && (std::abs(modInput.moveForward) > 0.1f || std::abs(modInput.moveRight) > 0.1f);
     if (!godMode && !modInput.noclip) {
         if (thirst <= 1.0f || energy <= 2.0f) {
@@ -896,11 +950,12 @@ void GameWorld::update(const PlayerInput& input, bool firePressed, float dt, Aud
             float stepDelta = std::hypot(player.position.x - prevPlayerPos.x,
                                          player.position.z - prevPlayerPos.z);
             playerStepDist += stepDelta;
-            float strideLen = tryingSprint ? 2.15f : 1.72f;
+            float strideLen = tryingSprint ? 2.15f : (player.crouched ? 1.35f : 1.72f);
             if (playerStepDist >= strideLen) {
                 playerStepDist -= strideLen;
                 float jitter = std::fmod(std::abs(player.position.x * 13.7f + player.position.z * 7.3f), 1.0f);
-                audio.play(SoundId::PlayerStep, tryingSprint ? 0.95f : 0.65f, jitter, tryingSprint ? 1.0f : 0.25f);
+                float stepVol = tryingSprint ? 0.95f : (player.crouched ? 0.30f : 0.65f);
+                audio.play(SoundId::PlayerStep, stepVol, jitter, tryingSprint ? 1.0f : 0.25f);
             }
         }
     }
@@ -1050,6 +1105,62 @@ void GameWorld::update(const PlayerInput& input, bool firePressed, float dt, Aud
         }
     }
 
+    // Update sewer wall moss-scraping minigame in real time + emit 3D falling moss particles!
+    if (mossMinigame.active) {
+        mossMinigame.update(dt, audio);
+        if (mossMinigame.cellsScrapedThisTick > 0 && mossMinigame.hasWorldPos) {
+            Rng pRng(baseSeed ^ static_cast<uint64_t>(mossMinigame.remainingMossCells * 2654435761ULL + particles.size() * 97ULL));
+            int count = std::min(5, (mossMinigame.cellsScrapedThisTick + 1) / 2);
+            for (int k = 0; k < count; ++k) {
+                Vec3 n = mossMinigame.patchNormal;
+                Vec3 tang{-n.z, 0.0f, n.x};
+                Vec3 spawnP = mossMinigame.patchWorldPos
+                            + n * 0.06f
+                            + tang * ((pRng.nextFloat() - 0.5f) * 0.42f)
+                            + Vec3{0.0f, (pRng.nextFloat() - 0.5f) * 0.35f, 0.0f};
+                Particle pt;
+                pt.pos = spawnP;
+                pt.vel = n * (0.25f + pRng.nextFloat() * 0.45f)
+                       + tang * ((pRng.nextFloat() - 0.5f) * 0.6f)
+                       + Vec3{0.0f, -0.35f, 0.0f};
+                pt.life = 0.75f + pRng.nextFloat() * 0.45f;
+                pt.color = {0.28f + pRng.nextFloat() * 0.14f, 0.62f + pRng.nextFloat() * 0.22f, 0.22f};
+                pt.size = 0.045f + pRng.nextFloat() * 0.035f;
+                pt.gravity = 6.8f;
+                pt.sprite = SpriteType::WaterDrop; // Crisp solid square pixel particle!
+                particles.push_back(pt);
+            }
+        }
+        if (mossMinigame.completedJustNow) {
+            if (mossMinigame.targetMossIdx >= 0 && mossMinigame.targetMossIdx < static_cast<int>(mossPatches.size())) {
+                mossPatches[mossMinigame.targetMossIdx].scraped = true;
+            }
+            // Add harvested 2x1x2 Moss into 3D backpack (or hand / floor if full)
+            if (backpack.tryAutoAdd(ItemType::Moss, 0) >= 0) {
+                hudNoticeText = "HARVESTED MOSS (2X1X2)";
+                hudNoticeTimer = 2.0f;
+            } else if (!hasHeldItem) {
+                hasHeldItem = true;
+                heldPlaceMode = false;
+                heldItemType = ItemType::Moss;
+                heldItemOrient = {};
+                heldItemDurability = 0;
+                resetHeldConsumableState(false);
+                hudNoticeText = "BACKPACK FULL - MOSS IN HAND";
+                hudNoticeTimer = 2.0f;
+            } else {
+                worldItems.push_back({player.position, ItemType::Moss, false,
+                                      map.currentRegX, map.currentRegZ, {}, 0});
+                hudNoticeText = "BACKPACK FULL - MOSS DROPPED";
+                hudNoticeTimer = 2.0f;
+            }
+            syncInventoryCounts();
+            audio.play(SoundId::Pickup, 0.9f);
+            mossMinigame.completedJustNow = false;
+            mossMinigame.close();
+        }
+    }
+
     // Update hovered interactable object & realistic held food/water consumption
     updateHover();
     updateHeldConsumption(dt, audio);
@@ -1100,8 +1211,8 @@ void GameWorld::update(const PlayerInput& input, bool firePressed, float dt, Aud
         return;
     }
 
-    // Robot Enemies AI
-    Vec3 target = player.eyePosition();
+    // Robot Enemies AI (uses UN-LEANED detectionEyePosition() so Q/E corner peeking NEVER triggers enemies!)
+    Vec3 target = player.detectionEyePosition();
     auto isWalkable = [&](float x, float z) -> bool {
         int ix = static_cast<int>(std::floor(x));
         int iz = static_cast<int>(std::floor(z));
@@ -1987,7 +2098,7 @@ void GameWorld::update(const PlayerInput& input, bool firePressed, float dt, Aud
             pr.life = 0.0f;
             continue;
         }
-        if (!pr.fromPlayer && lengthSq(pr.pos - player.eyePosition()) < 0.55f * 0.55f) {
+        if (!pr.fromPlayer && lengthSq(pr.pos - player.detectionEyePosition()) < 0.55f * 0.55f) {
             health -= pr.damage;
             damageFlash = 0.6f;
             pr.life = 0.0f;
@@ -2009,6 +2120,20 @@ void GameWorld::update(const PlayerInput& input, bool firePressed, float dt, Aud
         std::remove_if(particles.begin(), particles.end(),
                        [](const Particle& p) { return p.life <= 0.0f; }),
         particles.end());
+
+    // Update horned sewer creatures (gentle breathing & curious orientation toward nearby player)
+    for (auto& cr : creatures) {
+        cr.animTime += dt;
+        Vec3 toPlayer{player.position.x - cr.pos.x, 0.0f, player.position.z - cr.pos.z};
+        float dSq = lengthSq(toPlayer);
+        if (dSq > 0.04f && dSq < 4.2f * 4.2f && std::abs(player.position.y - cr.pos.y) < 1.8f) {
+            float wantYaw = std::atan2(toPlayer.x, toPlayer.z);
+            float diff = wantYaw - cr.yaw;
+            while (diff > PI) diff -= 2.0f * PI;
+            while (diff < -PI) diff += 2.0f * PI;
+            cr.yaw += diff * std::min(1.0f, dt * 3.2f);
+        }
+    }
 
     if (health <= 0.0f) {
         health = 0.0f;
@@ -2213,6 +2338,10 @@ Mat4 GameWorld::heldItemWorldMatrix() const {
                 -(0.38f + swingS * 0.24f)
             };
             poseRot = Mat4::rotateY(-0.35f) * Mat4::rotateX(-0.30f - swingS * 1.05f) * Mat4::rotateZ(0.12f + swingS * 0.42f);
+            break;
+        case ItemType::Moss:
+            localOff = {0.19f, -0.14f, -0.36f};
+            poseRot = Mat4::rotateX(0.32f) * Mat4::rotateY(-0.28f) * Mat4::rotateZ(0.10f);
             break;
     }
 
@@ -2789,7 +2918,7 @@ bool GameWorld::performMeleeAttack(AudioEngine& audio) {
 
 void GameWorld::updateSurfaceCrafting() {
     availableCrafts.clear();
-    if (lockpick.active || backpackMode == BackpackMode::InHands || draggingItem) return;
+    if (lockpick.active || mossMinigame.active || backpackMode == BackpackMode::InHands || draggingItem) return;
     if (hoveredItemIdx < 0 || hoveredItemIdx >= static_cast<int>(worldItems.size())) return;
 
     const auto& anchor = worldItems[hoveredItemIdx];
@@ -2937,6 +3066,7 @@ bool GameWorld::handlePrimaryClick(const Vec3& rayOrig, const Vec3& rayDir, Audi
             draggingItem = false;
             dragItemDurability = 0;
             dragOriginBackpackId = -1;
+            dragFromWorld = false;
             placementPreview = GhostPreviewState{};
             syncInventoryCounts();
             return true;
@@ -3030,6 +3160,14 @@ bool GameWorld::handlePrimaryClick(const Vec3& rayOrig, const Vec3& rayDir, Audi
             performMeleeAttack(audio);
             return true;
         }
+        // If holding a Battery in hand, LMB recharges the flashlight (just like other held items!)
+        if (hasHeldItem && heldItemType == ItemType::Battery) {
+            if (!useHeldItem(audio)) {
+                hudNoticeText = inventory.hasFlashlight ? "FLASHLIGHT BATTERY FULL" : "NEED FLASHLIGHT";
+                hudNoticeTimer = 1.4f;
+            }
+            return true;
+        }
     }
     return false;
 }
@@ -3037,13 +3175,16 @@ bool GameWorld::handlePrimaryClick(const Vec3& rayOrig, const Vec3& rayDir, Audi
 bool GameWorld::handleSecondaryClick(const Vec3& rayOrig, const Vec3& rayDir, AudioEngine& audio) {
     updateCursorHover(rayOrig, rayDir);
 
-    // 1) If already RMB-dragging an item -> drop/place it (or cancel back into backpack if invalid)
+    // 1) If already RMB-dragging an item -> drop/place it (or cancel back to its origin if invalid)
     if (draggingItem) {
         if (placementPreview.active && placementPreview.valid) {
             return handlePrimaryClick(rayOrig, rayDir, audio);
         }
-        // Cancel drag: restore item into backpack or hand
-        if (backpack.tryAutoAdd(dragItemType, dragItemDurability) < 0 && !hasHeldItem) {
+        // Cancel drag: restore grounded world item back to its original spot, or backpack item into backpack/hand
+        if (dragFromWorld) {
+            worldItems.push_back({dragOriginWorldPos, dragItemType, false,
+                                  dragOriginRegX, dragOriginRegZ, dragOriginWorldOrient, dragItemDurability});
+        } else if (backpack.tryAutoAdd(dragItemType, dragItemDurability) < 0 && !hasHeldItem) {
             hasHeldItem = true;
             heldPlaceMode = false;
             heldItemType = dragItemType;
@@ -3054,6 +3195,7 @@ bool GameWorld::handleSecondaryClick(const Vec3& rayOrig, const Vec3& rayDir, Au
         draggingItem = false;
         dragItemDurability = 0;
         dragOriginBackpackId = -1;
+        dragFromWorld = false;
         placementPreview = GhostPreviewState{};
         syncInventoryCounts();
         return true;
@@ -3070,6 +3212,7 @@ bool GameWorld::handleSecondaryClick(const Vec3& rayOrig, const Vec3& rayDir, Au
         PackedItem removed;
         if (backpack.removeById(hoveredBackpackItemId, &removed)) {
             draggingItem = true;
+            dragFromWorld = false;
             dragItemType = removed.type;
             dragItemOrient = removed.orient;
             dragItemDurability = removed.durability;
@@ -3081,7 +3224,31 @@ bool GameWorld::handleSecondaryClick(const Vec3& rayOrig, const Vec3& rayDir, Au
         }
     }
 
-    // 3) If holding an item in hand -> RMB toggles 3D ground placement preview mode!
+    // 3) Pressing RMB while looking at a grounded world item -> drag it directly across the 3D world grid!
+    if (backpackMode != BackpackMode::InHands && !heldPlaceMode) {
+        updateHover();
+        if (hoveredItemIdx >= 0 && hoveredItemIdx < static_cast<int>(worldItems.size()) &&
+            !worldItems[hoveredItemIdx].pickedUp) {
+            auto& wi = worldItems[hoveredItemIdx];
+            wi.pickedUp = true;
+            draggingItem = true;
+            dragFromWorld = true;
+            dragItemType = wi.type;
+            dragItemOrient = wi.orient;
+            dragItemDurability = wi.durability;
+            dragOriginBackpackId = -1;
+            dragOriginWorldPos = wi.pos;
+            dragOriginWorldOrient = wi.orient;
+            dragOriginRegX = wi.regX;
+            dragOriginRegZ = wi.regZ;
+            hoveredItemIdx = -1;
+            updateCursorHover(rayOrig, rayDir);
+            audio.play3D(SoundId::Pickup, wi.pos, 0.65f);
+            return true;
+        }
+    }
+
+    // 4) If holding an item in hand -> RMB toggles 3D ground placement preview mode!
     if (hasHeldItem && backpackMode != BackpackMode::InHands) {
         heldPlaceMode = !heldPlaceMode;
         if (heldPlaceMode) {
@@ -3094,12 +3261,103 @@ bool GameWorld::handleSecondaryClick(const Vec3& rayOrig, const Vec3& rayDir, Au
     return false;
 }
 
+std::vector<ItemType> GameWorld::getAccessibleWeaponSlots() const {
+    static constexpr ItemType WEAPON_ORDER[5] = {
+        ItemType::Spear, ItemType::Knife, ItemType::Broom, ItemType::Mop, ItemType::Stick
+    };
+    std::vector<ItemType> slots;
+    for (ItemType wt : WEAPON_ORDER) {
+        bool held = (hasHeldItem && heldItemType == wt);
+        bool inPackAccessible = (backpack.findFirstAccessible(wt) >= 0);
+        if (held || inPackAccessible) {
+            slots.push_back(wt);
+        }
+    }
+    return slots;
+}
+
+bool GameWorld::equipWeaponHotkey(int slotIdx, AudioEngine& audio) {
+    if (gameOver || lockpick.active || mossMinigame.active || draggingItem || settingsMenuOpen) return false;
+    auto slots = getAccessibleWeaponSlots();
+    if (slotIdx < 0 || slotIdx >= static_cast<int>(slots.size())) return false;
+    ItemType want = slots[slotIdx];
+
+    // Pressing the hotkey of the weapon already in hand stows it back into the backpack
+    if (hasHeldItem && heldItemType == want) {
+        if (backpack.tryAutoAdd(heldItemType, heldItemDurability) >= 0) {
+            hasHeldItem = false;
+            heldPlaceMode = false;
+            heldItemDurability = 0;
+            consumeLmbHeld = false;
+            resetHeldConsumableState(false);
+            placementPreview = GhostPreviewState{};
+            syncInventoryCounts();
+            audio.play(SoundId::Pickup, 0.7f);
+            return true;
+        }
+        hudNoticeText = "BACKPACK FULL";
+        hudNoticeTimer = 1.4f;
+        return false;
+    }
+
+    int packId = backpack.findFirstAccessible(want);
+    if (packId < 0) {
+        hudNoticeText = "WEAPON BLOCKED IN BACKPACK";
+        hudNoticeTimer = 1.6f;
+        return false;
+    }
+
+    PackedItem removed;
+    if (!backpack.removeById(packId, &removed)) return false;
+
+    if (hasHeldItem) {
+        if (backpack.tryAutoAdd(heldItemType, heldItemDurability) < 0) {
+            worldItems.push_back({player.position, heldItemType, false,
+                                  map.currentRegX, map.currentRegZ, heldItemOrient, heldItemDurability});
+        }
+    }
+    hasHeldItem = true;
+    heldPlaceMode = false;
+    heldItemType = removed.type;
+    heldItemOrient = removed.orient;
+    heldItemDurability = removed.durability;
+    consumeLmbHeld = false;
+    resetHeldConsumableState(true);
+    placementPreview = GhostPreviewState{};
+    if (backpackMode == BackpackMode::InHands) {
+        backpackMode = BackpackMode::OnBack;
+        backpackViewYaw = 0.0f;
+        backpackViewPitch = 0.0f;
+        inventoryOpen = false;
+    }
+    syncInventoryCounts();
+    audio.play(SoundId::Pickup, 0.85f);
+    return true;
+}
+
+uint64_t GameWorld::nextRunSeed() const {
+    if (!settings.useRandomSeed) {
+        return settings.fixedSeed;
+    }
+    std::random_device rd;
+    uint64_t now = static_cast<uint64_t>(std::chrono::high_resolution_clock::now().time_since_epoch().count());
+    uint64_t s = (static_cast<uint64_t>(rd()) << 32) ^ static_cast<uint64_t>(rd()) ^ now ^ (baseSeed * 6364136223846793005ULL + 1442695040888963407ULL);
+    return (s == 0) ? 0x4D4547410001ULL : s;
+}
+
+bool GameWorld::playerHasKnifeForMoss() const {
+    if (hasHeldItem && heldItemType == ItemType::Knife) return true;
+    return backpack.findFirstAccessible(ItemType::Knife) >= 0;
+}
+
 void GameWorld::updateHover() {
     hoveredDoorIdx = -1;
     hoveredItemIdx = -1;
+    hoveredMossIdx = -1;
     Vec3 orig = player.eyePosition();
     Vec3 dir = player.forwardDir();
     float wallT = raycastWorld(orig, dir, 2.7f);
+    // Allow ray to reach flush wall-mounted moss patches right on the wall surface (+0.08m margin)
     float bestT = wallT;
 
     // Check doors first so closed cabinet door blocks grabbing items behind it
@@ -3109,6 +3367,7 @@ void GameWorld::updateHover() {
             bestT = t;
             hoveredDoorIdx = static_cast<int>(i);
             hoveredItemIdx = -1;
+            hoveredMossIdx = -1;
         }
     }
 
@@ -3123,6 +3382,19 @@ void GameWorld::updateHover() {
             bestT = t;
             hoveredItemIdx = static_cast<int>(i);
             hoveredDoorIdx = -1;
+            hoveredMossIdx = -1;
+        }
+    }
+
+    float mossLimitT = std::min(2.7f, bestT + 0.08f);
+    for (size_t i = 0; i < mossPatches.size(); ++i) {
+        if (mossPatches[i].scraped) continue;
+        float t = 0.0f;
+        if (rayIntersectAABB(orig, dir, mossPatches[i].worldBounds(), mossLimitT, t)) {
+            if (hoveredDoorIdx < 0 && hoveredItemIdx < 0) {
+                mossLimitT = t;
+                hoveredMossIdx = static_cast<int>(i);
+            }
         }
     }
 
@@ -3188,6 +3460,19 @@ bool GameWorld::beginInteract(AudioEngine& audio, bool quickToggle) {
             return true;
         }
         grabbedDoorIdx = hoveredDoorIdx;
+        return true;
+    }
+    if (hoveredMossIdx >= 0 && hoveredMossIdx < static_cast<int>(mossPatches.size()) &&
+        !mossPatches[hoveredMossIdx].scraped) {
+        if (!playerHasKnifeForMoss()) {
+            hudNoticeText = "NEED KNIFE TO SCRAPE MOSS";
+            hudNoticeTimer = 1.8f;
+            audio.play(SoundId::DoorImpact, 0.25f, 0.0f, 0.3f);
+            return true;
+        }
+        const auto& mp = mossPatches[hoveredMossIdx];
+        Vec3 norm{static_cast<float>(mp.normalX), 0.0f, static_cast<float>(mp.normalZ)};
+        mossMinigame.open(hoveredMossIdx, mp.seed, &mp.pos, &norm);
         return true;
     }
     return false;
@@ -3268,7 +3553,8 @@ bool GameWorld::useInventoryItem(ItemType type, AudioEngine& audio) {
 }
 
 void GameWorld::gatherInteractables(std::vector<DoorRenderState>& outDoors,
-                                    std::vector<ItemRenderState>& outItems) const {
+                                    std::vector<ItemRenderState>& outItems,
+                                    std::vector<MossRenderState>* outMoss) const {
     outDoors.clear();
     for (size_t i = 0; i < doors.size(); ++i) {
         const auto& d = doors[i];
@@ -3288,6 +3574,30 @@ void GameWorld::gatherInteractables(std::vector<DoorRenderState>& outDoors,
             fill = clampf(static_cast<float>(worldItems[i].durability) / 100.0f, 0.02f, 1.0f);
         }
         outItems.push_back({worldItems[i].pos, static_cast<int>(worldItems[i].type), worldItems[i].orient, hl, fill});
+    }
+
+    if (outMoss) {
+        outMoss->clear();
+        for (size_t i = 0; i < mossPatches.size(); ++i) {
+            if (mossPatches[i].scraped) continue;
+            bool hl = (static_cast<int>(i) == hoveredMossIdx);
+            outMoss->push_back({mossPatches[i].pos, mossPatches[i].normalX, mossPatches[i].normalZ,
+                                mossPatches[i].width, mossPatches[i].height, mossPatches[i].seed, hl});
+        }
+    }
+}
+
+void GameWorld::gatherCreatureTransforms(std::vector<Mat4>& outTransforms) const {
+    outTransforms.clear();
+    outTransforms.reserve(creatures.size());
+    for (const auto& cr : creatures) {
+        // Subtle organic breathing scale (keeps grounded paws anchored at y=0 and preserves 1:1 5cm/cell scale!)
+        float breath = 1.0f + 0.016f * std::sin(cr.animTime * 3.4f);
+        float sway = 0.025f * std::sin(cr.animTime * 1.9f);
+        Mat4 m = Mat4::translate(cr.pos)
+               * Mat4::rotateY(cr.yaw + sway)
+               * Mat4::scale({1.0f, breath, 1.0f});
+        outTransforms.push_back(m);
     }
 }
 

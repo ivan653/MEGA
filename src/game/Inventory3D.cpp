@@ -48,6 +48,7 @@ Int3 itemBaseGridSize(ItemType type) {
         case ItemType::Knife:      return {1, 6, 1};  // 1 x 6 x 1
         case ItemType::Stick:      return {1, 26, 1}; // 1 x 26 x 1 (broken broom/mop handle)
         case ItemType::Spear:      return {1, 30, 1}; // 1 x 30 x 1 (crafted spear, fits 2x30x6 back slot!)
+        case ItemType::Moss:       return {2, 1, 2};  // 2 x 1 x 2 (damp sewer moss clump)
     }
     return {1, 1, 1};
 }
@@ -65,6 +66,7 @@ const char* itemDisplayName(ItemType type) {
         case ItemType::Knife:      return "KNIFE";
         case ItemType::Stick:      return "STICK";
         case ItemType::Spear:      return "SPEAR";
+        case ItemType::Moss:       return "MOSS";
     }
     return "ITEM";
 }
@@ -216,8 +218,72 @@ int Backpack3D::tryAutoAdd(ItemType type, int durability) {
         {0, 0, 0}, {0, 1, 0}, {1, 0, 0}, {0, 0, 1}, {1, 1, 0}, {0, 1, 1}
     };
 
-    // 1) Try main 6x8x4 interior cavity first
-    for (int gy = 0; gy < DIM_Y; ++gy) {
+    // Helper: checks if every item occupying the (gx..gx+sz.x, gz..gz+sz.z) column below gy has the same ItemType
+    auto columnIsPureSameType = [&](int gx, int gy, int gz, Int3 sz, bool& exactAligned) -> bool {
+        bool hasSameBelow = false;
+        exactAligned = false;
+        for (const auto& it : items) {
+            if (it.inBackSlot) continue;
+            Int3 os = it.size();
+            bool ox = (gx < it.gx + os.x) && (gx + sz.x > it.gx);
+            bool oz = (gz < it.gz + os.z) && (gz + sz.z > it.gz);
+            if (!ox || !oz) continue;
+            if (it.gy < gy) {
+                if (it.type != type) return false;
+                hasSameBelow = true;
+                if (it.gx == gx && it.gz == gz && os.x == sz.x && os.z == sz.z) {
+                    exactAligned = true;
+                }
+            }
+        }
+        return hasSameBelow;
+    };
+
+    // 1) Main 6x8x4 interior cavity — Column-first packing so each ItemType stacks cleanly in its own vertical column!
+    //    Pass 1A: Stack directly on top of an existing column of the SAME ItemType (prefers exact footprint alignment)
+    {
+        int bestGx = -1, bestGy = -1, bestGz = -1;
+        ItemOrientation bestOri{};
+        int bestScore = -1;
+
+        for (int gy = 1; gy < DIM_Y; ++gy) {
+            for (const auto& ori : CANDIDATES) {
+                Int3 sz = ori.applyToSize(itemBaseGridSize(type));
+                if (gy + sz.y > DIM_Y) continue;
+                for (int gz = 0; gz <= DIM_Z - sz.z; ++gz) {
+                    for (int gx = 0; gx <= DIM_X - sz.x; ++gx) {
+                        if (!canPlaceAt(gx, gy, gz, type, ori)) continue;
+                        bool exactAligned = false;
+                        if (!columnIsPureSameType(gx, gy, gz, sz, exactAligned)) continue;
+                        int score = (exactAligned ? 1000 : 500) - gy * 10;
+                        if (score > bestScore) {
+                            bestScore = score;
+                            bestGx = gx; bestGy = gy; bestGz = gz; bestOri = ori;
+                        }
+                    }
+                }
+            }
+        }
+        if (bestScore >= 0) {
+            return placeAt(bestGx, bestGy, bestGz, type, bestOri, durability);
+        }
+    }
+
+    //    Pass 1B: Start a fresh column on the floor (gy == 0) so we NEVER block a different item type below!
+    for (const auto& ori : CANDIDATES) {
+        Int3 sz = ori.applyToSize(itemBaseGridSize(type));
+        if (sz.y > DIM_Y) continue;
+        for (int gz = 0; gz <= DIM_Z - sz.z; ++gz) {
+            for (int gx = 0; gx <= DIM_X - sz.x; ++gx) {
+                if (canPlaceAt(gx, 0, gz, type, ori)) {
+                    return placeAt(gx, 0, gz, type, ori, durability);
+                }
+            }
+        }
+    }
+
+    //    Pass 1C: Fallback (backpack floor is full and same-type columns are full) — stack anywhere valid
+    for (int gy = 1; gy < DIM_Y; ++gy) {
         for (const auto& ori : CANDIDATES) {
             Int3 sz = ori.applyToSize(itemBaseGridSize(type));
             if (gy + sz.y > DIM_Y) continue;

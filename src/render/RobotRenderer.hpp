@@ -43,6 +43,16 @@ struct ItemRenderState {
     float fill = 1.0f;      // 0..1 remaining fill for Water/Food
 };
 
+struct MossRenderState {
+    Vec3 pos;
+    int normalX = 0;
+    int normalZ = 1;
+    float width = 0.64f;
+    float height = 0.64f;
+    uint64_t seed = 0;
+    bool highlighted = false;
+};
+
 struct ConsumableVisualState {
     float fill = 1.0f;         // 0..1 remaining water in bottle or ration bar length
     float openProgress = 0.0f; // 0 = sealed, 1 = cap unscrewed / wrapper peeled back
@@ -90,7 +100,8 @@ public:
                              ItemType heldType = ItemType::Food,
                              const ItemOrientation& heldOrient = {},
                              const Mat4& heldMatrix = Mat4::identity(),
-                             const ConsumableVisualState& heldConsumable = {});
+                             const ConsumableVisualState& heldConsumable = {},
+                             const std::vector<MossRenderState>& mossPatches = {});
 
 private:
     GLuint vao_ = 0;

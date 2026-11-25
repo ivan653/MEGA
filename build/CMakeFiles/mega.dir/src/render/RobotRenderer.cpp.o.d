@@ -69,8 +69,11 @@ CMakeFiles/mega.dir/src/render/RobotRenderer.cpp.o: \
  /usr/include/c++/16/limits /usr/include/c++/16/bits/invoke.h \
  /usr/include/c++/16/bits/ranges_util.h \
  /usr/include/c++/16/pstl/glue_algorithm_defs.h \
- /usr/include/c++/16/pstl/execution_defs.h /usr/include/c++/16/cstdio \
- /usr/include/stdio.h \
+ /usr/include/c++/16/pstl/execution_defs.h /usr/include/c++/16/cstdint \
+ /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdint.h \
+ /usr/include/stdint.h /usr/include/bits/wchar.h \
+ /usr/include/bits/stdint-uintn.h /usr/include/bits/stdint-least.h \
+ /usr/include/c++/16/cstdio /usr/include/stdio.h \
  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdarg.h \
  /usr/include/bits/types/__fpos_t.h /usr/include/bits/types/__mbstate_t.h \
  /usr/include/bits/types/__fpos64_t.h /usr/include/bits/types/__FILE.h \
@@ -82,9 +85,8 @@ CMakeFiles/mega.dir/src/render/RobotRenderer.cpp.o: \
  /usr/include/c++/16/iosfwd /usr/include/c++/16/bits/stringfwd.h \
  /usr/include/c++/16/bits/memoryfwd.h /usr/include/c++/16/bits/postypes.h \
  /usr/include/c++/16/cwchar /usr/include/wchar.h \
- /usr/include/bits/wchar.h /usr/include/bits/types/wint_t.h \
- /usr/include/bits/types/mbstate_t.h /usr/include/c++/16/exception \
- /usr/include/c++/16/bits/exception_ptr.h \
+ /usr/include/bits/types/wint_t.h /usr/include/bits/types/mbstate_t.h \
+ /usr/include/c++/16/exception /usr/include/c++/16/bits/exception_ptr.h \
  /usr/include/c++/16/bits/cxxabi_init_exception.h \
  /usr/include/c++/16/typeinfo /usr/include/c++/16/bits/hash_bytes.h \
  /usr/include/c++/16/bits/nested_exception.h \
@@ -159,7 +161,11 @@ CMakeFiles/mega.dir/src/render/RobotRenderer.cpp.o: \
  /usr/include/c++/16/x86_64-pc-linux-gnu/bits/basic_file.h \
  /usr/include/c++/16/x86_64-pc-linux-gnu/bits/c++io.h \
  /usr/include/c++/16/bits/fstream.tcc /usr/include/c++/16/sstream \
- /usr/include/c++/16/bits/sstream.tcc \
+ /usr/include/c++/16/bits/sstream.tcc /usr/include/c++/16/vector \
+ /usr/include/c++/16/bits/stl_uninitialized.h \
+ /usr/include/c++/16/bits/stl_vector.h \
+ /usr/include/c++/16/bits/stl_bvector.h \
+ /usr/include/c++/16/bits/vector.tcc \
  /home/ivan/ImportantFiles/My\ Games/MEGA/src/core/Math3D.hpp \
  /usr/include/c++/16/cmath /usr/include/math.h \
  /usr/include/bits/math-vector.h /usr/include/bits/libm-simd-decl-stubs.h \
@@ -179,18 +185,11 @@ CMakeFiles/mega.dir/src/render/RobotRenderer.cpp.o: \
  /usr/include/c++/16/tr1/modified_bessel_func.tcc \
  /usr/include/c++/16/tr1/poly_hermite.tcc \
  /usr/include/c++/16/tr1/poly_laguerre.tcc \
- /usr/include/c++/16/tr1/riemann_zeta.tcc /usr/include/c++/16/cstdint \
- /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdint.h \
- /usr/include/stdint.h /usr/include/bits/stdint-uintn.h \
- /usr/include/bits/stdint-least.h \
+ /usr/include/c++/16/tr1/riemann_zeta.tcc \
  /home/ivan/ImportantFiles/My\ Games/MEGA/src/game/Inventory3D.hpp \
  /home/ivan/ImportantFiles/My\ Games/MEGA/src/core/LootTable.hpp \
  /home/ivan/ImportantFiles/My\ Games/MEGA/src/core/Rng.hpp \
- /usr/include/c++/16/array /usr/include/c++/16/vector \
- /usr/include/c++/16/bits/stl_uninitialized.h \
- /usr/include/c++/16/bits/stl_vector.h \
- /usr/include/c++/16/bits/stl_bvector.h \
- /usr/include/c++/16/bits/vector.tcc \
+ /usr/include/c++/16/array \
  /home/ivan/ImportantFiles/My\ Games/MEGA/src/render/Shader.hpp \
  /usr/include/epoxy/gl.h /usr/include/epoxy/common.h \
  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdbool.h \

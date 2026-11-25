@@ -32,7 +32,9 @@ private:
     void drawText(int x, int y, const char* text, uint32_t rgba, int scale = 1);
     void drawBar(int x, int y, int w, int h, float pct, uint32_t fillCol);
     void drawLockpickMinigame(const GameWorld& gw);
+    void drawMossMinigame(const GameWorld& gw);
     void drawMinimap(const GameWorld& gw);
+    void drawSettingsMenu(const GameWorld& gw);
 };
 
 } // namespace mega

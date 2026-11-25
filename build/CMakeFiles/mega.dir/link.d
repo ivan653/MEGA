@@ -3,12 +3,14 @@ mega: \
   /usr/lib/gcc/x86_64-pc-linux-gnu/16/../../../../lib/crti.o \
   /usr/lib/gcc/x86_64-pc-linux-gnu/16/crtbeginS.o \
   CMakeFiles/mega.dir/src/main.cpp.o \
+  CMakeFiles/mega.dir/src/core/ObjLoader.cpp.o \
   CMakeFiles/mega.dir/src/render/Shader.cpp.o \
   CMakeFiles/mega.dir/src/render/Framebuffer.cpp.o \
   CMakeFiles/mega.dir/src/render/TextureAtlas.cpp.o \
   CMakeFiles/mega.dir/src/render/WorldMesher.cpp.o \
   CMakeFiles/mega.dir/src/render/BillboardRenderer.cpp.o \
   CMakeFiles/mega.dir/src/render/RobotRenderer.cpp.o \
+  CMakeFiles/mega.dir/src/render/ModelRenderer.cpp.o \
   CMakeFiles/mega.dir/src/render/HudRenderer.cpp.o \
   CMakeFiles/mega.dir/src/world/WorldGrid.cpp.o \
   CMakeFiles/mega.dir/src/world/LightBaker.cpp.o \
@@ -17,6 +19,7 @@ mega: \
   CMakeFiles/mega.dir/src/game/GameWorld.cpp.o \
   CMakeFiles/mega.dir/src/game/Inventory3D.cpp.o \
   CMakeFiles/mega.dir/src/game/LockpickMinigame.cpp.o \
+  CMakeFiles/mega.dir/src/game/MossMinigame.cpp.o \
   CMakeFiles/mega.dir/src/audio/AudioEngine.cpp.o \
   /usr/lib/libSDL3.so.0.4.20 \
   /usr/lib/libGLX.so \
@@ -72,6 +75,8 @@ mega: \
 
 CMakeFiles/mega.dir/src/main.cpp.o:
 
+CMakeFiles/mega.dir/src/core/ObjLoader.cpp.o:
+
 CMakeFiles/mega.dir/src/render/Shader.cpp.o:
 
 CMakeFiles/mega.dir/src/render/Framebuffer.cpp.o:
@@ -83,6 +88,8 @@ CMakeFiles/mega.dir/src/render/WorldMesher.cpp.o:
 CMakeFiles/mega.dir/src/render/BillboardRenderer.cpp.o:
 
 CMakeFiles/mega.dir/src/render/RobotRenderer.cpp.o:
+
+CMakeFiles/mega.dir/src/render/ModelRenderer.cpp.o:
 
 CMakeFiles/mega.dir/src/render/HudRenderer.cpp.o:
 
@@ -99,6 +106,8 @@ CMakeFiles/mega.dir/src/game/GameWorld.cpp.o:
 CMakeFiles/mega.dir/src/game/Inventory3D.cpp.o:
 
 CMakeFiles/mega.dir/src/game/LockpickMinigame.cpp.o:
+
+CMakeFiles/mega.dir/src/game/MossMinigame.cpp.o:
 
 CMakeFiles/mega.dir/src/audio/AudioEngine.cpp.o:
 

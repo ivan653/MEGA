@@ -107,6 +107,26 @@ struct SewerSegment {
     int regZ = 0;
 };
 
+// Scrapeable sewer wall moss patch (harvested with a Knife into 2x1x2 ItemType::Moss)
+struct MossPatchPlacement {
+    Vec3 centerPos;
+    int normalX = 0;
+    int normalZ = 1; // Outward wall normal into sewer tunnel
+    float width = 0.64f;
+    float height = 0.64f;
+    uint64_t patchSeed = 0;
+    int regX = 0;
+    int regZ = 0;
+};
+
+// Horned sewer rodent creature spawn point on dry sewer walkways
+struct CreatureSpawn {
+    Vec3 pos;
+    float yaw = 0.0f;
+    int regX = 0;
+    int regZ = 0;
+};
+
 // 3D interior clearance volume where loot items can spawn, plus optional adjacent floor zone beside storage
 struct LootSurface {
     LootSource source = LootSource::Crate;
@@ -132,6 +152,8 @@ struct MegaResult {
     std::vector<HatchPlacement> hatches;
     std::vector<LadderPlacement> ladders;
     std::vector<SewerSegment> sewerTunnels;
+    std::vector<MossPatchPlacement> mossPatches;
+    std::vector<CreatureSpawn> creatureSpawns;
     std::vector<LootSurface> lootSurfaces;
     std::set<std::pair<int, int>> loadedRegions;
     int currentRegX = 0;

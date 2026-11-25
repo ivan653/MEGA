@@ -25,6 +25,7 @@ constexpr Glyph3x5 FONT[] = {
     {'(', {0b010,0b100,0b100,0b100,0b010}},
     {')', {0b010,0b001,0b001,0b001,0b010}},
     {'%', {0b101,0b001,0b010,0b100,0b101}},
+    {'.', {0b000,0b000,0b000,0b000,0b010}},
     {':', {0b000,0b010,0b000,0b010,0b000}},
     {'/', {0b001,0b001,0b010,0b100,0b100}},
     {'[', {0b110,0b100,0b100,0b100,0b110}},
@@ -269,6 +270,8 @@ void HudRenderer::render(const GameWorld& gw) {
     int cy = height_ / 2;
     if (gw.lockpick.active) {
         drawLockpickMinigame(gw);
+    } else if (gw.mossMinigame.active) {
+        drawMossMinigame(gw);
     } else if (gw.draggingItem) {
         Int3 sz = gw.dragItemOrient.applyToSize(itemBaseGridSize(gw.dragItemType));
         char dbuf[96];
@@ -322,7 +325,7 @@ void HudRenderer::render(const GameWorld& gw) {
             }
         } else {
             fillRect(cx - 4, cy - 4, 8, 8, rgba(160, 225, 255, 170));
-            const char* label = hd.isHatch ? "[LMB DRAG / E] HATCH"
+            const char* label = hd.isHatch ? "[LMB DRAG / F] HATCH"
                               : (hd.isCabinet ? "[LMB DRAG] CABINET" : "[LMB DRAG] DOOR");
             int lw = static_cast<int>(std::strlen(label)) * 4;
             drawText(cx - lw, cy + 16, label, rgba(210, 230, 245, 230), 2);
@@ -331,9 +334,22 @@ void HudRenderer::render(const GameWorld& gw) {
         fillRect(cx - 4, cy - 4, 8, 8, rgba(255, 230, 120, 190));
         ItemType itT = gw.worldItems[gw.hoveredItemIdx].type;
         Int3 bsz = itemBaseGridSize(itT);
-        char ibuf[64];
-        std::snprintf(ibuf, sizeof(ibuf), "[LMB] %s %dX%dX%d", itemDisplayName(itT), bsz.x, bsz.y, bsz.z);
-        drawText(cx - 72, cy + 16, ibuf, rgba(255, 235, 150, 235), 2);
+        char ibuf[96];
+        std::snprintf(ibuf, sizeof(ibuf), "[LMB] %s %dX%dX%d  [RMB] DRAG", itemDisplayName(itT), bsz.x, bsz.y, bsz.z);
+        int iw = static_cast<int>(std::strlen(ibuf)) * 4;
+        drawText(cx - iw, cy + 16, ibuf, rgba(255, 235, 150, 235), 2);
+    } else if (gw.hoveredMossIdx >= 0) {
+        if (gw.playerHasKnifeForMoss()) {
+            fillRect(cx - 4, cy - 4, 8, 8, rgba(130, 235, 110, 215));
+            const char* mPrompt = "[LMB / F] SCRAPE MOSS (KNIFE)";
+            int mw = static_cast<int>(std::strlen(mPrompt)) * 4;
+            drawText(cx - mw, cy + 16, mPrompt, rgba(165, 245, 140, 245), 2);
+        } else {
+            fillRect(cx - 4, cy - 4, 8, 8, rgba(225, 130, 90, 215));
+            const char* mPrompt = "SEWER MOSS - NEED KNIFE";
+            int mw = static_cast<int>(std::strlen(mPrompt)) * 4;
+            drawText(cx - mw, cy + 16, mPrompt, rgba(245, 150, 115, 240), 2);
+        }
     } else if (gw.hoveredGroundedBackpack) {
         fillRect(cx - 4, cy - 4, 8, 8, rgba(145, 225, 175, 210));
         drawText(cx - 104, cy + 16, "[B] PICK UP BACKPACK  [LMB] PACK", rgba(165, 235, 190, 240), 2);
@@ -388,9 +404,10 @@ void HudRenderer::render(const GameWorld& gw) {
             } else if (gw.heldItemType == ItemType::Food) {
                 int pct = std::clamp(static_cast<int>(std::round(gw.consumeRemaining * 100.0f)), 0, 100);
                 std::snprintf(hbuf, sizeof(hbuf), "HAND: FOOD BAR (%d%%)  [HOLD LMB] EAT  [RMB] PLACE", pct);
-            } else if (gw.heldItemType == ItemType::Battery || gw.heldItemType == ItemType::Flashlight) {
-                std::snprintf(hbuf, sizeof(hbuf), "HAND: %s %dX%dX%d  [E] USE  [RMB] PLACE",
-                              itemDisplayName(gw.heldItemType), sz.x, sz.y, sz.z);
+            } else if (gw.heldItemType == ItemType::Battery) {
+                std::snprintf(hbuf, sizeof(hbuf), "HAND: BATTERY  [LMB] RECHARGE  [RMB] PLACE");
+            } else if (gw.heldItemType == ItemType::Flashlight) {
+                std::snprintf(hbuf, sizeof(hbuf), "HAND: FLASHLIGHT  [L] TOGGLE  [RMB] PLACE");
             } else {
                 std::snprintf(hbuf, sizeof(hbuf), "HAND: %s %dX%dX%d  [RMB] PLACE",
                               itemDisplayName(gw.heldItemType), sz.x, sz.y, sz.z);
@@ -477,6 +494,35 @@ void HudRenderer::render(const GameWorld& gw) {
         fillRect(10, 10, gwPx + 16, 24, rgba(16, 24, 34, 210));
         fillRect(10, 10, gwPx + 16, 2, rgba(95, 225, 180, 235));
         drawText(18, 17, gbuf, rgba(120, 245, 195, 245), 2);
+    }
+
+    if (gw.player.crouched && !gw.lockpick.active && !gw.settingsMenuOpen) {
+        fillRect(bx - 8, by - 32, 92, 20, rgba(14, 22, 28, 195));
+        drawText(bx + 2, by - 26, "CROUCH", rgba(155, 220, 245, 235), 2);
+    }
+
+    // Bottom-center accessible weapon hotkeys bar (only shows weapons accessible in hand/backpack!)
+    if (!gw.lockpick.active && !gw.settingsMenuOpen && gw.backpackMode != BackpackMode::InHands) {
+        auto wSlots = gw.getAccessibleWeaponSlots();
+        if (!wSlots.empty()) {
+            char wbuf[160];
+            wbuf[0] = '\0';
+            for (size_t i = 0; i < wSlots.size() && i < 5; ++i) {
+                char part[32];
+                bool active = (gw.hasHeldItem && gw.heldItemType == wSlots[i]);
+                std::snprintf(part, sizeof(part), "%s[%zu] %s%s",
+                              (i > 0 ? "  " : ""), i + 1, itemDisplayName(wSlots[i]),
+                              active ? "*" : "");
+                std::strncat(wbuf, part, sizeof(wbuf) - std::strlen(wbuf) - 1);
+            }
+            int ww = static_cast<int>(std::strlen(wbuf)) * 8;
+            fillRect(cx - ww / 2 - 10, height_ - 36, ww + 20, 24, rgba(12, 18, 24, 195));
+            drawText(cx - ww / 2, height_ - 29, wbuf, rgba(220, 235, 200, 235), 2);
+        }
+    }
+
+    if (gw.settingsMenuOpen) {
+        drawSettingsMenu(gw);
     }
 
     if (gw.gameOver) {
@@ -619,6 +665,239 @@ void HudRenderer::drawLockpickMinigame(const GameWorld& gw) {
         fillRect(handleX, shaftY - 4, 42, 9, rgba(80, 95, 110, 255));
         drawLine(handleX + 42, shaftY, tipX, shaftY, pickCol, 3);
         drawLine(tipX, shaftY, tipX, tipY, pickCol, 3);
+    }
+}
+
+void HudRenderer::drawSettingsMenu(const GameWorld& gw) {
+    // Semi-transparent dark backdrop over the 3D scene
+    fillRect(0, 0, width_, height_, rgba(6, 10, 14, 175));
+
+    const int px = 390, py = 145, pw = 500, ph = 420;
+    fillRect(px, py, pw, ph, rgba(14, 20, 28, 240));
+    fillRect(px, py, pw, 3, rgba(110, 215, 245, 245));
+    fillRect(px, py + ph - 3, pw, 3, rgba(110, 215, 245, 245));
+    fillRect(px, py, 3, ph, rgba(70, 140, 170, 220));
+    fillRect(px + pw - 3, py, 3, ph, rgba(70, 140, 170, 220));
+
+    drawText(px + 150, py + 22, "SETTINGS / PAUSE", rgba(165, 235, 255, 250), 3);
+    drawText(px + 68, py + 52, "CLICK OR USE ARROWS/ENTER  -  ESC TO RESUME", rgba(145, 170, 190, 215), 2);
+
+    auto drawRowBg = [&](int row) -> int {
+        int ry = 215 + row * 52;
+        bool sel = (gw.settingsSelectedRow == row);
+        fillRect(px + 16, ry, pw - 32, 40, sel ? rgba(32, 52, 70, 235) : rgba(18, 26, 36, 215));
+        if (sel) {
+            fillRect(px + 16, ry, 4, 40, rgba(120, 235, 255, 250));
+        }
+        return ry;
+    };
+
+    // Row 0: Master Volume (0%..200%)
+    {
+        int ry = drawRowBg(0);
+        char buf[32];
+        std::snprintf(buf, sizeof(buf), "VOLUME: %d%%", static_cast<int>(std::round(gw.settings.masterVolume * 100.0f)));
+        drawText(px + 30, ry + 14, buf, rgba(225, 235, 245, 245), 2);
+        float pct = std::clamp(gw.settings.masterVolume / 2.0f, 0.0f, 1.0f);
+        drawBar(640, ry + 12, 215, 16, pct, rgba(95, 210, 245, 240));
+    }
+
+    // Row 1: Mouse Sensitivity (0.0004..0.0060)
+    {
+        int ry = drawRowBg(1);
+        float mult = gw.settings.mouseSensitivity / cfg::MOUSE_SENS;
+        char buf[32];
+        std::snprintf(buf, sizeof(buf), "MOUSE SENS: %.1fX", mult);
+        drawText(px + 30, ry + 14, buf, rgba(225, 235, 245, 245), 2);
+        float pct = std::clamp((gw.settings.mouseSensitivity - 0.0004f) / (0.0060f - 0.0004f), 0.0f, 1.0f);
+        drawBar(640, ry + 12, 215, 16, pct, rgba(145, 230, 155, 240));
+    }
+
+    // Row 2: Fullscreen toggle
+    {
+        int ry = drawRowBg(2);
+        drawText(px + 30, ry + 14, "FULLSCREEN", rgba(225, 235, 245, 245), 2);
+        const char* val = gw.settings.fullscreen ? "[ON]" : "[OFF]";
+        uint32_t col = gw.settings.fullscreen ? rgba(125, 245, 160, 250) : rgba(210, 150, 130, 240);
+        drawText(730, ry + 14, val, col, 2);
+    }
+
+    // Row 3: World Seed Mode (FIXED vs RANDOM)
+    {
+        int ry = drawRowBg(3);
+        drawText(px + 30, ry + 14, "WORLD SEED", rgba(225, 235, 245, 245), 2);
+        const char* val = gw.settings.useRandomSeed ? "[RANDOM]" : "[FIXED]";
+        uint32_t col = gw.settings.useRandomSeed ? rgba(245, 215, 115, 250) : rgba(145, 220, 250, 250);
+        drawText(710, ry + 14, val, col, 2);
+    }
+
+    // Row 4: Regenerate World
+    {
+        int ry = drawRowBg(4);
+        drawText(px + 125, ry + 14, "NEW WORLD (APPLY SEED)", rgba(250, 225, 135, 245), 2);
+    }
+
+    // Row 5: Resume
+    {
+        int ry = drawRowBg(5);
+        drawText(px + 185, ry + 14, "RESUME GAME", rgba(155, 240, 200, 250), 2);
+    }
+
+    // Controls quick reference footer
+    drawText(px + 28, py + ph - 26, "Q/E PEEK  CTRL CROUCH  F INTERACT  L LIGHT  1-5 WEAPON", rgba(135, 160, 180, 215), 2);
+}
+
+void HudRenderer::drawMossMinigame(const GameWorld& gw) {
+    const auto& mm = gw.mossMinigame;
+    const int cx = width_ / 2;
+    const int cy = height_ / 2;
+    const int bw = 396;
+    const int bh = 376;
+    const int bx = cx - bw / 2;
+    const int by = cy - bh / 2;
+
+    // Damp dark sewer brick frame background
+    fillRect(bx - 4, by - 4, bw + 8, bh + 8, rgba(10, 14, 12, 235));
+    fillRect(bx, by, bw, bh, rgba(26, 32, 26, 245));
+    // Subtle brick mortar lines on exposed wall canvas
+    for (int ry = by + 44; ry < by + bh - 16; ry += 28) {
+        fillRect(bx + 16, ry, bw - 32, 2, rgba(17, 21, 17, 235));
+        int brickOff = ((ry / 28) % 2) * 32;
+        for (int rx = bx + 24 + brickOff; rx < bx + bw - 20; rx += 64) {
+            fillRect(rx, ry - 26, 2, 26, rgba(17, 21, 17, 235));
+        }
+    }
+
+    // Frame border
+    fillRect(bx, by, bw, 3, rgba(95, 185, 85, 240));
+    fillRect(bx, by + bh - 3, bw, 3, rgba(95, 185, 85, 240));
+    fillRect(bx, by, 3, bh, rgba(65, 125, 60, 220));
+    fillRect(bx + bw - 3, by, 3, bh, rgba(65, 125, 60, 220));
+
+    int pct = std::clamp(static_cast<int>(std::round(mm.progress() * 100.0f)), 0, 100);
+    char hdr[80];
+    std::snprintf(hdr, sizeof(hdr), "SCRAPE MOSS (%d%%)   [HOLD LMB + DRAG]   ESC EXIT", pct);
+    int hw = static_cast<int>(std::strlen(hdr)) * 4;
+    drawText(cx - hw, by + 14, hdr, rgba(175, 240, 155, 245), 2);
+
+    // 1. Render 44x44 irregular moss patch (5x5 px per cell = 220x220 px) with crisp dark silhouette border!
+    constexpr int CELL_PX = 5;
+    constexpr int PATCH_W = MossMinigame::GRID_W * CELL_PX;
+    constexpr int PATCH_H = MossMinigame::GRID_H * CELL_PX;
+    const int patchX = cx - PATCH_W / 2;
+    const int patchY = cy - PATCH_H / 2 - 6;
+
+    const uint32_t mossCols[4] = {
+        0,
+        rgba(48, 108, 38, 255),
+        rgba(64, 136, 48, 255),
+        rgba(82, 162, 58, 255)
+    };
+    const uint32_t outlineCol = rgba(18, 42, 16, 255);
+
+    for (int gy = 0; gy < MossMinigame::GRID_H; ++gy) {
+        for (int gx = 0; gx < MossMinigame::GRID_W; ++gx) {
+            uint8_t sh = mm.cells[static_cast<size_t>(gy * MossMinigame::GRID_W + gx)];
+            if (sh == 0) continue;
+            int px0 = patchX + gx * CELL_PX;
+            int py0 = patchY + gy * CELL_PX;
+            fillRect(px0, py0, CELL_PX, CELL_PX, mossCols[std::min<uint8_t>(sh, 3)]);
+
+            // Crisp dark border along outer & freshly-scraped inner edges (matches sketch!)
+            auto emptyAt = [&](int nx, int ny) {
+                if (nx < 0 || nx >= MossMinigame::GRID_W || ny < 0 || ny >= MossMinigame::GRID_H) return true;
+                return mm.cells[static_cast<size_t>(ny * MossMinigame::GRID_W + nx)] == 0;
+            };
+            if (emptyAt(gx - 1, gy)) fillRect(px0, py0, 2, CELL_PX, outlineCol);
+            if (emptyAt(gx + 1, gy)) fillRect(px0 + CELL_PX - 2, py0, 2, CELL_PX, outlineCol);
+            if (emptyAt(gx, gy - 1)) fillRect(px0, py0, CELL_PX, 2, outlineCol);
+            if (emptyAt(gx, gy + 1)) fillRect(px0, py0 + CELL_PX - 2, CELL_PX, 2, outlineCol);
+        }
+    }
+
+    // 2. Render falling scraped moss chunks & crumbs tumbling downward below the blade!
+    for (const auto& ch : mm.chunks) {
+        int fx = patchX + static_cast<int>(std::round(ch.x * PATCH_W));
+        int fy = patchY + static_cast<int>(std::round(ch.y * PATCH_H));
+        if (fx < bx + 8 || fx > bx + bw - 8 || fy < by + 34 || fy > by + bh - 8) continue;
+        int sz = std::max(3, static_cast<int>(std::round(ch.size)));
+        int hs = sz / 2;
+        uint32_t fillC = mossCols[1 + (ch.shade % 3)];
+        // Irregular chunky moss silhouette (offset sub-rects rotated by sin/cos)
+        int ox = static_cast<int>(std::round(std::cos(ch.rot) * (hs * 0.45f)));
+        int oy = static_cast<int>(std::round(std::sin(ch.rot) * (hs * 0.45f)));
+        fillRect(fx - hs - 1, fy - hs - 1, sz + 2, sz + 2, outlineCol);
+        fillRect(fx - hs + ox, fy - hs - oy, sz, sz, fillC);
+        fillRect(fx - hs, fy - hs, sz - 1, sz - 1, fillC);
+    }
+
+    // 3. Render Model-Accurate Angled Knife (matches ItemType::Knife: dark handle + crossguard + tapered steel blade!)
+    {
+        float press = mm.scrapingHeld ? 2.0f : 0.0f;
+        float kx = static_cast<float>(patchX) + mm.knifeX * PATCH_W - press;
+        float ky = static_cast<float>(patchY) + mm.knifeY * PATCH_H - press;
+
+        // Unit vector along blade from crossguard toward tip (~32 deg left of vertical, identical to sketch!)
+        const float ux = -0.515f;
+        const float uy = -0.857f;
+        // Perpendicular vector pointing up-right (spine direction)
+        const float nx = 0.857f;
+        const float ny = -0.515f;
+
+        auto toScreen = [&](float sAlong, float nPerp, int& outX, int& outY) {
+            outX = static_cast<int>(std::round(kx + ux * sAlong + nx * nPerp));
+            outY = static_cast<int>(std::round(ky + uy * sAlong + ny * nPerp));
+        };
+
+        const uint32_t darkRim   = rgba(24, 28, 32, 255);
+        const uint32_t bladeEdge = rgba(226, 236, 248, 255);
+        const uint32_t bladeFlat = rgba(168, 180, 196, 255);
+        const uint32_t guardCol  = rgba(132, 142, 155, 255);
+        const uint32_t gripCol   = rgba(70, 64, 58, 255);
+        const uint32_t rivetCol  = rgba(185, 192, 200, 255);
+
+        // Steel Blade: s in [-26 .. +28], curved cutting edge on -n side, straight spine on +n side, tapering to sharp tip!
+        for (int si = -52; si <= 56; ++si) {
+            float s = si * 0.5f;
+            float t = (s + 26.0f) / 54.0f; // 0 at guard -> 1 at tip
+            float spineN = 4.5f * (1.0f - t);
+            float belly = std::sin(t * 3.14159f) * 3.2f;
+            float edgeN = -(5.5f * (1.0f - t * 0.85f) + belly * (1.0f - t * 0.35f));
+            for (int ni = static_cast<int>(std::floor((edgeN - 1.5f) * 2.0f));
+                 ni <= static_cast<int>(std::ceil((spineN + 1.5f) * 2.0f)); ++ni) {
+                float n = ni * 0.5f;
+                int sx, sy;
+                toScreen(s, n, sx, sy);
+                bool isBorder = (n <= edgeN - 0.4f || n >= spineN + 0.4f || si >= 54);
+                uint32_t col = isBorder ? darkRim : ((n < 0.0f) ? bladeEdge : bladeFlat);
+                putPixel(sx, sy, col);
+            }
+        }
+
+        // Crossguard / Bolster: s in [-30 .. -25], n in [-13 .. +13]
+        for (int si = -60; si <= -50; ++si) {
+            float s = si * 0.5f;
+            for (int ni = -26; ni <= 26; ++ni) {
+                float n = ni * 0.5f;
+                int sx, sy;
+                toScreen(s, n, sx, sy);
+                bool rim = (si <= -59 || si >= -51 || ni <= -24 || ni >= 24);
+                putPixel(sx, sy, rim ? darkRim : guardCol);
+            }
+        }
+
+        // Tactical Handle: s in [-62 .. -30], n in [-5.5 .. +5.5] with two metallic rivets
+        for (int si = -124; si <= -61; ++si) {
+            float s = si * 0.5f;
+            for (int ni = -11; ni <= 11; ++ni) {
+                float n = ni * 0.5f;
+                int sx, sy;
+                toScreen(s, n, sx, sy);
+                bool rim = (si <= -122 || ni <= -9 || ni >= 9);
+                bool rivet = (std::abs(n) <= 1.6f && (std::abs(s + 39.0f) <= 1.6f || std::abs(s + 51.0f) <= 1.6f));
+                putPixel(sx, sy, rim ? darkRim : (rivet ? rivetCol : gripCol));
+            }
+        }
     }
 }
 

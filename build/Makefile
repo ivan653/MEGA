@@ -195,6 +195,33 @@ src/audio/AudioEngine.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/mega_tests.dir/build.make CMakeFiles/mega_tests.dir/src/audio/AudioEngine.cpp.s
 .PHONY : src/audio/AudioEngine.cpp.s
 
+src/core/ObjLoader.o: src/core/ObjLoader.cpp.o
+.PHONY : src/core/ObjLoader.o
+
+# target to build an object file
+src/core/ObjLoader.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/mega.dir/build.make CMakeFiles/mega.dir/src/core/ObjLoader.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/mega_tests.dir/build.make CMakeFiles/mega_tests.dir/src/core/ObjLoader.cpp.o
+.PHONY : src/core/ObjLoader.cpp.o
+
+src/core/ObjLoader.i: src/core/ObjLoader.cpp.i
+.PHONY : src/core/ObjLoader.i
+
+# target to preprocess a source file
+src/core/ObjLoader.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/mega.dir/build.make CMakeFiles/mega.dir/src/core/ObjLoader.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/mega_tests.dir/build.make CMakeFiles/mega_tests.dir/src/core/ObjLoader.cpp.i
+.PHONY : src/core/ObjLoader.cpp.i
+
+src/core/ObjLoader.s: src/core/ObjLoader.cpp.s
+.PHONY : src/core/ObjLoader.s
+
+# target to generate assembly for a file
+src/core/ObjLoader.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/mega.dir/build.make CMakeFiles/mega.dir/src/core/ObjLoader.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/mega_tests.dir/build.make CMakeFiles/mega_tests.dir/src/core/ObjLoader.cpp.s
+.PHONY : src/core/ObjLoader.cpp.s
+
 src/game/GameWorld.o: src/game/GameWorld.cpp.o
 .PHONY : src/game/GameWorld.o
 
@@ -275,6 +302,33 @@ src/game/LockpickMinigame.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/mega.dir/build.make CMakeFiles/mega.dir/src/game/LockpickMinigame.cpp.s
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/mega_tests.dir/build.make CMakeFiles/mega_tests.dir/src/game/LockpickMinigame.cpp.s
 .PHONY : src/game/LockpickMinigame.cpp.s
+
+src/game/MossMinigame.o: src/game/MossMinigame.cpp.o
+.PHONY : src/game/MossMinigame.o
+
+# target to build an object file
+src/game/MossMinigame.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/mega.dir/build.make CMakeFiles/mega.dir/src/game/MossMinigame.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/mega_tests.dir/build.make CMakeFiles/mega_tests.dir/src/game/MossMinigame.cpp.o
+.PHONY : src/game/MossMinigame.cpp.o
+
+src/game/MossMinigame.i: src/game/MossMinigame.cpp.i
+.PHONY : src/game/MossMinigame.i
+
+# target to preprocess a source file
+src/game/MossMinigame.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/mega.dir/build.make CMakeFiles/mega.dir/src/game/MossMinigame.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/mega_tests.dir/build.make CMakeFiles/mega_tests.dir/src/game/MossMinigame.cpp.i
+.PHONY : src/game/MossMinigame.cpp.i
+
+src/game/MossMinigame.s: src/game/MossMinigame.cpp.s
+.PHONY : src/game/MossMinigame.s
+
+# target to generate assembly for a file
+src/game/MossMinigame.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/mega.dir/build.make CMakeFiles/mega.dir/src/game/MossMinigame.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/mega_tests.dir/build.make CMakeFiles/mega_tests.dir/src/game/MossMinigame.cpp.s
+.PHONY : src/game/MossMinigame.cpp.s
 
 src/game/Player.o: src/game/Player.cpp.o
 .PHONY : src/game/Player.o
@@ -398,6 +452,30 @@ src/render/HudRenderer.s: src/render/HudRenderer.cpp.s
 src/render/HudRenderer.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/mega.dir/build.make CMakeFiles/mega.dir/src/render/HudRenderer.cpp.s
 .PHONY : src/render/HudRenderer.cpp.s
+
+src/render/ModelRenderer.o: src/render/ModelRenderer.cpp.o
+.PHONY : src/render/ModelRenderer.o
+
+# target to build an object file
+src/render/ModelRenderer.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/mega.dir/build.make CMakeFiles/mega.dir/src/render/ModelRenderer.cpp.o
+.PHONY : src/render/ModelRenderer.cpp.o
+
+src/render/ModelRenderer.i: src/render/ModelRenderer.cpp.i
+.PHONY : src/render/ModelRenderer.i
+
+# target to preprocess a source file
+src/render/ModelRenderer.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/mega.dir/build.make CMakeFiles/mega.dir/src/render/ModelRenderer.cpp.i
+.PHONY : src/render/ModelRenderer.cpp.i
+
+src/render/ModelRenderer.s: src/render/ModelRenderer.cpp.s
+.PHONY : src/render/ModelRenderer.s
+
+# target to generate assembly for a file
+src/render/ModelRenderer.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/mega.dir/build.make CMakeFiles/mega.dir/src/render/ModelRenderer.cpp.s
+.PHONY : src/render/ModelRenderer.cpp.s
 
 src/render/RobotRenderer.o: src/render/RobotRenderer.cpp.o
 .PHONY : src/render/RobotRenderer.o
@@ -614,6 +692,9 @@ help:
 	@echo "... src/audio/AudioEngine.o"
 	@echo "... src/audio/AudioEngine.i"
 	@echo "... src/audio/AudioEngine.s"
+	@echo "... src/core/ObjLoader.o"
+	@echo "... src/core/ObjLoader.i"
+	@echo "... src/core/ObjLoader.s"
 	@echo "... src/game/GameWorld.o"
 	@echo "... src/game/GameWorld.i"
 	@echo "... src/game/GameWorld.s"
@@ -623,6 +704,9 @@ help:
 	@echo "... src/game/LockpickMinigame.o"
 	@echo "... src/game/LockpickMinigame.i"
 	@echo "... src/game/LockpickMinigame.s"
+	@echo "... src/game/MossMinigame.o"
+	@echo "... src/game/MossMinigame.i"
+	@echo "... src/game/MossMinigame.s"
 	@echo "... src/game/Player.o"
 	@echo "... src/game/Player.i"
 	@echo "... src/game/Player.s"
@@ -638,6 +722,9 @@ help:
 	@echo "... src/render/HudRenderer.o"
 	@echo "... src/render/HudRenderer.i"
 	@echo "... src/render/HudRenderer.s"
+	@echo "... src/render/ModelRenderer.o"
+	@echo "... src/render/ModelRenderer.i"
+	@echo "... src/render/ModelRenderer.s"
 	@echo "... src/render/RobotRenderer.o"
 	@echo "... src/render/RobotRenderer.i"
 	@echo "... src/render/RobotRenderer.s"

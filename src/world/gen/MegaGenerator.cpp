@@ -803,6 +803,9 @@ void placeSewerBridgeAt(WorldGrid& w, const SewerSegment& seg, int alongCoord) {
 void populateSewerTunnel(WorldGrid& w, const SewerSegment& seg,
                          std::vector<PointLight3D>& lights,
                          std::vector<LootSurface>& lootSurfaces,
+                         std::vector<MossPatchPlacement>& mossPatches,
+                         std::vector<CreatureSpawn>& creatureSpawns,
+                         float mossSpawnChance,
                          const std::set<std::pair<int, int>>& protectedFloorCells,
                          Rng& rng) {
     int minX, maxX, minZ, maxZ;
@@ -932,6 +935,54 @@ void populateSewerTunnel(WorldGrid& w, const SewerSegment& seg,
                 }
             }
         }
+        // Scrapeable Sewer Wall Moss patches along dry walkway walls (configurable via sewerMossSpawnChance!)
+        if (mossSpawnChance > 0.0001f) {
+            for (int x = minX + 3; x <= maxX - 3; x += 6) {
+                if (!rng.chance(mossSpawnChance)) continue;
+                // Prefer dry walkway wall so player can comfortably stand right next to the moss!
+                bool preferNorth = (seg.width < 4) ? (seg.channelOffset != 0) : rng.chance(0.5f);
+                int wallZ = preferNorth ? (minZ - 1) : (maxZ + 1);
+                int airZ  = preferNorth ? minZ : maxZ;
+                if (w.getBlock(x, SEWER_FLOOR_Y + 1, wallZ) == BlockType::Air) continue;
+                if (w.getBlock(x, SEWER_FLOOR_Y + 1, airZ) != BlockType::Air) continue;
+
+                float wz = preferNorth ? static_cast<float>(minZ) : static_cast<float>(maxZ + 1);
+                int nz = preferNorth ? 1 : -1;
+                float py = floorY + 1.12f + (rng.nextFloat() - 0.5f) * 0.24f;
+                Vec3 cPos{x + 0.5f, py, wz + nz * 0.015f};
+
+                // Avoid overlapping crates/lamps
+                AABB checkBox{{cPos.x - 0.40f, cPos.y - 0.40f, cPos.z - 0.18f},
+                              {cPos.x + 0.40f, cPos.y + 0.40f, cPos.z + 0.18f}};
+                bool hitProp = false;
+                for (const auto& p : w.props()) {
+                    if (checkBox.intersects(p.box)) { hitProp = true; break; }
+                }
+                if (!hitProp) {
+                    uint64_t mSeed = (static_cast<uint64_t>(rng.nextU32()) << 32) | static_cast<uint64_t>(rng.nextU32());
+                    mossPatches.push_back({cPos, 0, nz, 0.64f, 0.64f, mSeed, seg.regX, seg.regZ});
+                }
+            }
+        }
+        // Spawn horned sewer rodent creature on dry sewer walkway (~25% per tunnel)
+        if (rng.chance(0.25f) && maxX - minX >= 10) {
+            int cx = rng.rangeInt(minX + 4, maxX - 4);
+            int dryZ = (seg.channelOffset > 0) ? minZ : maxZ;
+            if (w.getBlock(cx, SEWER_FLOOR_Y, dryZ) == BlockType::Air &&
+                w.getCell(cx, SEWER_FLOOR_Y - 1, dryZ).isSolid()) {
+                Vec3 cPos{cx + 0.5f, floorY, dryZ + 0.5f};
+                AABB cBox{{cPos.x - 0.35f, floorY + 0.02f, cPos.z - 0.35f},
+                          {cPos.x + 0.35f, floorY + 0.50f, cPos.z + 0.35f}};
+                bool clear = true;
+                for (const auto& pc : w.propColliders()) {
+                    if (cBox.intersects(pc)) { clear = false; break; }
+                }
+                if (clear) {
+                    float yaw = rng.chance(0.5f) ? (PI * 0.5f) : (-PI * 0.5f);
+                    creatureSpawns.push_back({cPos, yaw, seg.regX, seg.regZ});
+                }
+            }
+        }
     } else {
         float zA = static_cast<float>(minZ) + 0.3f;
         float zB = static_cast<float>(maxZ + 1) - 0.3f;
@@ -996,6 +1047,51 @@ void populateSewerTunnel(WorldGrid& w, const SewerSegment& seg,
                          {box.max.x - 0.05f, ceilY - 0.12f, box.max.z - 0.05f}},
                         false, {}, seg.regX, seg.regZ
                     });
+                }
+            }
+        }
+        // Scrapeable Sewer Wall Moss patches along dry walkway walls (configurable via sewerMossSpawnChance!)
+        if (mossSpawnChance > 0.0001f) {
+            for (int z = minZ + 3; z <= maxZ - 3; z += 6) {
+                if (!rng.chance(mossSpawnChance)) continue;
+                bool preferWest = (seg.width < 4) ? (seg.channelOffset != 0) : rng.chance(0.5f);
+                int wallX = preferWest ? (minX - 1) : (maxX + 1);
+                int airX  = preferWest ? minX : maxX;
+                if (w.getBlock(wallX, SEWER_FLOOR_Y + 1, z) == BlockType::Air) continue;
+                if (w.getBlock(airX, SEWER_FLOOR_Y + 1, z) != BlockType::Air) continue;
+
+                float wx = preferWest ? static_cast<float>(minX) : static_cast<float>(maxX + 1);
+                int nx = preferWest ? 1 : -1;
+                float py = floorY + 1.12f + (rng.nextFloat() - 0.5f) * 0.24f;
+                Vec3 cPos{wx + nx * 0.015f, py, z + 0.5f};
+
+                AABB checkBox{{cPos.x - 0.18f, cPos.y - 0.40f, cPos.z - 0.40f},
+                              {cPos.x + 0.18f, cPos.y + 0.40f, cPos.z + 0.40f}};
+                bool hitProp = false;
+                for (const auto& p : w.props()) {
+                    if (checkBox.intersects(p.box)) { hitProp = true; break; }
+                }
+                if (!hitProp) {
+                    uint64_t mSeed = (static_cast<uint64_t>(rng.nextU32()) << 32) | static_cast<uint64_t>(rng.nextU32());
+                    mossPatches.push_back({cPos, nx, 0, 0.64f, 0.64f, mSeed, seg.regX, seg.regZ});
+                }
+            }
+        }
+        if (rng.chance(0.25f) && maxZ - minZ >= 10) {
+            int cz = rng.rangeInt(minZ + 4, maxZ - 4);
+            int dryX = (seg.channelOffset > 0) ? minX : maxX;
+            if (w.getBlock(dryX, SEWER_FLOOR_Y, cz) == BlockType::Air &&
+                w.getCell(dryX, SEWER_FLOOR_Y - 1, cz).isSolid()) {
+                Vec3 cPos{dryX + 0.5f, floorY, cz + 0.5f};
+                AABB cBox{{cPos.x - 0.35f, floorY + 0.02f, cPos.z - 0.35f},
+                          {cPos.x + 0.35f, floorY + 0.50f, cPos.z + 0.35f}};
+                bool clear = true;
+                for (const auto& pc : w.propColliders()) {
+                    if (cBox.intersects(pc)) { clear = false; break; }
+                }
+                if (clear) {
+                    float yaw = rng.chance(0.5f) ? 0.0f : PI;
+                    creatureSpawns.push_back({cPos, yaw, seg.regX, seg.regZ});
                 }
             }
         }
@@ -1251,6 +1347,81 @@ void MegaGenerator::generateRegion(MegaResult& state, int regX, int regZ,
                     intervalsOverlap(az0, az1, 52, 63, 2));
         };
 
+        // Strict clearance check so dead-end rooms (3x4 or 3x3) NEVER generate inside or clipping ANY corridor or room!
+        auto segBox = [](const CorridorSegment& c, int& minX, int& maxX, int& minZ, int& maxZ) {
+            if (c.alongX) {
+                minX = std::min(c.x0, c.x1);
+                maxX = std::max(c.x0, c.x1);
+                minZ = c.z0;
+                maxZ = c.z0 + c.width - 1;
+            } else {
+                minX = c.x0;
+                maxX = c.x0 + c.width - 1;
+                minZ = std::min(c.z0, c.z1);
+                maxZ = std::max(c.z0, c.z1);
+            }
+        };
+        auto roomAreaClear = [&](int rx0, int rx1, int rz0, int rz1, size_t skipCorridorIdx) -> bool {
+            // Stay safely inside region interior so room never intrudes into neighbor region's border corridors
+            if (rx0 < baseX + 3 || rx1 > baseX + cfg::REGION_SIZE - 4 ||
+                rz0 < baseZ + 3 || rz1 > baseZ + cfg::REGION_SIZE - 4) {
+                return false;
+            }
+            if (hitsStarter(rx0, rx1, rz0, rz1)) return false;
+
+            for (size_t j = 0; j < regCorridors.size(); ++j) {
+                if (j == skipCorridorIdx) continue;
+                int cMinX, cMaxX, cMinZ, cMaxZ;
+                segBox(regCorridors[j], cMinX, cMaxX, cMinZ, cMaxZ);
+                if (intervalsOverlap(rx0, rx1, cMinX, cMaxX, 1) &&
+                    intervalsOverlap(rz0, rz1, cMinZ, cMaxZ, 1)) {
+                    return false;
+                }
+            }
+            for (const auto& lc : loopCorridors) {
+                int cMinX, cMaxX, cMinZ, cMaxZ;
+                segBox(lc, cMinX, cMaxX, cMinZ, cMaxZ);
+                if (intervalsOverlap(rx0, rx1, cMinX, cMaxX, 1) &&
+                    intervalsOverlap(rz0, rz1, cMinZ, cMaxZ, 1)) {
+                    return false;
+                }
+            }
+            for (const auto& existing : state.corridors) {
+                if (std::abs(existing.regX - regX) > 1 || std::abs(existing.regZ - regZ) > 1) continue;
+                int cMinX, cMaxX, cMinZ, cMaxZ;
+                segBox(existing, cMinX, cMaxX, cMinZ, cMaxZ);
+                if (intervalsOverlap(rx0, rx1, cMinX, cMaxX, 1) &&
+                    intervalsOverlap(rz0, rz1, cMinZ, cMaxZ, 1)) {
+                    return false;
+                }
+            }
+            for (const auto& otherRm : deadEndRooms) {
+                if (intervalsOverlap(rx0, rx1, otherRm.x0 - 1, otherRm.x1 + 1, 1) &&
+                    intervalsOverlap(rz0, rz1, otherRm.z0 - 1, otherRm.z1 + 1, 1)) {
+                    return false;
+                }
+            }
+            for (const auto& otherHr : hatchRooms) {
+                if (intervalsOverlap(rx0, rx1, otherHr.x0 - 1, otherHr.x1 + 1, 1) &&
+                    intervalsOverlap(rz0, rz1, otherHr.z0 - 1, otherHr.z1 + 1, 1)) {
+                    return false;
+                }
+            }
+            return true;
+        };
+
+        auto hitsAnyRoom = [&](int ax0, int ax1, int az0, int az1) {
+            for (const auto& rm : deadEndRooms) {
+                if (intervalsOverlap(ax0, ax1, rm.x0 - 1, rm.x1 + 1, 1) &&
+                    intervalsOverlap(az0, az1, rm.z0 - 1, rm.z1 + 1, 1)) return true;
+            }
+            for (const auto& hr : hatchRooms) {
+                if (intervalsOverlap(ax0, ax1, hr.x0 - 1, hr.x1 + 1, 1) &&
+                    intervalsOverlap(az0, az1, hr.z0 - 1, hr.z1 + 1, 1)) return true;
+            }
+            return false;
+        };
+
         if (mode == 0) {
             // 1/3 -> Build an exact flush L-shaped return loop back to parent corridor ("donut / ring")
             int w = seg.width;
@@ -1273,7 +1444,8 @@ void MegaGenerator::generateRegion(MegaResult& state, int regX, int regZ,
                     int envMaxX = std::max(leg1X + w - 1, par.x0 + par.width - 1);
                     int envMinZ = std::min(seg.z0, retZ);
                     int envMaxZ = std::max(seg.z0, retZ) + w - 1;
-                    if (hitsStarter(envMinX, envMaxX, envMinZ, envMaxZ)) continue;
+                    if (hitsStarter(envMinX, envMaxX, envMinZ, envMaxZ) ||
+                        hitsAnyRoom(envMinX, envMaxX, envMinZ, envMaxZ)) continue;
 
                     leg1.alongX = false;
                     leg1.x0 = leg1.x1 = leg1X;
@@ -1300,7 +1472,8 @@ void MegaGenerator::generateRegion(MegaResult& state, int regX, int regZ,
                     int envMaxX = std::max(seg.x0, retX) + w - 1;
                     int envMinZ = std::min(leg1Z, par.z0);
                     int envMaxZ = std::max(leg1Z + w - 1, par.z0 + par.width - 1);
-                    if (hitsStarter(envMinX, envMaxX, envMinZ, envMaxZ)) continue;
+                    if (hitsStarter(envMinX, envMaxX, envMinZ, envMaxZ) ||
+                        hitsAnyRoom(envMinX, envMaxX, envMinZ, envMaxZ)) continue;
 
                     leg1.alongX = true;
                     leg1.z0 = leg1.z1 = leg1Z;
@@ -1390,7 +1563,7 @@ void MegaGenerator::generateRegion(MegaResult& state, int regX, int regZ,
                 }
             }
 
-            if (!hitsStarter(rm.x0 - 1, rm.x1 + 1, rm.z0 - 1, rm.z1 + 1)) {
+            if (roomAreaClear(rm.x0 - 1, rm.x1 + 1, rm.z0 - 1, rm.z1 + 1, i)) {
                 deadEndRooms.push_back(rm);
                 state.deadEndRoomsCreated++;
             }
@@ -1481,10 +1654,10 @@ void MegaGenerator::generateRegion(MegaResult& state, int regX, int regZ,
                 {static_cast<float>(hr.hatchX) + 0.92f, static_cast<float>(FLOOR_Y) + 0.22f, static_cast<float>(hr.hatchZ) + 0.92f}
             };
 
-            // Keep hatch inside region interior bounds so shaft & sewer starter stay cleanly inside this region
+            // Keep hatch room cleanly clear of all corridors, loops, starter room, and other rooms!
             bool inRegBounds = (hr.hatchX >= baseX + 5 && hr.hatchX <= baseX + cfg::REGION_SIZE - 6 &&
                                 hr.hatchZ >= baseZ + 5 && hr.hatchZ <= baseZ + cfg::REGION_SIZE - 6);
-            if (inRegBounds && !hitsStarter(hr.x0 - 1, hr.x1 + 1, hr.z0 - 1, hr.z1 + 1)) {
+            if (inRegBounds && roomAreaClear(hr.x0 - 1, hr.x1 + 1, hr.z0 - 1, hr.z1 + 1, i)) {
                 hatchRooms.push_back(hr);
                 state.hatchRoomsCreated++;
             }
@@ -2009,7 +2182,9 @@ void MegaGenerator::generateRegion(MegaResult& state, int regX, int regZ,
             }
         }
         for (const auto& s : regSewers) {
-            populateSewerTunnel(state.world, s, state.pointLights, state.lootSurfaces, protectedFloorCells, srng);
+            populateSewerTunnel(state.world, s, state.pointLights, state.lootSurfaces,
+                                state.mossPatches, state.creatureSpawns, settings.sewerMossSpawnChance,
+                                protectedFloorCells, srng);
             state.sewerTunnels.push_back(s);
         }
     }
@@ -2153,6 +2328,20 @@ bool MegaGenerator::updateInfiniteStream(MegaResult& state, const Vec3& playerPo
                                       std::abs(s.regZ - rz) > keepRadius;
                            }),
             state.sewerTunnels.end());
+        state.mossPatches.erase(
+            std::remove_if(state.mossPatches.begin(), state.mossPatches.end(),
+                           [&](const MossPatchPlacement& m) {
+                               return std::abs(m.regX - rx) > keepRadius ||
+                                      std::abs(m.regZ - rz) > keepRadius;
+                           }),
+            state.mossPatches.end());
+        state.creatureSpawns.erase(
+            std::remove_if(state.creatureSpawns.begin(), state.creatureSpawns.end(),
+                           [&](const CreatureSpawn& c) {
+                               return std::abs(c.regX - rx) > keepRadius ||
+                                      std::abs(c.regZ - rz) > keepRadius;
+                           }),
+            state.creatureSpawns.end());
         state.lootSurfaces.erase(
             std::remove_if(state.lootSurfaces.begin(), state.lootSurfaces.end(),
                            [&](const LootSurface& s) {

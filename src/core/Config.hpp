@@ -1,10 +1,12 @@
 #pragma once
 
 #include <algorithm>
+#include <cstdint>
 #include <cstdio>
 #include <fstream>
 #include <sstream>
 #include <string>
+#include <vector>
 
 namespace mega::cfg {
 
@@ -29,9 +31,13 @@ inline constexpr float AIR_ACCEL       = 3.5f;
 inline constexpr float GROUND_FRICTION = 10.0f;
 inline constexpr float STEP_HEIGHT     = 0.52f;
 
-inline constexpr float PLAYER_RADIUS   = 0.30f;
-inline constexpr float PLAYER_HEIGHT   = 1.75f;
-inline constexpr float PLAYER_EYE_Y    = 1.56f;
+inline constexpr float PLAYER_RADIUS        = 0.30f;
+inline constexpr float PLAYER_HEIGHT        = 1.75f;
+inline constexpr float PLAYER_EYE_Y         = 1.56f;
+inline constexpr float PLAYER_CROUCH_HEIGHT = 1.05f;
+inline constexpr float PLAYER_CROUCH_EYE_Y  = 0.88f;
+inline constexpr float PLAYER_LEAN_MAX_OFFSET = 0.52f;
+inline constexpr float PLAYER_LEAN_MAX_ROLL   = 0.19f;
 
 inline constexpr float MOUSE_SENS      = 0.0020f;
 inline constexpr float FOV_DEGREES     = 70.0f;
@@ -125,6 +131,13 @@ struct GameSettings {
     float volLockpickSnap   = 0.95f;
     float volWeapon         = 0.85f;
 
+    // --- Controls, Display & World Seed ---
+    float mouseSensitivity    = cfg::MOUSE_SENS;
+    bool fullscreen           = false;
+    bool useRandomSeed        = false;
+    uint64_t fixedSeed        = 0x4D4547410001ULL;
+    float sewerMossSpawnChance = 0.38f; // Chance for scrapeable moss patches on sewer tunnel walls (0.0..1.0)
+
     // --- Corridor Generation & Streaming ---
     int corridorMinLen        = 30;
     int corridorMaxLen        = 80;
@@ -216,6 +229,12 @@ struct GameSettings {
             << "vol_lock_open = 0.90\n"
             << "vol_lockpick_snap = 0.95\n"
             << "vol_weapon = 0.85\n\n"
+            << "# --- Controls, Display & World Seed ---\n"
+            << "mouse_sensitivity = 0.0020\n"
+            << "fullscreen = 0\n"
+            << "use_random_seed = 0\n"
+            << "fixed_seed = 84960079216641\n"
+            << "sewer_moss_spawn_chance = 0.38\n\n"
             << "# --- Utility Complex Corridor Generator ---\n"
             << "corridor_min_len = 30\n"
             << "corridor_max_len = 80\n"
@@ -335,6 +354,13 @@ struct GameSettings {
                 else if (key == "vol_lockpick_snap") s.volLockpickSnap = std::clamp(std::stof(val), 0.0f, 2.0f);
                 else if (key == "vol_weapon") s.volWeapon = std::clamp(std::stof(val), 0.0f, 2.0f);
 
+                // Controls, display & world seed
+                else if (key == "mouse_sensitivity") s.mouseSensitivity = std::clamp(std::stof(val), 0.0003f, 0.0100f);
+                else if (key == "fullscreen") s.fullscreen = (std::stoi(val) != 0);
+                else if (key == "use_random_seed") s.useRandomSeed = (std::stoi(val) != 0);
+                else if (key == "fixed_seed") s.fixedSeed = std::stoull(val);
+                else if (key == "sewer_moss_spawn_chance") s.sewerMossSpawnChance = std::clamp(std::stof(val), 0.0f, 1.0f);
+
                 // World generation
                 else if (key == "corridor_min_len") s.corridorMinLen = std::clamp(std::stoi(val), 16, 120);
                 else if (key == "corridor_max_len") s.corridorMaxLen = std::clamp(std::stoi(val), 20, 120);
@@ -348,6 +374,94 @@ struct GameSettings {
             }
         }
         return s;
+    }
+
+    // Persists in-game user preferences into `path` in-place while preserving all comments and custom config keys!
+    bool saveUserPreferences(const std::string& path = "mega.cfg") const {
+        std::vector<std::string> lines;
+        {
+            std::ifstream in(path);
+            if (!in.good()) {
+                writeDefaultFile(path);
+            }
+        }
+        {
+            std::ifstream in(path);
+            if (!in.good()) return false;
+            std::string l;
+            while (std::getline(in, l)) {
+                lines.push_back(l);
+            }
+        }
+
+        auto trim = [](std::string str) {
+            size_t a = str.find_first_not_of(" \t\r\n");
+            if (a == std::string::npos) return std::string{};
+            size_t b = str.find_last_not_of(" \t\r\n");
+            return str.substr(a, b - a + 1);
+        };
+
+        auto fmtFloat = [](float v, const char* fmt) {
+            char buf[64];
+            std::snprintf(buf, sizeof(buf), fmt, v);
+            return std::string(buf);
+        };
+
+        struct KV {
+            const char* key;
+            std::string val;
+            bool found = false;
+        };
+        std::string seedStr = std::to_string(fixedSeed);
+        KV prefs[6] = {
+            {"master_volume",           fmtFloat(masterVolume, "%.2f"), false},
+            {"mouse_sensitivity",       fmtFloat(mouseSensitivity, "%.4f"), false},
+            {"fullscreen",              fullscreen ? "1" : "0", false},
+            {"use_random_seed",         useRandomSeed ? "1" : "0", false},
+            {"fixed_seed",              seedStr, false},
+            {"sewer_moss_spawn_chance", fmtFloat(sewerMossSpawnChance, "%.2f"), false}
+        };
+
+        for (auto& line : lines) {
+            std::string code = line;
+            std::string comment;
+            auto hashPos = line.find('#');
+            if (hashPos != std::string::npos) {
+                code = line.substr(0, hashPos);
+                comment = " " + line.substr(hashPos);
+            }
+            auto eqPos = code.find('=');
+            if (eqPos == std::string::npos) continue;
+            std::string k = trim(code.substr(0, eqPos));
+            for (auto& p : prefs) {
+                if (k == p.key) {
+                    line = std::string(p.key) + " = " + p.val + comment;
+                    p.found = true;
+                    break;
+                }
+            }
+        }
+
+        bool anyMissing = false;
+        for (const auto& p : prefs) {
+            if (!p.found) { anyMissing = true; break; }
+        }
+        if (anyMissing) {
+            lines.push_back("");
+            lines.push_back("# --- Saved In-Game Preferences ---");
+            for (const auto& p : prefs) {
+                if (!p.found) {
+                    lines.push_back(std::string(p.key) + " = " + p.val);
+                }
+            }
+        }
+
+        std::ofstream out(path, std::ios::trunc);
+        if (!out.good()) return false;
+        for (const auto& l : lines) {
+            out << l << "\n";
+        }
+        return true;
     }
 };
 

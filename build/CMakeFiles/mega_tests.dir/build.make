@@ -89,10 +89,24 @@ CMakeFiles/mega_tests.dir/tests/CoreTests.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/mega_tests.dir/tests/CoreTests.cpp.s"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S "/home/ivan/ImportantFiles/My Games/MEGA/tests/CoreTests.cpp" -o CMakeFiles/mega_tests.dir/tests/CoreTests.cpp.s
 
+CMakeFiles/mega_tests.dir/src/core/ObjLoader.cpp.o: CMakeFiles/mega_tests.dir/flags.make
+CMakeFiles/mega_tests.dir/src/core/ObjLoader.cpp.o: /home/ivan/ImportantFiles/My\ Games/MEGA/src/core/ObjLoader.cpp
+CMakeFiles/mega_tests.dir/src/core/ObjLoader.cpp.o: CMakeFiles/mega_tests.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir="/home/ivan/ImportantFiles/My Games/MEGA/build/CMakeFiles" --progress-num=$(CMAKE_PROGRESS_2) "Building CXX object CMakeFiles/mega_tests.dir/src/core/ObjLoader.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/mega_tests.dir/src/core/ObjLoader.cpp.o -MF CMakeFiles/mega_tests.dir/src/core/ObjLoader.cpp.o.d -o CMakeFiles/mega_tests.dir/src/core/ObjLoader.cpp.o -c "/home/ivan/ImportantFiles/My Games/MEGA/src/core/ObjLoader.cpp"
+
+CMakeFiles/mega_tests.dir/src/core/ObjLoader.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/mega_tests.dir/src/core/ObjLoader.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E "/home/ivan/ImportantFiles/My Games/MEGA/src/core/ObjLoader.cpp" > CMakeFiles/mega_tests.dir/src/core/ObjLoader.cpp.i
+
+CMakeFiles/mega_tests.dir/src/core/ObjLoader.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/mega_tests.dir/src/core/ObjLoader.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S "/home/ivan/ImportantFiles/My Games/MEGA/src/core/ObjLoader.cpp" -o CMakeFiles/mega_tests.dir/src/core/ObjLoader.cpp.s
+
 CMakeFiles/mega_tests.dir/src/world/WorldGrid.cpp.o: CMakeFiles/mega_tests.dir/flags.make
 CMakeFiles/mega_tests.dir/src/world/WorldGrid.cpp.o: /home/ivan/ImportantFiles/My\ Games/MEGA/src/world/WorldGrid.cpp
 CMakeFiles/mega_tests.dir/src/world/WorldGrid.cpp.o: CMakeFiles/mega_tests.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir="/home/ivan/ImportantFiles/My Games/MEGA/build/CMakeFiles" --progress-num=$(CMAKE_PROGRESS_2) "Building CXX object CMakeFiles/mega_tests.dir/src/world/WorldGrid.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir="/home/ivan/ImportantFiles/My Games/MEGA/build/CMakeFiles" --progress-num=$(CMAKE_PROGRESS_3) "Building CXX object CMakeFiles/mega_tests.dir/src/world/WorldGrid.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/mega_tests.dir/src/world/WorldGrid.cpp.o -MF CMakeFiles/mega_tests.dir/src/world/WorldGrid.cpp.o.d -o CMakeFiles/mega_tests.dir/src/world/WorldGrid.cpp.o -c "/home/ivan/ImportantFiles/My Games/MEGA/src/world/WorldGrid.cpp"
 
 CMakeFiles/mega_tests.dir/src/world/WorldGrid.cpp.i: cmake_force
@@ -106,7 +120,7 @@ CMakeFiles/mega_tests.dir/src/world/WorldGrid.cpp.s: cmake_force
 CMakeFiles/mega_tests.dir/src/world/LightBaker.cpp.o: CMakeFiles/mega_tests.dir/flags.make
 CMakeFiles/mega_tests.dir/src/world/LightBaker.cpp.o: /home/ivan/ImportantFiles/My\ Games/MEGA/src/world/LightBaker.cpp
 CMakeFiles/mega_tests.dir/src/world/LightBaker.cpp.o: CMakeFiles/mega_tests.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir="/home/ivan/ImportantFiles/My Games/MEGA/build/CMakeFiles" --progress-num=$(CMAKE_PROGRESS_3) "Building CXX object CMakeFiles/mega_tests.dir/src/world/LightBaker.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir="/home/ivan/ImportantFiles/My Games/MEGA/build/CMakeFiles" --progress-num=$(CMAKE_PROGRESS_4) "Building CXX object CMakeFiles/mega_tests.dir/src/world/LightBaker.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/mega_tests.dir/src/world/LightBaker.cpp.o -MF CMakeFiles/mega_tests.dir/src/world/LightBaker.cpp.o.d -o CMakeFiles/mega_tests.dir/src/world/LightBaker.cpp.o -c "/home/ivan/ImportantFiles/My Games/MEGA/src/world/LightBaker.cpp"
 
 CMakeFiles/mega_tests.dir/src/world/LightBaker.cpp.i: cmake_force
@@ -120,7 +134,7 @@ CMakeFiles/mega_tests.dir/src/world/LightBaker.cpp.s: cmake_force
 CMakeFiles/mega_tests.dir/src/world/gen/MegaGenerator.cpp.o: CMakeFiles/mega_tests.dir/flags.make
 CMakeFiles/mega_tests.dir/src/world/gen/MegaGenerator.cpp.o: /home/ivan/ImportantFiles/My\ Games/MEGA/src/world/gen/MegaGenerator.cpp
 CMakeFiles/mega_tests.dir/src/world/gen/MegaGenerator.cpp.o: CMakeFiles/mega_tests.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir="/home/ivan/ImportantFiles/My Games/MEGA/build/CMakeFiles" --progress-num=$(CMAKE_PROGRESS_4) "Building CXX object CMakeFiles/mega_tests.dir/src/world/gen/MegaGenerator.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir="/home/ivan/ImportantFiles/My Games/MEGA/build/CMakeFiles" --progress-num=$(CMAKE_PROGRESS_5) "Building CXX object CMakeFiles/mega_tests.dir/src/world/gen/MegaGenerator.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/mega_tests.dir/src/world/gen/MegaGenerator.cpp.o -MF CMakeFiles/mega_tests.dir/src/world/gen/MegaGenerator.cpp.o.d -o CMakeFiles/mega_tests.dir/src/world/gen/MegaGenerator.cpp.o -c "/home/ivan/ImportantFiles/My Games/MEGA/src/world/gen/MegaGenerator.cpp"
 
 CMakeFiles/mega_tests.dir/src/world/gen/MegaGenerator.cpp.i: cmake_force
@@ -134,7 +148,7 @@ CMakeFiles/mega_tests.dir/src/world/gen/MegaGenerator.cpp.s: cmake_force
 CMakeFiles/mega_tests.dir/src/game/Player.cpp.o: CMakeFiles/mega_tests.dir/flags.make
 CMakeFiles/mega_tests.dir/src/game/Player.cpp.o: /home/ivan/ImportantFiles/My\ Games/MEGA/src/game/Player.cpp
 CMakeFiles/mega_tests.dir/src/game/Player.cpp.o: CMakeFiles/mega_tests.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir="/home/ivan/ImportantFiles/My Games/MEGA/build/CMakeFiles" --progress-num=$(CMAKE_PROGRESS_5) "Building CXX object CMakeFiles/mega_tests.dir/src/game/Player.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir="/home/ivan/ImportantFiles/My Games/MEGA/build/CMakeFiles" --progress-num=$(CMAKE_PROGRESS_6) "Building CXX object CMakeFiles/mega_tests.dir/src/game/Player.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/mega_tests.dir/src/game/Player.cpp.o -MF CMakeFiles/mega_tests.dir/src/game/Player.cpp.o.d -o CMakeFiles/mega_tests.dir/src/game/Player.cpp.o -c "/home/ivan/ImportantFiles/My Games/MEGA/src/game/Player.cpp"
 
 CMakeFiles/mega_tests.dir/src/game/Player.cpp.i: cmake_force
@@ -148,7 +162,7 @@ CMakeFiles/mega_tests.dir/src/game/Player.cpp.s: cmake_force
 CMakeFiles/mega_tests.dir/src/game/GameWorld.cpp.o: CMakeFiles/mega_tests.dir/flags.make
 CMakeFiles/mega_tests.dir/src/game/GameWorld.cpp.o: /home/ivan/ImportantFiles/My\ Games/MEGA/src/game/GameWorld.cpp
 CMakeFiles/mega_tests.dir/src/game/GameWorld.cpp.o: CMakeFiles/mega_tests.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir="/home/ivan/ImportantFiles/My Games/MEGA/build/CMakeFiles" --progress-num=$(CMAKE_PROGRESS_6) "Building CXX object CMakeFiles/mega_tests.dir/src/game/GameWorld.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir="/home/ivan/ImportantFiles/My Games/MEGA/build/CMakeFiles" --progress-num=$(CMAKE_PROGRESS_7) "Building CXX object CMakeFiles/mega_tests.dir/src/game/GameWorld.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/mega_tests.dir/src/game/GameWorld.cpp.o -MF CMakeFiles/mega_tests.dir/src/game/GameWorld.cpp.o.d -o CMakeFiles/mega_tests.dir/src/game/GameWorld.cpp.o -c "/home/ivan/ImportantFiles/My Games/MEGA/src/game/GameWorld.cpp"
 
 CMakeFiles/mega_tests.dir/src/game/GameWorld.cpp.i: cmake_force
@@ -162,7 +176,7 @@ CMakeFiles/mega_tests.dir/src/game/GameWorld.cpp.s: cmake_force
 CMakeFiles/mega_tests.dir/src/game/Inventory3D.cpp.o: CMakeFiles/mega_tests.dir/flags.make
 CMakeFiles/mega_tests.dir/src/game/Inventory3D.cpp.o: /home/ivan/ImportantFiles/My\ Games/MEGA/src/game/Inventory3D.cpp
 CMakeFiles/mega_tests.dir/src/game/Inventory3D.cpp.o: CMakeFiles/mega_tests.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir="/home/ivan/ImportantFiles/My Games/MEGA/build/CMakeFiles" --progress-num=$(CMAKE_PROGRESS_7) "Building CXX object CMakeFiles/mega_tests.dir/src/game/Inventory3D.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir="/home/ivan/ImportantFiles/My Games/MEGA/build/CMakeFiles" --progress-num=$(CMAKE_PROGRESS_8) "Building CXX object CMakeFiles/mega_tests.dir/src/game/Inventory3D.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/mega_tests.dir/src/game/Inventory3D.cpp.o -MF CMakeFiles/mega_tests.dir/src/game/Inventory3D.cpp.o.d -o CMakeFiles/mega_tests.dir/src/game/Inventory3D.cpp.o -c "/home/ivan/ImportantFiles/My Games/MEGA/src/game/Inventory3D.cpp"
 
 CMakeFiles/mega_tests.dir/src/game/Inventory3D.cpp.i: cmake_force
@@ -176,7 +190,7 @@ CMakeFiles/mega_tests.dir/src/game/Inventory3D.cpp.s: cmake_force
 CMakeFiles/mega_tests.dir/src/game/LockpickMinigame.cpp.o: CMakeFiles/mega_tests.dir/flags.make
 CMakeFiles/mega_tests.dir/src/game/LockpickMinigame.cpp.o: /home/ivan/ImportantFiles/My\ Games/MEGA/src/game/LockpickMinigame.cpp
 CMakeFiles/mega_tests.dir/src/game/LockpickMinigame.cpp.o: CMakeFiles/mega_tests.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir="/home/ivan/ImportantFiles/My Games/MEGA/build/CMakeFiles" --progress-num=$(CMAKE_PROGRESS_8) "Building CXX object CMakeFiles/mega_tests.dir/src/game/LockpickMinigame.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir="/home/ivan/ImportantFiles/My Games/MEGA/build/CMakeFiles" --progress-num=$(CMAKE_PROGRESS_9) "Building CXX object CMakeFiles/mega_tests.dir/src/game/LockpickMinigame.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/mega_tests.dir/src/game/LockpickMinigame.cpp.o -MF CMakeFiles/mega_tests.dir/src/game/LockpickMinigame.cpp.o.d -o CMakeFiles/mega_tests.dir/src/game/LockpickMinigame.cpp.o -c "/home/ivan/ImportantFiles/My Games/MEGA/src/game/LockpickMinigame.cpp"
 
 CMakeFiles/mega_tests.dir/src/game/LockpickMinigame.cpp.i: cmake_force
@@ -187,10 +201,24 @@ CMakeFiles/mega_tests.dir/src/game/LockpickMinigame.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/mega_tests.dir/src/game/LockpickMinigame.cpp.s"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S "/home/ivan/ImportantFiles/My Games/MEGA/src/game/LockpickMinigame.cpp" -o CMakeFiles/mega_tests.dir/src/game/LockpickMinigame.cpp.s
 
+CMakeFiles/mega_tests.dir/src/game/MossMinigame.cpp.o: CMakeFiles/mega_tests.dir/flags.make
+CMakeFiles/mega_tests.dir/src/game/MossMinigame.cpp.o: /home/ivan/ImportantFiles/My\ Games/MEGA/src/game/MossMinigame.cpp
+CMakeFiles/mega_tests.dir/src/game/MossMinigame.cpp.o: CMakeFiles/mega_tests.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir="/home/ivan/ImportantFiles/My Games/MEGA/build/CMakeFiles" --progress-num=$(CMAKE_PROGRESS_10) "Building CXX object CMakeFiles/mega_tests.dir/src/game/MossMinigame.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/mega_tests.dir/src/game/MossMinigame.cpp.o -MF CMakeFiles/mega_tests.dir/src/game/MossMinigame.cpp.o.d -o CMakeFiles/mega_tests.dir/src/game/MossMinigame.cpp.o -c "/home/ivan/ImportantFiles/My Games/MEGA/src/game/MossMinigame.cpp"
+
+CMakeFiles/mega_tests.dir/src/game/MossMinigame.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/mega_tests.dir/src/game/MossMinigame.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E "/home/ivan/ImportantFiles/My Games/MEGA/src/game/MossMinigame.cpp" > CMakeFiles/mega_tests.dir/src/game/MossMinigame.cpp.i
+
+CMakeFiles/mega_tests.dir/src/game/MossMinigame.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/mega_tests.dir/src/game/MossMinigame.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S "/home/ivan/ImportantFiles/My Games/MEGA/src/game/MossMinigame.cpp" -o CMakeFiles/mega_tests.dir/src/game/MossMinigame.cpp.s
+
 CMakeFiles/mega_tests.dir/src/audio/AudioEngine.cpp.o: CMakeFiles/mega_tests.dir/flags.make
 CMakeFiles/mega_tests.dir/src/audio/AudioEngine.cpp.o: /home/ivan/ImportantFiles/My\ Games/MEGA/src/audio/AudioEngine.cpp
 CMakeFiles/mega_tests.dir/src/audio/AudioEngine.cpp.o: CMakeFiles/mega_tests.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir="/home/ivan/ImportantFiles/My Games/MEGA/build/CMakeFiles" --progress-num=$(CMAKE_PROGRESS_9) "Building CXX object CMakeFiles/mega_tests.dir/src/audio/AudioEngine.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir="/home/ivan/ImportantFiles/My Games/MEGA/build/CMakeFiles" --progress-num=$(CMAKE_PROGRESS_11) "Building CXX object CMakeFiles/mega_tests.dir/src/audio/AudioEngine.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/mega_tests.dir/src/audio/AudioEngine.cpp.o -MF CMakeFiles/mega_tests.dir/src/audio/AudioEngine.cpp.o.d -o CMakeFiles/mega_tests.dir/src/audio/AudioEngine.cpp.o -c "/home/ivan/ImportantFiles/My Games/MEGA/src/audio/AudioEngine.cpp"
 
 CMakeFiles/mega_tests.dir/src/audio/AudioEngine.cpp.i: cmake_force
@@ -204,6 +232,7 @@ CMakeFiles/mega_tests.dir/src/audio/AudioEngine.cpp.s: cmake_force
 # Object files for target mega_tests
 mega_tests_OBJECTS = \
 "CMakeFiles/mega_tests.dir/tests/CoreTests.cpp.o" \
+"CMakeFiles/mega_tests.dir/src/core/ObjLoader.cpp.o" \
 "CMakeFiles/mega_tests.dir/src/world/WorldGrid.cpp.o" \
 "CMakeFiles/mega_tests.dir/src/world/LightBaker.cpp.o" \
 "CMakeFiles/mega_tests.dir/src/world/gen/MegaGenerator.cpp.o" \
@@ -211,12 +240,14 @@ mega_tests_OBJECTS = \
 "CMakeFiles/mega_tests.dir/src/game/GameWorld.cpp.o" \
 "CMakeFiles/mega_tests.dir/src/game/Inventory3D.cpp.o" \
 "CMakeFiles/mega_tests.dir/src/game/LockpickMinigame.cpp.o" \
+"CMakeFiles/mega_tests.dir/src/game/MossMinigame.cpp.o" \
 "CMakeFiles/mega_tests.dir/src/audio/AudioEngine.cpp.o"
 
 # External object files for target mega_tests
 mega_tests_EXTERNAL_OBJECTS =
 
 mega_tests: CMakeFiles/mega_tests.dir/tests/CoreTests.cpp.o
+mega_tests: CMakeFiles/mega_tests.dir/src/core/ObjLoader.cpp.o
 mega_tests: CMakeFiles/mega_tests.dir/src/world/WorldGrid.cpp.o
 mega_tests: CMakeFiles/mega_tests.dir/src/world/LightBaker.cpp.o
 mega_tests: CMakeFiles/mega_tests.dir/src/world/gen/MegaGenerator.cpp.o
@@ -224,6 +255,7 @@ mega_tests: CMakeFiles/mega_tests.dir/src/game/Player.cpp.o
 mega_tests: CMakeFiles/mega_tests.dir/src/game/GameWorld.cpp.o
 mega_tests: CMakeFiles/mega_tests.dir/src/game/Inventory3D.cpp.o
 mega_tests: CMakeFiles/mega_tests.dir/src/game/LockpickMinigame.cpp.o
+mega_tests: CMakeFiles/mega_tests.dir/src/game/MossMinigame.cpp.o
 mega_tests: CMakeFiles/mega_tests.dir/src/audio/AudioEngine.cpp.o
 mega_tests: CMakeFiles/mega_tests.dir/build.make
 mega_tests: CMakeFiles/mega_tests.dir/compiler_depend.ts
@@ -231,7 +263,7 @@ mega_tests: /usr/lib/libgtest_main.so.1.18.0
 mega_tests: /usr/lib/libSDL3.so.0.4.20
 mega_tests: /usr/lib/libgtest.so.1.18.0
 mega_tests: CMakeFiles/mega_tests.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir="/home/ivan/ImportantFiles/My Games/MEGA/build/CMakeFiles" --progress-num=$(CMAKE_PROGRESS_10) "Linking CXX executable mega_tests"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir="/home/ivan/ImportantFiles/My Games/MEGA/build/CMakeFiles" --progress-num=$(CMAKE_PROGRESS_12) "Linking CXX executable mega_tests"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/mega_tests.dir/link.txt --verbose=$(VERBOSE)
 	/usr/bin/cmake -P /home/ivan/ImportantFiles/My\ Games/MEGA/build/mega_tests_e3b0c442_discovery.cmake -- 
 

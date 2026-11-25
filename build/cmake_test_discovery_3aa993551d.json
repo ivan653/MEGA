@@ -1,5 +1,5 @@
 {
-  "tests": 18,
+  "tests": 21,
   "name": "AllTests",
   "testsuites": [
     {
@@ -9,7 +9,7 @@
         {
           "name": "BoundsAndBlockPlacement",
           "file": "\/home\/ivan\/ImportantFiles\/My Games\/MEGA\/tests\/CoreTests.cpp",
-          "line": 12
+          "line": 13
         }
       ]
     },
@@ -20,7 +20,7 @@
         {
           "name": "GravityLandsOnFloorAndStepUpWorks",
           "file": "\/home\/ivan\/ImportantFiles\/My Games\/MEGA\/tests\/CoreTests.cpp",
-          "line": 28
+          "line": 29
         }
       ]
     },
@@ -31,7 +31,7 @@
         {
           "name": "GeneratesConnectedMultiBiomeMegastructureQuickly",
           "file": "\/home\/ivan\/ImportantFiles\/My Games\/MEGA\/tests\/CoreTests.cpp",
-          "line": 61
+          "line": 62
         }
       ]
     },
@@ -42,7 +42,7 @@
         {
           "name": "RaycastAndStarterRoomSurvivalWork",
           "file": "\/home\/ivan\/ImportantFiles\/My Games\/MEGA\/tests\/CoreTests.cpp",
-          "line": 87
+          "line": 88
         }
       ]
     },
@@ -53,7 +53,7 @@
         {
           "name": "SlowPushOverforceBreakAndGentleTapPhysics",
           "file": "\/home\/ivan\/ImportantFiles\/My Games\/MEGA\/tests\/CoreTests.cpp",
-          "line": 212
+          "line": 213
         }
       ]
     },
@@ -64,12 +64,12 @@
         {
           "name": "ObservePatrolAndChaseFootKinematics",
           "file": "\/home\/ivan\/ImportantFiles\/My Games\/MEGA\/tests\/CoreTests.cpp",
-          "line": 298
+          "line": 299
         },
         {
           "name": "ObserveMapNavigationPatrolAndChase",
           "file": "\/home\/ivan\/ImportantFiles\/My Games\/MEGA\/tests\/CoreTests.cpp",
-          "line": 372
+          "line": 373
         }
       ]
     },
@@ -80,7 +80,7 @@
         {
           "name": "PanningObstacleThicknessAndConditionalEcho",
           "file": "\/home\/ivan\/ImportantFiles\/My Games\/MEGA\/tests\/CoreTests.cpp",
-          "line": 481
+          "line": 482
         }
       ]
     },
@@ -91,7 +91,7 @@
         {
           "name": "FivePercentBreakChanceAndSafeExitDoor",
           "file": "\/home\/ivan\/ImportantFiles\/My Games\/MEGA\/tests\/CoreTests.cpp",
-          "line": 576
+          "line": 577
         }
       ]
     },
@@ -102,7 +102,7 @@
         {
           "name": "ParsesPlayerLightingAndAudioSettings",
           "file": "\/home\/ivan\/ImportantFiles\/My Games\/MEGA\/tests\/CoreTests.cpp",
-          "line": 676
+          "line": 677
         }
       ]
     },
@@ -113,7 +113,7 @@
         {
           "name": "CenterlineBypassAndCooperativePassing",
           "file": "\/home\/ivan\/ImportantFiles\/My Games\/MEGA\/tests\/CoreTests.cpp",
-          "line": 709
+          "line": 710
         }
       ]
     },
@@ -124,7 +124,7 @@
         {
           "name": "NoclipInvisibilityAndSpeedWork",
           "file": "\/home\/ivan\/ImportantFiles\/My Games\/MEGA\/tests\/CoreTests.cpp",
-          "line": 795
+          "line": 796
         }
       ]
     },
@@ -135,7 +135,7 @@
         {
           "name": "VolumeRotationTopBlockingAndWorldGridPlacement",
           "file": "\/home\/ivan\/ImportantFiles\/My Games\/MEGA\/tests\/CoreTests.cpp",
-          "line": 867
+          "line": 868
         }
       ]
     },
@@ -146,7 +146,7 @@
         {
           "name": "Lockers90PercentOpenMetalCabinetsAlwaysLockedAndLootTablesWork",
           "file": "\/home\/ivan\/ImportantFiles\/My Games\/MEGA\/tests\/CoreTests.cpp",
-          "line": 941
+          "line": 942
         }
       ]
     },
@@ -157,7 +157,7 @@
         {
           "name": "DeadEndsConvertToRingLoopsAndRareCabinetRooms",
           "file": "\/home\/ivan\/ImportantFiles\/My Games\/MEGA\/tests\/CoreTests.cpp",
-          "line": 1001
+          "line": 1002
         }
       ]
     },
@@ -168,7 +168,7 @@
         {
           "name": "RearStrapSlotBreakingWeaponsAndSurfaceSpearCraft",
           "file": "\/home\/ivan\/ImportantFiles\/My Games\/MEGA\/tests\/CoreTests.cpp",
-          "line": 1106
+          "line": 1107
         }
       ]
     },
@@ -179,7 +179,7 @@
         {
           "name": "FixedHandGripWaterDrinkingAndFoodBitingWork",
           "file": "\/home\/ivan\/ImportantFiles\/My Games\/MEGA\/tests\/CoreTests.cpp",
-          "line": 1231
+          "line": 1232
         }
       ]
     },
@@ -190,7 +190,40 @@
         {
           "name": "HatchRoomsLaddersAndSewerTopologyWork",
           "file": "\/home\/ivan\/ImportantFiles\/My Games\/MEGA\/tests\/CoreTests.cpp",
-          "line": 1320
+          "line": 1321
+        }
+      ]
+    },
+    {
+      "name": "GameplayUpgradesTest",
+      "tests": 1,
+      "testsuite": [
+        {
+          "name": "ColumnPackingWorldDragBatteryLmbWeaponHotkeysAndSafePeekWork",
+          "file": "\/home\/ivan\/ImportantFiles\/My Games\/MEGA\/tests\/CoreTests.cpp",
+          "line": 1480
+        }
+      ]
+    },
+    {
+      "name": "SewerMossAndSettingsSaveTest",
+      "tests": 1,
+      "testsuite": [
+        {
+          "name": "SettingsPersistConfigurableMossSpawnAndKnifeScrapingWork",
+          "file": "\/home\/ivan\/ImportantFiles\/My Games\/MEGA\/tests\/CoreTests.cpp",
+          "line": 1673
+        }
+      ]
+    },
+    {
+      "name": "ObjModelAndCreatureScaleTest",
+      "tests": 1,
+      "testsuite": [
+        {
+          "name": "LoadsHornedCreatureObjAtExactFiveCmPerGridCellScale",
+          "file": "\/home\/ivan\/ImportantFiles\/My Games\/MEGA\/tests\/CoreTests.cpp",
+          "line": 1811
         }
       ]
     }

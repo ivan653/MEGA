@@ -19,10 +19,11 @@ enum class ItemType : int {
     Tape       = 7, // 2 x 1 x 2  (electrical tape)
     Knife      = 8, // 1 x 6 x 1
     Stick      = 9, // 1 x 26 x 1 (broken broom/mop handle)
-    Spear      = 10 // 1 x 32 x 1 (crafted from Stick + Tape + Knife)
+    Spear      = 10,// 1 x 32 x 1 (crafted from Stick + Tape + Knife)
+    Moss       = 11 // 2 x 1 x 2  (scraped from sewer walls using a Knife)
 };
 
-inline constexpr int ITEM_TYPE_COUNT = 11;
+inline constexpr int ITEM_TYPE_COUNT = 12;
 
 inline bool isMeleeWeapon(ItemType t) {
     return t == ItemType::Broom || t == ItemType::Mop || t == ItemType::Stick ||
@@ -45,7 +46,7 @@ struct LootSourceTable {
     // Relative weights for each ItemType:
     // Flashlight, Battery, Food, Water, Lockpick, Broom, Mop, Tape, Knife, Stick, Spear
     std::array<float, ITEM_TYPE_COUNT> weights = {
-        0.04f, 0.22f, 0.25f, 0.22f, 0.14f, 0.03f, 0.03f, 0.04f, 0.03f, 0.0f, 0.0f
+        0.04f, 0.22f, 0.25f, 0.22f, 0.14f, 0.03f, 0.03f, 0.04f, 0.03f, 0.0f, 0.0f, 0.0f
     };
 
     ItemType rollItem(Rng& rng) const {
@@ -68,23 +69,23 @@ struct LootTables {
     LootTables() {
         // 0: Wooden Crates
         sources[static_cast<int>(LootSource::Crate)] = {
-            0.48f, 2, {0.02f, 0.22f, 0.30f, 0.24f, 0.11f, 0.01f, 0.01f, 0.06f, 0.03f, 0.0f, 0.0f}
+            0.48f, 2, {0.02f, 0.22f, 0.30f, 0.24f, 0.11f, 0.01f, 0.01f, 0.06f, 0.03f, 0.0f, 0.0f, 0.0f}
         };
         // 1: Standard Locked Metal Cabinet Shelves
         sources[static_cast<int>(LootSource::CabinetShelf)] = {
-            0.68f, 2, {0.08f, 0.26f, 0.18f, 0.18f, 0.15f, 0.02f, 0.02f, 0.06f, 0.05f, 0.0f, 0.0f}
+            0.68f, 2, {0.08f, 0.26f, 0.18f, 0.18f, 0.15f, 0.02f, 0.02f, 0.06f, 0.05f, 0.0f, 0.0f, 0.0f}
         };
         // 2: Open Shelving Racks
         sources[static_cast<int>(LootSource::ShelvingRack)] = {
-            0.42f, 2, {0.03f, 0.20f, 0.26f, 0.24f, 0.13f, 0.02f, 0.02f, 0.06f, 0.04f, 0.0f, 0.0f}
+            0.42f, 2, {0.03f, 0.20f, 0.26f, 0.24f, 0.13f, 0.02f, 0.02f, 0.06f, 0.04f, 0.0f, 0.0f, 0.0f}
         };
         // 3: Hideable Corridor Lockers
         sources[static_cast<int>(LootSource::Locker)] = {
-            0.28f, 1, {0.02f, 0.18f, 0.14f, 0.16f, 0.36f, 0.03f, 0.03f, 0.05f, 0.03f, 0.0f, 0.0f}
+            0.28f, 1, {0.02f, 0.18f, 0.14f, 0.16f, 0.36f, 0.03f, 0.03f, 0.05f, 0.03f, 0.0f, 0.0f, 0.0f}
         };
         // 4: Rare Cabinet inside 3x4 Dead-End Rooms (increased loot + broom/mop/tape/knife)
         sources[static_cast<int>(LootSource::RareCabinet)] = {
-            0.88f, 3, {0.06f, 0.14f, 0.10f, 0.10f, 0.12f, 0.12f, 0.12f, 0.12f, 0.12f, 0.0f, 0.0f}
+            0.88f, 3, {0.06f, 0.14f, 0.10f, 0.10f, 0.12f, 0.12f, 0.12f, 0.12f, 0.12f, 0.0f, 0.0f, 0.0f}
         };
     }
 
@@ -101,7 +102,7 @@ struct LootTables {
         };
         const char* itemNames[ITEM_TYPE_COUNT] = {
             "flashlight", "battery", "food", "water", "lockpick",
-            "broom", "mop", "tape", "knife", "stick", "spear"
+            "broom", "mop", "tape", "knife", "stick", "spear", "moss"
         };
 
         out << "# MEGA // Loot Tables Configuration\n"
@@ -174,6 +175,7 @@ struct LootTables {
                 else if (field == "weight_knife") tbl.weights[8] = std::max(0.0f, std::stof(val));
                 else if (field == "weight_stick") tbl.weights[9] = std::max(0.0f, std::stof(val));
                 else if (field == "weight_spear") tbl.weights[10] = std::max(0.0f, std::stof(val));
+                else if (field == "weight_moss") tbl.weights[11] = std::max(0.0f, std::stof(val));
             } catch (...) {
             }
         }

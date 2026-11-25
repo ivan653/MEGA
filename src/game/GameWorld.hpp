@@ -6,6 +6,7 @@
 #include "core/Math3D.hpp"
 #include "game/Inventory3D.hpp"
 #include "game/LockpickMinigame.hpp"
+#include "game/MossMinigame.hpp"
 #include "game/Player.hpp"
 #include "render/BillboardRenderer.hpp"
 #include "render/RobotRenderer.hpp"
@@ -122,6 +123,28 @@ struct WorldItem {
     AABB worldBounds() const;
 };
 
+struct WorldMossPatch {
+    Vec3 pos;
+    int normalX = 0;
+    int normalZ = 1;
+    float width = 0.64f;
+    float height = 0.64f;
+    uint64_t seed = 0;
+    bool scraped = false;
+    int regX = 0;
+    int regZ = 0;
+
+    AABB worldBounds() const;
+};
+
+struct WorldCreature {
+    Vec3 pos;
+    float yaw = 0.0f;
+    float animTime = 0.0f;
+    int regX = 0;
+    int regZ = 0;
+};
+
 struct CraftOption {
     int recipeId = 0;
     ItemType result = ItemType::Spear;
@@ -182,9 +205,12 @@ public:
     Inventory inventory;
     Backpack3D backpack;
     LockpickMinigame lockpick;
+    MossMinigame mossMinigame;
     std::vector<Enemy> enemies;
     std::vector<HingeDoor> doors;
     std::vector<WorldItem> worldItems;
+    std::vector<WorldMossPatch> mossPatches;
+    std::vector<WorldCreature> creatures;
     std::vector<Pickup> pickups;
     std::vector<Projectile> projectiles;
     std::vector<Particle> particles;
@@ -238,11 +264,20 @@ public:
     ItemOrientation dragItemOrient{};
     int dragItemDurability = 0;
     int dragOriginBackpackId = -1;
+    bool dragFromWorld = false;       // True when RMB-dragging a grounded world item across the 3D grid
+    Vec3 dragOriginWorldPos{};
+    ItemOrientation dragOriginWorldOrient{};
+    int dragOriginRegX = 0;
+    int dragOriginRegZ = 0;
     int hoveredBackpackItemId = -1;
     bool hoveredBackpackBlocked = false;
     bool hoveredGroundedBackpack = false;
     GhostPreviewState placementPreview{};
     std::vector<CraftOption> availableCrafts;
+
+    // In-game Pause / Settings Menu state
+    bool settingsMenuOpen = false;
+    int settingsSelectedRow = 0;
 
     // God Mode debug/testing controls
     bool godMode = false;
@@ -254,6 +289,7 @@ public:
     // Amnesia-style interaction state
     int hoveredDoorIdx = -1;
     int hoveredItemIdx = -1;
+    int hoveredMossIdx = -1;
     int grabbedDoorIdx = -1;
 
     // Player footstep & HUD feedback state
@@ -273,8 +309,13 @@ public:
     Mat4 backpackWorldMatrix() const;
     Mat4 heldItemWorldMatrix() const;
     bool isCameraPausedForInventory() const {
-        return backpackMode == BackpackMode::InHands || draggingItem || lockpick.active;
+        return settingsMenuOpen || backpackMode == BackpackMode::InHands ||
+               draggingItem || lockpick.active || mossMinigame.active;
     }
+    bool playerHasKnifeForMoss() const;
+    std::vector<ItemType> getAccessibleWeaponSlots() const;
+    bool equipWeaponHotkey(int slotIdx, AudioEngine& audio);
+    uint64_t nextRunSeed() const;
     void toggleBackpackInHands();
     bool togglePlaceBackpackOnGround(AudioEngine& audio);
     void updateCursorHover(const Vec3& rayOrig, const Vec3& rayDir);
@@ -304,7 +345,9 @@ public:
     void gatherRobots(std::vector<RobotRenderState>& out) const;
     void gatherRobotLights(std::vector<PointLight3D>& out) const;
     void gatherInteractables(std::vector<DoorRenderState>& outDoors,
-                             std::vector<ItemRenderState>& outItems) const;
+                             std::vector<ItemRenderState>& outItems,
+                             std::vector<MossRenderState>* outMoss = nullptr) const;
+    void gatherCreatureTransforms(std::vector<Mat4>& outTransforms) const;
     BackpackRenderState gatherBackpackState() const;
     void spawnRobotsInLoadedRegions();
     void syncLockersFromMap();

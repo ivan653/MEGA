@@ -354,7 +354,8 @@ void RobotRenderer::renderInteractables(const Shader& worldShader, const Mat4& v
                                         ItemType heldType,
                                         const ItemOrientation& heldOrient,
                                         const Mat4& heldMatrix,
-                                        const ConsumableVisualState& heldConsumable) {
+                                        const ConsumableVisualState& heldConsumable,
+                                        const std::vector<MossRenderState>& mossPatches) {
     if (doors.empty() && items.empty() && !backpackState.visible && !ghost.active && !hasHeldItem) return;
     (void)view; (void)proj; (void)camPos; (void)heldOrient;
 
@@ -547,13 +548,22 @@ void RobotRenderer::renderInteractables(const Shader& worldShader, const Mat4& v
                         {0.032f, sy * 0.96f, 0.032f}, 3.0f, forceEmissive, Vec3{0.78f, 0.54f, 0.32f} * tint.x);
             drawLitPart(centerM * Mat4::translate({0.0f, -sy * 0.48f, 0.0f}) * Mat4::scale({0.022f, sy * 0.04f, 0.022f}),
                         {0.022f, sy * 0.04f, 0.022f}, 3.0f, forceEmissive, Vec3{0.92f, 0.76f, 0.54f} * tint.x);
-        } else { // ItemType::Spear: 1 x 30 x 1 -> wooden pole + blue electrical tape binding + knife blade tip!
+        } else if (type == ItemType::Spear) { // 1 x 30 x 1 -> wooden pole + blue electrical tape binding + knife blade tip!
             drawLitPart(centerM * Mat4::translate({0.0f, -sy * 0.10f, 0.0f}) * Mat4::scale({0.032f, sy * 0.80f, 0.032f}),
                         {0.032f, sy * 0.80f, 0.032f}, 3.0f, forceEmissive, Vec3{0.78f, 0.54f, 0.32f} * tint.x);
             drawLitPart(centerM * Mat4::translate({0.0f, sy * 0.27f, 0.0f}) * Mat4::scale({0.046f, sy * 0.075f, 0.046f}),
                         {0.046f, sy * 0.075f, 0.046f}, 9.0f, forceEmissive, Vec3{0.20f, 0.48f, 0.98f} * tint.x);
             drawLitPart(centerM * Mat4::translate({0.0f, sy * 0.40f, 0.0f}) * Mat4::scale({0.026f, sy * 0.20f, 0.012f}),
                         {0.026f, sy * 0.20f, 0.012f}, 4.0f, forceEmissive, Vec3{1.35f, 1.40f, 1.48f} * tint.x);
+        } else { // ItemType::Moss: 2 x 1 x 2 -> lush organic multi-tuft damp sewer moss clump!
+            Vec3 darkMoss = Vec3{0.34f, 0.78f, 0.28f} * tint.x;
+            Vec3 brightMoss = Vec3{0.52f, 1.08f, 0.40f} * tint.x;
+            drawLitPart(centerM * Mat4::translate({0.0f, -sy * 0.14f, 0.0f}) * Mat4::scale({sx * 0.88f, sy * 0.56f, sz * 0.86f}),
+                        {sx * 0.88f, sy * 0.56f, sz * 0.86f}, 15.0f, forceEmissive, darkMoss);
+            drawLitPart(centerM * Mat4::translate({-sx * 0.14f, sy * 0.12f, sz * 0.10f}) * Mat4::scale({sx * 0.54f, sy * 0.52f, sz * 0.52f}),
+                        {sx * 0.54f, sy * 0.52f, sz * 0.52f}, 15.0f, forceEmissive, brightMoss);
+            drawLitPart(centerM * Mat4::translate({sx * 0.18f, sy * 0.06f, -sz * 0.14f}) * Mat4::scale({sx * 0.46f, sy * 0.46f, sz * 0.48f}),
+                        {sx * 0.46f, sy * 0.46f, sz * 0.48f}, 15.0f, forceEmissive, brightMoss * 0.92f);
         }
     };
 
@@ -617,6 +627,32 @@ void RobotRenderer::renderInteractables(const Shader& worldShader, const Mat4& v
         wCons.fill = it.fill;
         if (t == ItemType::Food && it.fill < 0.99f) wCons.openProgress = 0.75f;
         drawItemCentered(centerM, t, tint, 0.0f, &wCons);
+    }
+
+    // 2.5) Render unscraped 3D Sewer Wall Moss Patches (irregular multi-pad organic moss growth!)
+    for (const auto& mp : mossPatches) {
+        Vec3 baseGreen = mp.highlighted ? Vec3{0.68f, 1.42f, 0.52f} : Vec3{0.42f, 0.96f, 0.34f};
+        Vec3 deepGreen = mp.highlighted ? Vec3{0.48f, 1.12f, 0.38f} : Vec3{0.28f, 0.72f, 0.24f};
+        float yaw = 0.0f;
+        if (mp.normalX > 0) yaw = PI * 0.5f;
+        else if (mp.normalX < 0) yaw = -PI * 0.5f;
+        else if (mp.normalZ < 0) yaw = PI;
+
+        Mat4 wallM = Mat4::translate(mp.pos) * Mat4::rotateY(yaw);
+        float w = mp.width;
+        float h = mp.height;
+        // Central moss mat + irregular hanging tendrils & side tufts matching the minigame silhouette!
+        drawLitPart(wallM * Mat4::translate({0.0f, 0.03f, 0.014f}) * Mat4::scale({w * 0.80f, h * 0.72f, 0.028f}),
+                    {w * 0.80f, h * 0.72f, 0.028f}, 15.0f, 0.0f, deepGreen);
+        drawLitPart(wallM * Mat4::translate({-w * 0.14f, h * 0.10f, 0.024f}) * Mat4::scale({w * 0.48f, h * 0.46f, 0.024f}),
+                    {w * 0.48f, h * 0.46f, 0.024f}, 15.0f, 0.0f, baseGreen);
+        drawLitPart(wallM * Mat4::translate({w * 0.16f, -h * 0.06f, 0.022f}) * Mat4::scale({w * 0.42f, h * 0.48f, 0.022f}),
+                    {w * 0.42f, h * 0.48f, 0.022f}, 15.0f, 0.0f, baseGreen * 0.92f);
+        // Hanging lower moss tendrils
+        drawLitPart(wallM * Mat4::translate({-w * 0.18f, -h * 0.36f, 0.012f}) * Mat4::scale({w * 0.20f, h * 0.26f, 0.020f}),
+                    {w * 0.20f, h * 0.26f, 0.020f}, 15.0f, 0.0f, deepGreen);
+        drawLitPart(wallM * Mat4::translate({w * 0.12f, -h * 0.34f, 0.012f}) * Mat4::scale({w * 0.24f, h * 0.22f, 0.020f}),
+                    {w * 0.24f, h * 0.22f, 0.020f}, 15.0f, 0.0f, baseGreen * 0.85f);
     }
 
     // 3) Render Diegetic 3D Backpack (6 x 8 x 4 cavity + rear 2 x 30 x 6 dual-strap slot!)

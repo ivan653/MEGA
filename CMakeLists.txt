@@ -16,12 +16,14 @@ pkg_check_modules(EPOXY REQUIRED IMPORTED_TARGET epoxy)
 
 add_executable(mega
     src/main.cpp
+    src/core/ObjLoader.cpp
     src/render/Shader.cpp
     src/render/Framebuffer.cpp
     src/render/TextureAtlas.cpp
     src/render/WorldMesher.cpp
     src/render/BillboardRenderer.cpp
     src/render/RobotRenderer.cpp
+    src/render/ModelRenderer.cpp
     src/render/HudRenderer.cpp
     src/world/WorldGrid.cpp
     src/world/LightBaker.cpp
@@ -30,6 +32,7 @@ add_executable(mega
     src/game/GameWorld.cpp
     src/game/Inventory3D.cpp
     src/game/LockpickMinigame.cpp
+    src/game/MossMinigame.cpp
     src/audio/AudioEngine.cpp
 )
 
@@ -52,6 +55,7 @@ if(GTest_FOUND)
     enable_testing()
     add_executable(mega_tests
         tests/CoreTests.cpp
+        src/core/ObjLoader.cpp
         src/world/WorldGrid.cpp
         src/world/LightBaker.cpp
         src/world/gen/MegaGenerator.cpp
@@ -59,6 +63,7 @@ if(GTest_FOUND)
         src/game/GameWorld.cpp
         src/game/Inventory3D.cpp
         src/game/LockpickMinigame.cpp
+        src/game/MossMinigame.cpp
         src/audio/AudioEngine.cpp
     )
     target_include_directories(mega_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
